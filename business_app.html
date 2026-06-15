@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>نظام إدارة الأعمال المتكامل</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.rtl.min.css">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f8f9fa; }
+        .sidebar { min-height: 100vh; background-color: #343a40; color: white; }
+        .sidebar a { color: #cfd8dc; text-decoration: none; padding: 10px 15px; display: block; }
+        .sidebar a:hover, .sidebar a.active { background-color: #0d6efd; color: white; border-radius: 5px; }
+        .card-stat { border-radius: 10px; border: none; shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .section-content { display: none; }
+        .section-content.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .table-responsive { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+    </style>
+</head>
+<body>
+
+<div class="container-fluid">
+    <div class="row">
+        <!-- Sidebar -->
+        <div class="col-md-2 sidebar p-3">
+            <h4 class="text-center mb-4"><i class="fas fa-briefcase"></i> مدير الأعمال</h4>
+            <nav>
+                <a href="#" onclick="showSection('dashboard')" class="active" id="nav-dashboard"><i class="fas fa-home"></i> لوحة التحكم</a>
+                <a href="#" onclick="showSection('inventory')" id="nav-inventory"><i class="fas fa-boxes"></i> إدارة المخازن</a>
+                <a href="#" onclick="showSection('accounting')" id="nav-accounting"><i class="fas fa-calculator"></i> إدارة الحسابات</a>
+            </nav>
+        </div>
+
+        <!-- Main Content -->
+        <div class="col-md-10 p-4">
+            
+            <!-- Dashboard Section -->
+            <div id="dashboard" class="section-content active">
+                <h2 class="mb-4">لوحة التحكم</h2>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <div class="card card-stat bg-primary text-white p-3">
+                            <h5>قيمة المخزون</h5>
+                            <h3 id="dash-inventory-value">0 ر.س</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card card-stat bg-success text-white p-3">
+                            <h5>إجمالي الإيرادات</h5>
+                            <h3 id="dash-income">0 ر.س</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card card-stat bg-danger text-white p-3">
+                            <h5>إجمالي المصروفات</h5>
+                            <h3 id="dash-expense">0 ر.س</h3>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="card card-stat bg-info text-white p-3">
+                            <h5>صافي الربح</h5>
+                            <h3 id="dash-profit">0 ر.س</h3>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-6">
+                        <div class="table-responsive">
+                            <h5><i class="fas fa-exclamation-triangle"></i> تنبيهات المخزون المنخفض</h5>
+                            <table class="table table-hover">
+                                <thead><tr><th>المنتج</th><th>الكمية</th></tr></thead>
+                                <tbody id="low-stock-table"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Inventory Section -->
+            <div id="inventory" class="section-content">
+                <h2 class="mb-4">إدارة المخازن</h2>
+                <div class="card p-4 mb-4">
+                    <form id="inventory-form" class="row g-3">
+                        <div class="col-md-3">
+                            <input type="text" class="form-control" id="prod-name" placeholder="اسم المنتج" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="prod-qty" placeholder="الكمية" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="prod-price" placeholder="سعر الوحدة" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="prod-min" placeholder="حد التنبيه" value="5">
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus"></i> إضافة منتج</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>اسم المنتج</th>
+                                <th>الكمية</th>
+                                <th>سعر الوحدة</th>
+                                <th>القيمة الإجمالية</th>
+                                <th>حالة المخزون</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inventory-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Accounting Section -->
+            <div id="accounting" class="section-content">
+                <h2 class="mb-4">إدارة الحسابات</h2>
+                <div class="card p-4 mb-4">
+                    <form id="accounting-form" class="row g-3">
+                        <div class="col-md-3">
+                            <select class="form-select" id="acc-type" required>
+                                <option value="income">إيراد (+)</option>
+                                <option value="expense">مصروف (-)</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <input type="text" class="form-control" id="acc-desc" placeholder="وصف العملية" required>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="number" class="form-control" id="acc-amount" placeholder="المبلغ" required>
+                        </div>
+                        <div class="col-md-3">
+                            <button type="submit" class="btn btn-success w-100"><i class="fas fa-save"></i> تسجيل</button>
+                        </div>
+                    </form>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>التاريخ</th>
+                                <th>النوع</th>
+                                <th>الوصف</th>
+                                <th>المبلغ</th>
+                                <th>إجراءات</th>
+                            </tr>
+                        </thead>
+                        <tbody id="accounting-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript Logic -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // Data Management
+    let inventory = JSON.parse(localStorage.getItem('inventory')) || [];
+    let transactions = JSON.parse(localStorage.getItem('transactions')) || [];
+
+    // Navigation
+    function showSection(sectionId) {
+        document.querySelectorAll('.section-content').forEach(el => el.classList.remove('active'));
+        document.querySelectorAll('.sidebar a').forEach(el => el.classList.remove('active'));
+        document.getElementById(sectionId).classList.add('active');
+        document.getElementById('nav-' + sectionId).classList.add('active');
+        if(sectionId === 'dashboard') updateDashboard();
+    }
+
+    // Inventory Functions
+    function renderInventory() {
+        const tbody = document.getElementById('inventory-table');
+        tbody.innerHTML = '';
+        inventory.forEach((item, index) => {
+            const total = item.qty * item.price;
+            const status = item.qty <= item.min ? '<span class="badge bg-danger">منخفض</span>' : '<span class="badge bg-success">جيد</span>';
+            tbody.innerHTML += `
+                <tr>
+                    <td>${index + 1}</td>
+                    <td>${item.name}</td>
+                    <td>${item.qty}</td>
+                    <td>${item.price}</td>
+                    <td>${total}</td>
+                    <td>${status}</td>
+                    <td>
+                        <button class="btn btn-sm btn-danger" onclick="deleteItem(${index})"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+        updateDashboard();
+    }
+
+    document.getElementById('inventory-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const newItem = {
+            name: document.getElementById('prod-name').value,
+            qty: parseInt(document.getElementById('prod-qty').value),
+            price: parseFloat(document.getElementById('prod-price').value),
+            min: parseInt(document.getElementById('prod-min').value)
+        };
+        inventory.push(newItem);
+        localStorage.setItem('inventory', JSON.stringify(inventory));
+        this.reset();
+        renderInventory();
+    });
+
+    function deleteItem(index) {
+        if(confirm('هل أنت متأكد من الحذف؟')) {
+            inventory.splice(index, 1);
+            localStorage.setItem('inventory', JSON.stringify(inventory));
+            renderInventory();
+        }
+    }
+
+    // Accounting Functions
+    function renderAccounting() {
+        const tbody = document.getElementById('accounting-table');
+        tbody.innerHTML = '';
+        transactions.forEach((t, index) => {
+            const typeClass = t.type === 'income' ? 'text-success' : 'text-danger';
+            const typeLabel = t.type === 'income' ? 'إيراد' : 'مصروف';
+            const sign = t.type === 'income' ? '+' : '-';
+            tbody.innerHTML += `
+                <tr>
+                    <td>${t.date}</td>
+                    <td class="${typeClass}">${typeLabel}</td>
+                    <td>${t.desc}</td>
+                    <td>${sign} ${t.amount}</td>
+                    <td>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteTrans(${index})"><i class="fas fa-times"></i></button>
+                    </td>
+                </tr>
+            `;
+        });
+        updateDashboard();
+    }
+
+    document.getElementById('accounting-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const newTrans = {
+            type: document.getElementById('acc-type').value,
+            desc: document.getElementById('acc-desc').value,
+            amount: parseFloat(document.getElementById('acc-amount').value),
+            date: new Date().toLocaleDateString('ar-EG')
+        };
+        transactions.push(newTrans);
+        localStorage.setItem('transactions', JSON.stringify(transactions));
+        this.reset();
+        renderAccounting();
+    });
+
+    function deleteTrans(index) {
+        if(confirm('حذف السجل المالي؟')) {
+            transactions.splice(index, 1);
+            localStorage.setItem('transactions', JSON.stringify(transactions));
+            renderAccounting();
+        }
+    }
+
+    // Dashboard Logic
+    function updateDashboard() {
+        // Inventory Stats
+        let invValue = 0;
+        let lowStockHtml = '';
+        inventory.forEach(item => {
+            invValue += (item.qty * item.price);
+            if(item.qty <= item.min) {
+                lowStockHtml += `<tr><td>${item.name}</td><td class="text-danger">${item.qty}</td></tr>`;
+            }
+        });
+        document.getElementById('dash-inventory-value').innerText = invValue.toLocaleString() + ' ر.س';
+        document.getElementById('low-stock-table').innerHTML = lowStockHtml || '<tr><td colspan="2" class="text-center">لا يوجد تنبيهات</td></tr>';
+
+        // Financial Stats
+        let income = 0;
+        let expense = 0;
+        transactions.forEach(t => {
+            if(t.type === 'income') income += t.amount;
+            else expense += t.amount;
+        });
+        
+        document.getElementById('dash-income').innerText = income.toLocaleString() + ' ر.س';
+        document.getElementById('dash-expense').innerText = expense.toLocaleString() + ' ر.س';
+        document.getElementById('dash-profit').innerText = (income - expense).toLocaleString() + ' ر.س';
+    }
+
+    // Initialize
+    renderInventory();
+    renderAccounting();
+    updateDashboard();
+
+</script>
+</body>
+</html>
