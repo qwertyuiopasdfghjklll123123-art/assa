@@ -1,0 +1,134 @@
+/* ============================================================
+   Tokmart - Order success, balance row, policy section, Google button, toasts, lightbox
+   ============================================================ */
+        /* ============================================================
+           ORDER SUCCESS
+           ============================================================ */
+        .order-success-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: var(--z-admin-overlay);
+            background: rgba(0,0,0,0.4);
+            backdrop-filter: blur(8px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            animation: fadeInOverlay 0.3s var(--ease-out);
+            padding: var(--safe-area-top) var(--safe-area-right) var(--safe-area-bottom) var(--safe-area-left);
+        }
+        
+        .order-success-overlay.open {
+            display: flex;
+        }
+        
+        .order-success-box {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 30px 24px 24px;
+            max-width: 480px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: var(--shadow-lg);
+            animation: formSlideIn 0.4s var(--ease-spring);
+        }
+        
+        .order-success-box .order-details-card {
+            background: var(--bg2);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+        
+        /* ============================================================
+           BALANCE ROW
+           ============================================================ */
+        .balance-row {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 12px 18px;
+            box-shadow: var(--shadow);
+        }
+        
+        /* ============================================================
+           POLICY SECTION
+           ============================================================ */
+        .policy-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 12px;
+        }
+        
+        .policy-content.open {
+            max-height: 500px !important;
+        }
+        
+        /* ============================================================
+           GOOGLE LOGIN
+           ============================================================ */
+        .g_id_signin {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            min-height: 50px;
+        }
+        
+        .g_id_signin > div {
+            width: 100% !important;
+            max-width: 320px !important;
+        }
+        
+        /* ============================================================
+         /* تصميم موحد ومنسق لجميع أنواع الإشعارات والتنبيهات المنبثقة */
+.toast, 
+.alert, 
+.notification, 
+.swal2-popup, 
+div[class*="notification"], 
+div[class*="toast"] {
+    background-color: #0f3d1c !important; /* اللون الأخضر الداكن الجديد */
+    color: #ffffff !important;           /* لون الخط أبيض وواضح */
+    border-radius: 14px !important;      /* زوايا دائرية أكثر نعومة */
+    padding: 16px 22px !important;
+    box-shadow: 0 8px 24px rgba(15, 61, 28, 0.25) !important; /* ظل متناسق مع لون الهوية */
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important; /* إطار خفيف وداعم للتصميم */
+}
+
+/* تخصيص لون أيقونات الخطأ أو التحذير داخل الإشعار لتكون واضحة وجذابة */
+.toast .fa-times-circle, 
+.alert .error-icon, 
+.swal2-icon-error {
+    color: #ff6b6b !important;
+}
+
+/* تخصيص لون أيقونات النجاح داخل الإشعار */
+.toast .fa-check-circle, 
+.alert .success-icon, 
+.swal2-icon-success {
+    color: #4cd137 !important;
+}
+        /* ============================================================
+           LIGHTBOX
+           ============================================================ */
+        #lightbox {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.92);
+            z-index: var(--z-dialog);
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 20px;
+            padding: var(--safe-area-top) var(--safe-area-right) var(--safe-area-bottom) var(--safe-area-left);
+        }
+        
+        #lightbox.active {
+            display: flex;
+        }
+        
