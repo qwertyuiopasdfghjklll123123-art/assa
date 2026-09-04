@@ -47,7 +47,7 @@ function handleRechargeAction(string $action): void {
                 ':userId' => $userId, ':amount' => $amount,
                 ':paymentMethod' => $paymentMethod, ':receiptImage' => $receiptImage,
             ])) {
-                sendNotification(0, '💰 طلب شحن رصيد جديد', 'المبلغ: ' . number_format($amount, 2) . ' د.ع', 'wallet', '/admin/recharges.php');
+                sendNotificationToAdmins('💰 طلب شحن رصيد جديد', 'المبلغ: ' . number_format($amount, 2) . ' د.ع', 'wallet', '/admin/recharges.php');
                 response(true, 'تم إرسال طلب الشحن بنجاح');
             }
             response(false, 'فشل إرسال الطلب');

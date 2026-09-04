@@ -21,6 +21,24 @@ function sendNotificationToAllUsers(string $title, string $message, string $type
     return true;
 }
 
+function sendNotificationToAdmins(string $title, string $message, string $type = 'info', string $link = ''): bool {
+    $admins = query("SELECT id FROM users WHERE isAdmin = 1");
+    foreach ($admins as $admin) {
+        execute(
+            "INSERT INTO notifications (userId, title, message, type, link, isRead, isPushSent)
+             VALUES (:userId, :title, :message, :type, :link, 0, 0)",
+            [
+                ':userId' => $admin['id'],
+                ':title' => $title,
+                ':message' => $message,
+                ':type' => $type,
+                ':link' => $link,
+            ]
+        );
+    }
+    return true;
+}
+
 function sendNotification(int $userId, string $title, string $message, string $type = 'info', string $link = ''): int {
     execute(
         "INSERT INTO notifications (userId, title, message, type, link, isRead, isPushSent)

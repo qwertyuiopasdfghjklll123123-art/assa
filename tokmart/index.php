@@ -53,7 +53,10 @@ $siteName = $site['name'];
 $siteDescription = $site['description'];
 $siteLogoUrl = $site['logo_url'];
 
-$assetsBase = APP_BASE_PATH . '/assets';
+// Relative (not APP_BASE_PATH-prefixed) on purpose: this document is always
+// the reference point browsers resolve these against, however deep/shallow
+// the app is installed, so it can't be thrown off by a wrong base-path guess.
+$assetsBase = 'assets';
 $cssFiles = ['base', 'layout', 'notifications', 'catalog', 'pages', 'chat', 'auth', 'misc', 'responsive'];
 $jsFiles = ['widgets-extra', 'core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'ui-utils', 'init'];
 ?>
@@ -184,16 +187,16 @@ $jsFiles = ['widgets-extra', 'core', 'auth', 'cart', 'catalog', 'chat', 'checkou
                             <span class="bal-amount" id="userBalance" style="font-size:var(--fs-3xl);font-weight:900;color:var(--primary);">0.00 د.ع</span>
                         </div>
                     </div>
-                    <button class="add-balance-btn" id="addBalanceBtn" style="padding:8px 20px;border:none;border-radius:6px;background:var(--primary-light);color:#fff;font-weight:700;font-size:var(--fs-base);cursor:pointer;">
+                    <button class="btn btn-sm btn-primary add-balance-btn" id="addBalanceBtn">
                         <i class="fa-solid fa-plus"></i> <span data-i18n="recharge_balance">شحن الرصيد</span>
                     </button>
                 </div>
 
                 <div class="auth-buttons" style="display:flex;gap:10px;margin:12px 0;flex-wrap:wrap;">
-                    <button class="auth-btn active" id="loginBtn" style="flex:1;padding:12px;border:2px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text2);font-size:var(--fs-md);font-weight:700;cursor:pointer;text-align:center;min-width:120px;">
+                    <button class="btn btn-md btn-outline active auth-btn" id="loginBtn" style="flex:1;min-width:120px;">
                         🔑 <span data-i18n="login">تسجيل الدخول</span>
                     </button>
-                    <button class="auth-btn" id="registerBtn" style="flex:1;padding:12px;border:2px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text2);font-size:var(--fs-md);font-weight:700;cursor:pointer;text-align:center;min-width:120px;">
+                    <button class="btn btn-md btn-outline auth-btn" id="registerBtn" style="flex:1;min-width:120px;">
                         📝 <span data-i18n="register">إنشاء حساب</span>
                     </button>
                 </div>
@@ -533,7 +536,7 @@ if (isset($_SESSION['user_id'])) {
     </div>
 
     <!-- زر الحفظ -->
-    <button type="button" onclick="saveAccountSettings()" style="width:100%;padding:13px;border:none;border-radius:10px;background:var(--primary);color:#fff;font-size:15px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;">
+    <button type="button" onclick="saveAccountSettings()" class="btn btn-lg btn-primary btn-block">
         <i class="fa-regular fa-floppy-disk"></i> حفظ التغييرات
     </button>
 </form>
@@ -675,7 +678,7 @@ if (isset($_SESSION['user_id'])) {
                     
                     <div id="resetError" style="color:var(--red);font-size:13px;margin-bottom:12px;display:none;text-align:center;"></div>
                     
-                    <button type="button" class="btn-submit" onclick="requestPasswordReset()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--primary-light);color:#fff;font-weight:700;font-size:16px;cursor:pointer;">
+                    <button type="button" class="btn-submit" onclick="requestPasswordReset()">
                         <i class="fa-solid fa-paper-plane"></i> إرسال كود التحقق
                     </button>
                     
@@ -702,7 +705,7 @@ if (isset($_SESSION['user_id'])) {
                     
                     <div id="resetCodeError" style="color:var(--red);font-size:13px;margin-bottom:12px;display:none;text-align:center;"></div>
                     
-                    <button type="button" class="btn-submit" onclick="verifyResetCode()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--primary-light);color:#fff;font-weight:700;font-size:16px;cursor:pointer;">
+                    <button type="button" class="btn-submit" onclick="verifyResetCode()">
                         <i class="fa-solid fa-check"></i> تحقق
                     </button>
                     
@@ -736,7 +739,7 @@ if (isset($_SESSION['user_id'])) {
                     
                     <div id="resetPasswordError" style="color:var(--red);font-size:13px;margin-bottom:12px;display:none;text-align:center;"></div>
                     
-                    <button type="button" class="btn-submit" onclick="resetPassword()" style="width:100%;padding:14px;border:none;border-radius:12px;background:var(--green);color:#fff;font-weight:700;font-size:16px;cursor:pointer;">
+                    <button type="button" class="btn-submit" onclick="resetPassword()" style="background:var(--green);">
                         <i class="fa-solid fa-check"></i> تغيير كلمة المرور
                     </button>
                 </div>
@@ -877,8 +880,8 @@ if (isset($_SESSION['user_id'])) {
 
 <script>
 window.APP_CONFIG = {
-    apiUrl: <?php echo json_encode(APP_BASE_PATH . '/api/index.php'); ?>,
-    adminUrl: <?php echo json_encode(APP_BASE_PATH . '/admin/'); ?>,
+    apiUrl: 'api/index.php',
+    adminUrl: 'admin/',
     isLoggedIn: <?php echo $isLoggedIn ? 'true' : 'false'; ?>,
     isAdmin: <?php echo $isAdmin ? 'true' : 'false'; ?>,
     isVerified: <?php echo $isVerified ? 'true' : 'false'; ?>,

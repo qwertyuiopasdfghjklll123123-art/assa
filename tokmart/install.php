@@ -139,6 +139,13 @@ if (!$alreadyInstalled && $_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if (empty($errors)) {
         $appSecret = bin2hex(random_bytes(32));
+        // install.php always lives at the true application root, so this is a
+        // reliable, one-time way to learn the base URL path the app is served
+        // under (e.g. '' at a domain root, '/tokmart' in a subdirectory) -
+        // far more robust than re-deriving it from SCRIPT_FILENAME on every
+        // request, which can misbehave under symlinks, proxies, or unusual
+        // server configs and silently breaks every asset/API URL on the site.
+        $basePath = rtrim(str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? '/')), '/');
         $configContent = "<?php\n\nreturn [\n"
             . "    'db' => [\n"
             . "        'host'    => " . var_export($dbHost, true) . ",\n"
@@ -148,6 +155,7 @@ if (!$alreadyInstalled && $_SERVER['REQUEST_METHOD'] === 'POST') {
             . "        'pass'    => " . var_export($dbPass, true) . ",\n"
             . "        'charset' => 'utf8mb4',\n"
             . "    ],\n"
+            . "    'base_path'  => " . var_export($basePath, true) . ",\n"
             . "    'app_secret' => " . var_export($appSecret, true) . ",\n"
             . "];\n";
 

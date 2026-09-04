@@ -82,35 +82,32 @@
         }
         
         /* ============================================================
-         /* تصميم موحد ومنسق لجميع أنواع الإشعارات والتنبيهات المنبثقة */
-.toast, 
-.alert, 
-.notification, 
-.swal2-popup, 
-div[class*="notification"], 
-div[class*="toast"] {
-    background-color: #0f3d1c !important; /* اللون الأخضر الداكن الجديد */
-    color: #ffffff !important;           /* لون الخط أبيض وواضح */
-    border-radius: 14px !important;      /* زوايا دائرية أكثر نعومة */
-    padding: 16px 22px !important;
-    box-shadow: 0 8px 24px rgba(15, 61, 28, 0.25) !important; /* ظل متناسق مع لون الهوية */
-    font-size: 14px !important;
-    font-weight: 500 !important;
-    border: 1px solid rgba(255, 255, 255, 0.1) !important; /* إطار خفيف وداعم للتصميم */
+           تصميم الإشعار المنبثق (toast) الموحد - نفس هوية إشعار لوحة الإدارة
+           ============================================================ */
+#toast {
+    position: fixed;
+    bottom: calc(100px + var(--safe-area-bottom));
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: var(--primary);
+    color: #ffffff;
+    border-radius: var(--radius-sm);
+    padding: 14px 24px;
+    box-shadow: var(--shadow-lg);
+    font-size: var(--fs-md);
+    font-weight: 600;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 88%;
+    text-align: center;
+    opacity: 0;
+    pointer-events: none;
+    z-index: var(--z-snackbar);
+    transition: all 0.3s var(--ease-spring);
 }
 
-/* تخصيص لون أيقونات الخطأ أو التحذير داخل الإشعار لتكون واضحة وجذابة */
-.toast .fa-times-circle, 
-.alert .error-icon, 
-.swal2-icon-error {
-    color: #ff6b6b !important;
-}
-
-/* تخصيص لون أيقونات النجاح داخل الإشعار */
-.toast .fa-check-circle, 
-.alert .success-icon, 
-.swal2-icon-success {
-    color: #4cd137 !important;
+#toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
 }
         /* ============================================================
            LIGHTBOX

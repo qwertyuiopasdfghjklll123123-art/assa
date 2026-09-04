@@ -31,18 +31,7 @@
             0% { opacity: 0; transform: translateX(20px); }
             100% { opacity: 1; transform: translateX(0); }
         }
-        
-        .notification-item {
-            animation: notifShine 5s ease-in-out infinite;
-        }
-        
-        @keyframes notifShine {
-            0% { background: var(--surface); }
-            10% { background: var(--bg2); }
-            20% { background: var(--surface); }
-            100% { background: var(--surface); }
-        }
-        
+
         .notification-item.unread {
             border-right: 4px solid var(--primary);
             background: var(--bg2);

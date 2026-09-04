@@ -81,61 +81,6 @@ function loadUserChatMessages() {
     });
 }
 
-function renderUserMessages(messages) {
-    const container = $('userMessagesContainer');
-    if (!container) return;
-    
-    const emptyMsg = $('emptyChatMessage');
-    if (emptyMsg) emptyMsg.remove();
-    const notification = $('newMsgNotification');
-    if (notification) notification.remove();
-    
-    if (!messages || messages.length === 0) {
-        container.innerHTML = `
-            <div style="text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;" id="emptyChatMessage">
-                <i class="fa-regular fa-comment-dots" style="font-size:48px;display:block;margin-bottom:12px;opacity:0.3;"></i>
-                ابدأ محادثتك مع الدعم الفني
-                <div style="font-size:12px;margin-top:8px;color:var(--text3);">سيرد فريق الدعم عليك في أقرب وقت</div>
-            </div>
-            <div class="new-msg-notification" id="newMsgNotification" onclick="scrollToBottomUser()">
-                <i class="fa-solid fa-circle" style="font-size:8px;color:var(--green);"></i>
-                رسائل جديدة <span id="newMsgCount">0</span>
-            </div>
-        `;
-        return;
-    }
-    
-    let html = '';
-    messages.forEach(function(msg) {
-        const isSent = msg.sender === 'user';
-        const timeStr = formatMessageTime(msg.createdAt);
-        const text = msg.message || '';
-        const readStatus = getReadStatusHtml(msg);
-        
-        html += `
-            <div class="message ${isSent ? 'sent' : 'received'}">
-                <div class="message-content">
-                    <div class="msg-text">${escapeHtml(text)}</div>
-                    <div class="msg-footer">
-                        <span class="msg-time ${isSent ? 'sent-time' : 'received-time'}">${timeStr}</span>
-                        ${isSent ? `<span class="msg-read-status">${readStatus}</span>` : ''}
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-    
-    html += `
-        <div class="new-msg-notification" id="newMsgNotification" onclick="scrollToBottomUser()">
-            <i class="fa-solid fa-circle" style="font-size:8px;color:var(--green);"></i>
-            رسائل جديدة <span id="newMsgCount">0</span>
-        </div>
-    `;
-    
-    container.innerHTML = html;
-    scrollToBottomUser();
-}
-
 function scrollToBottomUser() {
     const container = $('userMessagesContainer');
     if (container) {
@@ -228,26 +173,6 @@ function escapeHtml(text) {
     return div.innerHTML;
 }
 
-function formatMessageTime(timestamp) {
-    try {
-        if (!timestamp) return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-        const date = new Date(timestamp);
-        return date.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-    } catch (e) {
-        return new Date().toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' });
-    }
-}
-
-// ============================================================
-// ✅ دالة وقت القراءة (فارغة - لا تعرض أي شيء)
-// ============================================================
-function getReadStatusHtml(msg) {
-    return '';
-}
-
-// ============================================================
-// ✅ دالة عرض رسائل المستخدم (بدون وقت القراءة)
-// ============================================================
 function renderUserMessages(messages) {
     const container = $('userMessagesContainer');
     if (!container) return;

@@ -30,14 +30,19 @@
         
         .auth-body .btn-submit {
             width: 100%;
-            padding: 14px;
+            height: 50px;
+            padding: 0 22px;
             border: none;
-            border-radius: 12px;
+            border-radius: 14px;
             background: var(--primary-light);
             color: #fff;
             font-weight: 700;
-            font-size: 16px;
+            font-size: var(--fs-xl);
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
             transition: all 0.3s var(--ease-spring);
         }
         
@@ -170,25 +175,33 @@
         
         .logout-bottom-sheet .sheet-actions .btn-cancel-sheet {
             flex: 1;
-            padding: 14px;
+            height: 50px;
+            padding: 0 22px;
             border: 2px solid var(--border);
-            border-radius: 12px;
-            font-size: 15px;
+            border-radius: 14px;
+            font-size: var(--fs-xl);
             font-weight: 700;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.3s var(--ease-spring);
             background: var(--surface);
             color: var(--text2);
         }
-        
+
         .logout-bottom-sheet .sheet-actions .btn-confirm {
             flex: 1;
-            padding: 14px;
+            height: 50px;
+            padding: 0 22px;
             border: none;
-            border-radius: 12px;
-            font-size: 15px;
+            border-radius: 14px;
+            font-size: var(--fs-xl);
             font-weight: 700;
             cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.3s var(--ease-spring);
             background: var(--red);
             color: #fff;
