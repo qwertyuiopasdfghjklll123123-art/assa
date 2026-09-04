@@ -1,7 +1,7 @@
 <?php
 /**
  * Shared bootstrap: session, config, DB connection, upload folders.
- * Every entry point (app.php, index.php, admin/*.php, api/index.php) requires this first.
+ * Every entry point (index.php, admin/*.php, api/index.php) requires this first.
  */
 
 ini_set('session.cookie_lifetime', 60 * 60 * 24 * 365);

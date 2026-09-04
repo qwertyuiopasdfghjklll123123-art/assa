@@ -28,7 +28,7 @@ function requireAdmin(): bool {
 /** Used at the top of admin/*.php pages: redirects to the login screen instead of returning JSON. */
 function requireAdminPage(): void {
     if (!validateSession() || !isset($_SESSION['is_admin']) || $_SESSION['is_admin'] != 1) {
-        header('Location: ' . APP_BASE_PATH . '/app.php?page=account');
+        header('Location: ' . APP_BASE_PATH . '/index.php?page=account');
         exit;
     }
 }

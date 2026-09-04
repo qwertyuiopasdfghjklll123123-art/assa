@@ -40,7 +40,7 @@ function adminDeleteRow(action, id, confirmMsg, onDone) {
 
 function adminLogout() {
     adminPostAction('logout', {}).then(function() {
-        window.location.href = '../app.php';
+        window.location.href = '../index.php';
     });
 }
 

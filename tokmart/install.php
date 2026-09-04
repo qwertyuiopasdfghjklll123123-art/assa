@@ -169,10 +169,11 @@ if (!$alreadyInstalled && $_SERVER['REQUEST_METHOD'] === 'POST') {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>تثبيت Tokmart</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;600;700;800&family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { font-family: "Segoe UI", Tahoma, sans-serif; background: #F5F9FA; color: #193E45; direction: rtl; padding: 40px 16px; }
+body { font-family: 'IBM Plex Sans Arabic', 'Tajawal', system-ui, sans-serif; background: #F5F9FA; color: #193E45; direction: rtl; padding: 40px 16px; }
 .wrap { max-width: 640px; margin: 0 auto; }
 .logo { text-align: center; margin-bottom: 24px; }
 .logo i { font-size: 40px; color: #0f3d1c; }

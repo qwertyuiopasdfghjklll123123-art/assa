@@ -161,11 +161,7 @@ function renderAll() {
     renderFavorites();
     renderOrders();
     renderNotifications();
-    renderAdmin();
-    renderAdminRecharges();
-    loadAdminChats();
     updateBalanceDisplay();
-    updateAdminStats();
     updateNotifBadge();
     updateAccountUI();
 }
@@ -649,11 +645,3 @@ function renderOrders() {
         `;
     }).join('');
 }
-
-// ============================================================
-// ADMIN RENDER FUNCTIONS
-// ============================================================
-
-// ============================================================
-// ✅ دالة renderAdmin المُصححة
-// ============================================================

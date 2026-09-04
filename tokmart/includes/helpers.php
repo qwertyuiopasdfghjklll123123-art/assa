@@ -3,9 +3,30 @@
  * Small cross-cutting helpers used across the API handlers and pages.
  */
 
+/**
+ * DB columns of type DECIMAL come back from PDO/MySQL as strings (e.g. "0.00"),
+ * unlike INT columns which PDO already returns as native ints. The frontend does
+ * arithmetic (.toFixed(), comparisons) on these, so cast them to float before
+ * every JSON response - recursively, since getData() nests products inside
+ * categories, items inside orders, etc.
+ */
+const NUMERIC_RESPONSE_FIELDS = ['price', 'oldPrice', 'balance', 'total', 'transferAmount', 'amount', 'rating'];
+
+function castNumericFields($data) {
+    if (!is_array($data)) return $data;
+    foreach ($data as $key => $value) {
+        if (is_array($value)) {
+            $data[$key] = castNumericFields($value);
+        } elseif (in_array($key, NUMERIC_RESPONSE_FIELDS, true) && $value !== null && is_numeric($value)) {
+            $data[$key] = (float)$value;
+        }
+    }
+    return $data;
+}
+
 function response(bool $success, string $message, $data = null): void {
     header('Content-Type: application/json; charset=utf-8');
-    echo json_encode(['success' => $success, 'message' => $message, 'data' => $data], JSON_UNESCAPED_UNICODE);
+    echo json_encode(['success' => $success, 'message' => $message, 'data' => castNumericFields($data)], JSON_UNESCAPED_UNICODE);
     exit;
 }
 

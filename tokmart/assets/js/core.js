@@ -403,7 +403,16 @@ function setLanguage(lang) {
     document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
     document.documentElement.lang = lang;
     updateAllTexts();
+    renderLanguageOptions();
+    if (typeof updateLanguageDisplay === 'function') updateLanguageDisplay();
     showToast(t('update_success'));
+}
+
+function renderLanguageOptions() {
+    const ar = document.getElementById('langOptionAr');
+    const en = document.getElementById('langOptionEn');
+    if (ar) ar.classList.toggle('selected', currentLang === 'ar');
+    if (en) en.classList.toggle('selected', currentLang === 'en');
 }
 
 function updateAllTexts() {

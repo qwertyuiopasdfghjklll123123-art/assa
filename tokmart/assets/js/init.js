@@ -18,6 +18,12 @@ function init() {
         state.user = null;
     }
     
+    // ===== تطبيق اللغة المحفوظة =====
+    document.documentElement.dir = currentLang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = currentLang;
+    updateAllTexts();
+    renderLanguageOptions();
+
     updateBalanceDisplay();
     updateAccountUI();
     
@@ -163,48 +169,6 @@ function init() {
             if (!state.isAdmin || !state.isLoggedIn) { showToast('غير مصرح لك بالدخول'); return; }
             window.location.href = window.APP_CONFIG.adminUrl;
         });
-    }
-
-    const closeAdminBtn = $('closeAdminBtn');
-    if (closeAdminBtn) {
-        closeAdminBtn.addEventListener('click', function() { closeAdminPage(); });
-    }
-
-    $$('.admin-tabs button').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            $$('.admin-tabs button').forEach(function(b) { b.classList.remove('active'); });
-            this.classList.add('active');
-            $$('.admin-tab-content').forEach(function(tc) { tc.classList.remove('active'); });
-            const target = $(this.dataset.tab);
-            if (target) target.classList.add('active');
-            if (this.dataset.tab === 'tab-chats') loadAdminChats();
-            if (this.dataset.tab === 'tab-recharges') renderAdminRecharges();
-        });
-    });
-
-    const addProductBtn = $('addProductBtn');
-    if (addProductBtn) {
-        addProductBtn.addEventListener('click', function() { openProductForm(); });
-    }
-
-    const cancelProductForm = $('cancelProductForm');
-    if (cancelProductForm) {
-        cancelProductForm.addEventListener('click', closeProductForm);
-    }
-
-    const addCategoryBtn = $('addCategoryBtn');
-    if (addCategoryBtn) {
-        addCategoryBtn.addEventListener('click', function() { openCategoryForm(); });
-    }
-
-    const cancelCategoryForm = $('cancelCategoryForm');
-    if (cancelCategoryForm) {
-        cancelCategoryForm.addEventListener('click', closeCategoryForm);
-    }
-
-    const addPaymentBtn = $('addPaymentBtn');
-    if (addPaymentBtn) {
-        addPaymentBtn.addEventListener('click', function() { openPaymentForm(); });
     }
 
     const closeSuccessBtn = $('closeSuccessBtn');

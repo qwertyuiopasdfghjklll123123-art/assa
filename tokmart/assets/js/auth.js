@@ -2179,7 +2179,8 @@ function updateAccountUI() {
 function updateLanguageDisplay() {
     const display = $('currentLangDisplay');
     if (display) {
-        display.textContent = currentLang === 'ar' ? 'العربية' : 'English';
+        display.innerHTML = '<i class="fa-solid fa-check" style="font-size:var(--fs-xs);color:var(--green);margin-left:4px;"></i>'
+            + (currentLang === 'ar' ? 'العربية' : 'English');
     }
 }
 
