@@ -404,6 +404,22 @@ const BADGE_C={blue:'bb-bl',pink:'bb-pk',cyan:'bb-cn'};
 const LANGS={ar:{dir:'rtl',label:'العربية',about:'من أنا',works:'أعمالي',all:'الكل ←',articles:'مقالاتي',skills:'مهاراتي',contact:'تواصل معي',links:'روابطي',read:'اقرأ المزيد',min:'دقائق قراءة',avail:'متاح للعمل',loc:'العراق · البصرة',copy:'© حمزة — 2026',photo:'صورتك هنا',loading:'جاري التحميل...',footer:'حمزة — 2026'},en:{dir:'ltr',label:'English',about:'About Me',works:'My Work',all:'View All →',articles:'Articles',skills:'Skills',contact:'Contact',links:'My Links',read:'Read More',min:'min read',avail:'Available',loc:'Iraq · Basrah',copy:'© Hamza — 2026',photo:'Your photo here',loading:'Loading...',footer:'Hamza — 2026'},tr:{dir:'ltr',label:'Türkçe',about:'Hakkımda',works:'Çalışmalarım',all:'Tümü →',articles:'Makaleler',skills:'Yetenekler',contact:'İletişim',links:'Bağlantılar',read:'Devamı',min:'dk okuma',avail:'Müsait',loc:'Irak · Basra',copy:'© Hamza — 2026',photo:'Fotoğrafınız',loading:'Yükleniyor...',footer:'Hamza — 2026'},zh:{dir:'ltr',label:'中文',about:'关于我',works:'作品',all:'全部 →',articles:'文章',skills:'技能',contact:'联系',links:'链接',read:'阅读更多',min:'分钟',avail:'可接受工作',loc:'伊拉克 · 巴士拉',copy:'© 哈姆扎 — 2026',photo:'你的照片',loading:'加载中...',footer:'哈姆扎 — 2026'},ja:{dir:'ltr',label:'日本語',about:'自己紹介',works:'作品',all:'すべて →',articles:'記事',skills:'スキル',contact:'連絡先',links:'リンク',read:'続きを読む',min:'分',avail:'仕事受付中',loc:'イラク · バスラ',copy:'© ハムザ — 2026',photo:'写真をここに',loading:'読み込み中...',footer:'ハムザ — 2026'}};
 let DATA=null,CL='ar';
 const LANG_MAP={ar:'ar',en:'en',tr:'tr',zh:'zh-CN',ja:'ja'};
+const FALLBACK_DATA={
+  profile:{name:'حمزة',role:'Full-Stack Developer · العراق',about:'مطور ويب عراقي شغوف ببناء المنصات الرقمية المبتكرة. أعمل على تطوير حلول تقنية متكاملة تخدم آلاف المستخدمين يومياً — من كتابة الكود لإدارة البنية التحتية.',available:true,photo:null},
+  works:[
+    {title:'مشروع تجريبي 1',description:'وصف مختصر يظهر هنا لحين ربط الصفحة بمصدر بياناتك الحقيقي عبر /api/data.',icon:'fas fa-code',color:'blue',status:'live',url:''},
+    {title:'مشروع تجريبي 2',description:'محتوى تجريبي آخر — استبدله ببياناتك الفعلية من الخادم.',icon:'fas fa-mobile-screen',color:'cyan',status:'dev',url:''}
+  ],
+  articles:[
+    {title:'مقال تجريبي',description:'هذا محتوى تجريبي يظهر لحين ربط مصدر البيانات الحقيقي.',badge:'تجريبي',badge_color:'blue',date:'2026-01-01',read_time:3}
+  ],
+  skills:[
+    {name:'Python',icon:'fab fa-python',color:'linear-gradient(135deg,#4f8eff,#3a6fcc)',percentage:90},
+    {name:'Flask',icon:'fas fa-flask',color:'linear-gradient(135deg,#00b4d8,#0090aa)',percentage:85},
+    {name:'JavaScript',icon:'fab fa-js',color:'linear-gradient(135deg,#f0a030,#d09020)',percentage:80}
+  ],
+  social:[]
+};
 
 function isDesktop(){return window.innerWidth>=1024}
 
@@ -431,13 +447,12 @@ async function loadData(){
   try{
     const lp=LANG_MAP[CL]||CL;
     const r=await fetch('/api/data?lang='+lp);
+    if(!r.ok)throw new Error('bad response');
     DATA=await r.json();
-    render();
   }catch(e){
-    const t='<div class="loading">خطأ بالتحميل</div>';
-    const a=document.getElementById('app');if(a)a.innerHTML=t;
-    const m=document.getElementById('d-mainContent');if(m)m.innerHTML=t;
+    DATA=FALLBACK_DATA;
   }
+  render();
 }
 
 function setL(l){
