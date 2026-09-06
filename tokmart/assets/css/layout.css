@@ -115,7 +115,16 @@ header {
     flex-direction: column;
 }
 
-/* ===== SCROLL AREA ===== */
+/* ===== SCROLL AREA =====
+   No z-index here even though header/bottom-nav sit visually above this
+   area: setting one would make .scroll-area a stacking context, which traps
+   its fixed-position descendants (.auth-page.open, .settings-page.open,
+   etc.) inside that context. Their own z-index:var(--z-modal) would then
+   only be compared against siblings *inside* .scroll-area, never against
+   header's z-index:var(--z-header) one level up - so header (and its logo)
+   would keep painting on top of what's supposed to be a fullscreen overlay
+   covering it. Plain flow order already keeps this below header/bottom-nav
+   without needing a z-index. */
 .scroll-area {
     flex: 1 1 auto !important;
     height: 0 !important;
@@ -126,7 +135,6 @@ header {
     scroll-behavior: smooth;
     padding-bottom: 120px;
     position: relative;
-    z-index: var(--z-content);
     background: var(--bg);
     touch-action: pan-y;
 }
