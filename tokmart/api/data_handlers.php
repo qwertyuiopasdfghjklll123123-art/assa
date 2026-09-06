@@ -20,7 +20,6 @@ function handleDataAction(string $action): void {
                 ? query("SELECT * FROM orders ORDER BY id DESC LIMIT 50")
                 : query("SELECT * FROM orders WHERE userId = :userId ORDER BY id DESC LIMIT 10", [':userId' => $userId]);
 
-            $users = query("SELECT id, name, email, phone, balance, isAdmin, adminType, avatar_path, registeredAt, lastActivity, isVerified FROM users");
             $payments = query("SELECT * FROM payments WHERE enabled = 1");
             $notifications = query("SELECT * FROM notifications WHERE userId = :userId ORDER BY id DESC LIMIT 20", [':userId' => $userId]);
             $chats = query("SELECT * FROM chats WHERE userId = :userId ORDER BY id DESC LIMIT 50", [':userId' => $userId]);
@@ -62,20 +61,10 @@ function handleDataAction(string $action): void {
             }
             unset($c);
 
-            foreach ($users as &$u) {
-                $u['avatar_url'] = $u['avatar_path'] ? uploadUrl('avatars', $u['avatar_path']) : '';
-                $u['unread_chats'] = queryOne("SELECT COUNT(*) as count FROM chats WHERE userId = :userId AND isRead = 0", [':userId' => $u['id']])['count'] ?? 0;
-                $status = getUserStatus($u['id']);
-                $u['status'] = $status['status'];
-                $u['status_text'] = $status['text'];
-            }
-            unset($u);
-
             response(true, 'تم جلب البيانات', [
                 'products' => $products,
                 'categories' => $categories,
                 'orders' => $orders,
-                'users' => $users,
                 'payments' => $payments,
                 'notifications' => $notifications,
                 'chats' => $chats,

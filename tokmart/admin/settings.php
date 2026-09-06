@@ -129,6 +129,15 @@ require __DIR__ . '/includes/header.php';
     </div>
     <button class="btn btn-md btn-primary" onclick="saveSMTPSettings()">حفظ إعدادات البريد</button>
     <div class="settings-status" id="smtpStatus"></div>
+
+    <div class="form-group" style="margin-top:18px; padding-top:18px; border-top:1px solid var(--border);">
+        <label>اختبار الإرسال (يرسل رسالة تجريبية بالإعدادات الحالية في الأعلى قبل الحفظ)</label>
+        <div class="form-row">
+            <input type="email" id="smtpTestEmail" placeholder="بريدك الإلكتروني لاستقبال رسالة تجريبية">
+            <button class="btn btn-md btn-outline" onclick="testSMTPSettings()" style="white-space:nowrap;">إرسال بريد تجريبي</button>
+        </div>
+    </div>
+    <div class="settings-status" id="smtpTestStatus"></div>
 </div>
 
 <script>
@@ -184,6 +193,27 @@ function saveSMTPSettings() {
         enabled: $('smtpEnabled').checked ? '1' : '0'
     }, 'POST').then(function(res) {
         setStatus('smtpStatus', res.success, res.success ? '✅ ' + res.message : '❌ ' + res.message);
+    });
+}
+
+function testSMTPSettings() {
+    const testEmail = $('smtpTestEmail').value.trim();
+    if (!testEmail) {
+        setStatus('smtpTestStatus', false, '❌ الرجاء إدخال بريد إلكتروني لاستقبال الرسالة التجريبية');
+        return;
+    }
+    setStatus('smtpTestStatus', true, '⏳ جارٍ الإرسال...');
+    adminApi('testSMTPSettings', {
+        test_email: testEmail,
+        host: $('smtpHost').value.trim(),
+        port: $('smtpPort').value,
+        username: $('smtpUsername').value.trim(),
+        password: $('smtpPassword').value,
+        encryption: $('smtpEncryption').value,
+        from_email: $('smtpFromEmail').value.trim(),
+        from_name: $('smtpFromName').value.trim()
+    }, 'POST').then(function(res) {
+        setStatus('smtpTestStatus', res.success, res.message);
     });
 }
 </script>

@@ -9,7 +9,7 @@ function handleSettingsAction(string $action): void {
             requireAdmin();
 
             $clientId = getVal('client_id');
-            $clientSecret = getVal('client_secret');
+            $clientSecret = getRawVal('client_secret');
             $enabled = isTruthy(getVal('enabled'));
 
             if (empty($clientId) || empty($clientSecret)) {
@@ -31,13 +31,13 @@ function handleSettingsAction(string $action): void {
             requireAdmin();
 
             $smtpData = [
-                'host' => getVal('host'),
+                'host' => getRawVal('host'),
                 'port' => intval(getVal('port', 465)),
-                'username' => getVal('username'),
-                'password' => getVal('password'),
+                'username' => getRawVal('username'),
+                'password' => getRawVal('password'),
                 'encryption' => getVal('encryption', 'ssl'),
-                'from_email' => getVal('from_email'),
-                'from_name' => getVal('from_name', 'Tokmart'),
+                'from_email' => getRawVal('from_email'),
+                'from_name' => getRawVal('from_name', 'Tokmart'),
                 'enabled' => isTruthy(getVal('enabled')),
             ];
 
@@ -45,6 +45,32 @@ function handleSettingsAction(string $action): void {
                 response(true, 'تم حفظ إعدادات البريد');
             } else {
                 response(false, 'فشل حفظ الإعدادات');
+            }
+            break;
+
+        case 'testSMTPSettings':
+            requireAdmin();
+
+            $testEmail = trim(getVal('test_email', ''));
+            if (empty($testEmail) || !filter_var($testEmail, FILTER_VALIDATE_EMAIL)) {
+                response(false, 'الرجاء إدخال بريد إلكتروني صحيح للاختبار');
+            }
+
+            $smtpOverride = [
+                'host' => getRawVal('host'),
+                'port' => intval(getVal('port', 465)),
+                'username' => getRawVal('username'),
+                'password' => getRawVal('password'),
+                'encryption' => getVal('encryption', 'ssl'),
+                'from_email' => getRawVal('from_email'),
+                'from_name' => getRawVal('from_name', 'Tokmart'),
+            ];
+
+            $result = sendTestEmail($testEmail, $smtpOverride);
+            if ($result['success']) {
+                response(true, '✅ تم إرسال البريد التجريبي بنجاح، تحقق من صندوق الوارد');
+            } else {
+                response(false, '❌ فشل الإرسال: ' . $result['error']);
             }
             break;
 

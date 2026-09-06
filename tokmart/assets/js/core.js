@@ -83,7 +83,6 @@ let state = {
     rechargeMethods: window.APP_CONFIG.rechargeMethods,
     notifications: [],
     chats: [],
-    users: [],
     recharges: [],
     flashDeals: [],
     bestSellers: [],

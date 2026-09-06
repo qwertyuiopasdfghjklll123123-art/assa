@@ -41,6 +41,17 @@ function getVal(string $key, $default = '') {
     return $value;
 }
 
+/**
+ * Same as getVal() but without strip_tags/htmlspecialchars - for credential
+ * fields (passwords, API secrets) that are never rendered as HTML and must
+ * round-trip byte-for-byte to authenticate against an external service.
+ * Templates that display these values already escape them at render time.
+ */
+function getRawVal(string $key, $default = '') {
+    global $input;
+    return $input[$key] ?? $default;
+}
+
 function isTruthy($value): bool {
     return $value === true || $value === 1 || $value === '1' || $value === 'true';
 }

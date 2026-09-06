@@ -98,7 +98,6 @@ function applyData(data, silent) {
     if (data.payments) state.payments = data.payments;
     state.notifications = data.notifications || [];
     state.chats = data.chats || [];
-    state.users = data.users || [];
     state.recharges = data.recharges || [];
     state.flashDeals = data.flashDeals || [];
     state.bestSellers = data.bestSellers || [];
@@ -122,14 +121,6 @@ function applyData(data, silent) {
                 avatar_path: data.user.avatar_path
             }));
         } catch (e) {}
-    } else if (state.isLoggedIn && state.user) {
-        const updated = state.users.find(function(u) { return u.id === state.user.id; });
-        if (updated) {
-            state.user = updated;
-            state.balance = updated.balance || 0;
-            state.isAdmin = updated.isAdmin || false;
-            state.isVerified = updated.isVerified || false;
-        }
     }
 
     renderAll();

@@ -3,6 +3,17 @@
  * SMTP config + verification email sending.
  */
 
+// PHPMailer is vendored directly (no Composer) so it works on plain shared
+// hosting; guarded by file_exists so a partial upload degrades to the
+// mail() fallback below instead of a fatal error on every request.
+$phpmailerEntry = __DIR__ . '/lib/PHPMailer/PHPMailer.php';
+if (!class_exists('PHPMailer\PHPMailer\PHPMailer') && file_exists($phpmailerEntry)) {
+    require_once __DIR__ . '/lib/PHPMailer/Exception.php';
+    require_once __DIR__ . '/lib/PHPMailer/SMTP.php';
+    require_once $phpmailerEntry;
+}
+unset($phpmailerEntry);
+
 function getSMTPConfig(): array {
     $row = queryOne("SELECT value FROM settings WHERE `key` = 'smtp'");
     if ($row) {
@@ -20,6 +31,42 @@ function getSMTPConfig(): array {
         'from_name' => 'Tokmart',
         'enabled' => false,
     ];
+}
+
+/**
+ * Sends a real test email using the given (possibly unsaved) SMTP settings,
+ * so the admin can verify credentials from the settings page before saving.
+ * Returns the actual SMTP error instead of just true/false.
+ */
+function sendTestEmail(string $to, array $smtp): array {
+    if (empty($smtp['host']) || empty($smtp['from_email'])) {
+        return ['success' => false, 'error' => 'الرجاء تعبئة خادم SMTP وبريد المرسل أولاً'];
+    }
+    if (!class_exists('PHPMailer\PHPMailer\PHPMailer')) {
+        return ['success' => false, 'error' => 'مكتبة إرسال البريد (PHPMailer) غير موجودة على السيرفر، تحقق من رفع مجلد includes/lib/PHPMailer بالكامل'];
+    }
+
+    try {
+        $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+        $mail->isSMTP();
+        $mail->Host = $smtp['host'];
+        $mail->SMTPAuth = !empty($smtp['username']);
+        $mail->Username = $smtp['username'] ?? '';
+        $mail->Password = $smtp['password'] ?? '';
+        $mail->SMTPSecure = $smtp['encryption'] ?: false;
+        $mail->Port = (int)($smtp['port'] ?: 465);
+        $mail->setFrom($smtp['from_email'], $smtp['from_name'] ?: 'Tokmart');
+        $mail->addAddress($to);
+        $mail->isHTML(true);
+        $mail->CharSet = 'UTF-8';
+        $mail->Subject = '✅ بريد تجريبي - إعدادات SMTP تعمل بنجاح';
+        $mail->Body = '<p style="font-family:Arial,sans-serif">هذه رسالة تجريبية من متجرك على Tokmart. وصول هذه الرسالة يعني أن إعدادات SMTP صحيحة وجاهزة لإرسال أكواد التحقق.</p>';
+        $mail->AltBody = 'هذه رسالة تجريبية من متجرك على Tokmart. وصول هذه الرسالة يعني أن إعدادات SMTP صحيحة وجاهزة لإرسال أكواد التحقق.';
+        $mail->send();
+        return ['success' => true, 'error' => ''];
+    } catch (Exception $e) {
+        return ['success' => false, 'error' => $mail->ErrorInfo ?: $e->getMessage()];
+    }
 }
 
 /**

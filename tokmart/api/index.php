@@ -81,6 +81,7 @@ $routes = [
     'deletePayment' => 'handlePaymentAction', 'togglePayment' => 'handlePaymentAction',
 
     'saveGoogleOAuth' => 'handleSettingsAction', 'saveSMTPSettings' => 'handleSettingsAction',
+    'testSMTPSettings' => 'handleSettingsAction',
     'saveSiteSettings' => 'handleSettingsAction', 'savePolicy' => 'handleSettingsAction',
 ];
 
