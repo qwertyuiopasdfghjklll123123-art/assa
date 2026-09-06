@@ -178,7 +178,7 @@ function handleChatAction(string $action): void {
 
                     if ($sender === 'user') {
                         $userName = $_SESSION['user_name'] ?? 'مستخدم';
-                        sendNotification($adminId, "💬 رسالة جديدة من " . $userName, $message, 'chat', '/admin/chats.php');
+                        sendNotification($adminId, "💬 رسالة جديدة من " . $userName, $message, 'chat', '/admin/chats');
                     } else {
                         sendNotification($userId, "💬 رد من الدعم الفني", $message, 'chat', '/chat');
                     }
@@ -223,7 +223,7 @@ function handleChatAction(string $action): void {
                     VALUES (:userId, :adminId, :message, 'text', 'user', 0, NOW())";
 
             if (execute($sql, [':userId' => $userId, ':adminId' => $adminId, ':message' => $message])) {
-                sendNotification($adminId, "💬 رسالة دعم حول الطلب", $message, 'chat', '/admin/chats.php');
+                sendNotification($adminId, "💬 رسالة دعم حول الطلب", $message, 'chat', '/admin/chats');
                 response(true, 'تم إرسال رسالتك');
             } else {
                 response(false, 'فشل إرسال الرسالة');

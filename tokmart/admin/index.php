@@ -48,7 +48,7 @@ require __DIR__ . '/includes/header.php';
 <div class="admin-panel-section">
     <div class="admin-panel-section-header">
         <h3><i class="fa-solid fa-receipt"></i> أحدث الطلبات</h3>
-        <a href="orders.php" class="btn btn-sm btn-outline">عرض الكل</a>
+        <a href="<?php echo $adminBase; ?>/orders" class="btn btn-sm btn-outline">عرض الكل</a>
     </div>
     <div class="admin-table-wrap">
         <?php if (empty($recentOrders)): ?>
@@ -76,7 +76,7 @@ require __DIR__ . '/includes/header.php';
 <div class="admin-panel-section">
     <div class="admin-panel-section-header">
         <h3><i class="fa-solid fa-wallet"></i> أحدث طلبات الشحن</h3>
-        <a href="recharges.php" class="btn btn-sm btn-outline">عرض الكل</a>
+        <a href="<?php echo $adminBase; ?>/recharges" class="btn btn-sm btn-outline">عرض الكل</a>
     </div>
     <div class="admin-table-wrap">
         <?php if (empty($recentRecharges)): ?>

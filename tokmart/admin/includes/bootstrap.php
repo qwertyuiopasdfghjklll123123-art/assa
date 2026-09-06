@@ -13,7 +13,10 @@ $pendingOrdersCount = (int)(queryOne("SELECT COUNT(*) as count FROM orders WHERE
 
 // Relative on purpose (mirrors the root index.php's own reasoning): these
 // pages live one level under the app root, so "../assets" reaches the same
-// shared folder regardless of how deep/shallow the app is installed.
+// shared folder regardless of how deep/shallow the app is installed. That
+// holds under the clean /admin/<page> URLs too - one path segment before the
+// page name either way, so the ".." resolves the same.
 $assetsBase = '../assets';
 $apiUrl = '../api/index.php';
-$homeUrl = '../index.php';
+$homeUrl = APP_BASE_PATH . '/app';
+$adminBase = APP_BASE_PATH . '/admin';

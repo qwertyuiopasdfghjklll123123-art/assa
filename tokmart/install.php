@@ -215,7 +215,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <i class="fa-solid fa-circle-check"></i>
             <h2>تم الإعداد بنجاح!</h2>
             <p>تم إنشاء قاعدة البيانات وحساب المدير الخاص بك. يمكنك الآن الدخول إلى لوحة التحكم.</p>
-            <a href="admin/index.php">الدخول إلى لوحة التحكم <i class="fa-solid fa-arrow-left"></i></a>
+            <a href="<?php echo APP_BASE_PATH; ?>/admin">الدخول إلى لوحة التحكم <i class="fa-solid fa-arrow-left"></i></a>
         </div>
     </div>
     <?php else: ?>

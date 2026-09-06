@@ -8,12 +8,28 @@
 
 AddDefaultCharset UTF-8
 
-# Clean URLs: /app for the storefront, /admin for the admin panel (which
-# already redirects non-admins away on its own - this only affects the URL
-# shown, not who can see what).
+# Clean URLs: /app for the storefront, /admin (+ /admin/<page>) for the admin
+# panel (which already redirects non-admins away on its own - this only
+# affects the URL shown, not who can see what). No ".php" name, "index.php",
+# or bare "/" is ever left visible - each 301s to its clean form first.
 <IfModule mod_rewrite.c>
     RewriteEngine On
     RewriteBase /
+
+    # ---- Bounce old/direct URLs to their clean form (visible redirect) ----
+    RewriteRule ^$ /app [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/+index\.php[\s?] [NC]
+    RewriteRule ^index\.php$ /app [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/+admin/index\.php[\s?] [NC]
+    RewriteRule ^admin/index\.php$ /admin [R=301,L]
+
+    RewriteCond %{THE_REQUEST} \s/+admin/(products|categories|orders|users|payments|recharges|chats|settings|logout)\.php[\s?] [NC]
+    RewriteRule ^admin/(products|categories|orders|users|payments|recharges|chats|settings|logout)\.php$ /admin/$1 [R=301,L]
+
+    # ---- Clean URL -> real file (internal, address bar keeps the clean form) ----
     RewriteRule ^app/?$ index.php [L]
     RewriteRule ^admin/?$ admin/index.php [L]
+    RewriteRule ^admin/(products|categories|orders|users|payments|recharges|chats|settings|logout)/?$ admin/$1.php [L,QSA]
 </IfModule>

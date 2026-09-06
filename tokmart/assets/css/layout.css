@@ -102,10 +102,24 @@ header {
     border-color: var(--secondary) !important;
 }
 
+/* ===== MAIN CONTENT SHELL =====
+   #app is the fixed, full-height flex column (header + this). Without an
+   explicit height here, this block only grows to fit its own content, so
+   .scroll-area's height:0/flex:1 below has nothing to size against and the
+   page collapses to its content height - leaving the rest of #app's box as
+   dead space that just shows its background color, looking like most of
+   the screen is blank/hidden. */
+#mainContent {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
 /* ===== SCROLL AREA ===== */
 .scroll-area {
-    flex: 1;
-    height: 100%;
+    flex: 1 1 auto !important;
+    height: 0 !important;
+    min-height: 0;
     overflow-y: auto !important;
     overflow-x: hidden;
     -webkit-overflow-scrolling: touch;

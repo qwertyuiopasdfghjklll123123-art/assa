@@ -48,7 +48,7 @@ function handleRechargeAction(string $action): void {
             ])) {
                 // Notify every admin account - a made-up userId of 0 (as in the
                 // original) would silently vanish, since no user has that id.
-                sendNotificationToAdmins('💰 طلب شحن رصيد جديد', 'المبلغ: ' . number_format($amount, 2) . ' د.ع', 'wallet', '/admin/recharges.php');
+                sendNotificationToAdmins('💰 طلب شحن رصيد جديد', 'المبلغ: ' . number_format($amount, 2) . ' د.ع', 'wallet', '/admin/recharges');
                 response(true, 'تم إرسال طلب الشحن بنجاح');
             } else {
                 response(false, 'فشل إرسال الطلب');

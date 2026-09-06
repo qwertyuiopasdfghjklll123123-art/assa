@@ -780,7 +780,7 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
 <script>
 window.APP_CONFIG = {
     apiUrl: 'api/index.php',
-    adminUrl: 'admin/',
+    adminUrl: '<?php echo APP_BASE_PATH; ?>/admin',
     isLoggedIn: <?php echo $isLoggedIn ? 'true' : 'false'; ?>,
     isAdmin: <?php echo $isAdmin ? 'true' : 'false'; ?>,
     isVerified: <?php echo $isVerified ? 'true' : 'false'; ?>,

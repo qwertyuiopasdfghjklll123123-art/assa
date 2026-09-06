@@ -123,7 +123,7 @@ function handleOrderAction(string $action): void {
             }
 
             $paymentName = $payment === 'cash' ? 'الدفع عند الاستلام' : ($payment === 'electronic' ? 'الدفع الإلكتروني' : 'تحويل بنكي');
-            sendNotificationToAllUsers("📋 طلب جديد: $orderId", "طريقة الدفع: $paymentName - المبلغ: " . number_format($total, 2) . ' د.ع', 'order', '/admin/orders.php');
+            sendNotificationToAllUsers("📋 طلب جديد: $orderId", "طريقة الدفع: $paymentName - المبلغ: " . number_format($total, 2) . ' د.ع', 'order', '/admin/orders');
 
             $order = queryOne("SELECT * FROM orders WHERE id = :id", [':id' => $id]);
             if ($order) {

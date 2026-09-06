@@ -37,33 +37,33 @@ window.APP_CONFIG = {
         </div>
 
         <nav class="admin-nav">
-            <a href="index.php" class="admin-nav-item <?php echo $activeNav === 'dashboard' ? 'active' : ''; ?>">
+            <a href="<?php echo $adminBase; ?>" class="admin-nav-item <?php echo $activeNav === 'dashboard' ? 'active' : ''; ?>">
                 <i class="fa-solid fa-gauge"></i> <span>لوحة القيادة</span>
             </a>
-            <a href="products.php" class="admin-nav-item <?php echo $activeNav === 'products' ? 'active' : ''; ?>">
+            <a href="<?php echo $adminBase; ?>/products" class="admin-nav-item <?php echo $activeNav === 'products' ? 'active' : ''; ?>">
                 <i class="fa-solid fa-box"></i> <span>المنتجات</span>
             </a>
-            <a href="categories.php" class="admin-nav-item <?php echo $activeNav === 'categories' ? 'active' : ''; ?>">
+            <a href="<?php echo $adminBase; ?>/categories" class="admin-nav-item <?php echo $activeNav === 'categories' ? 'active' : ''; ?>">
                 <i class="fa-solid fa-tags"></i> <span>التصنيفات</span>
             </a>
-            <a href="orders.php" class="admin-nav-item <?php echo $activeNav === 'orders' ? 'active' : ''; ?>">
+            <a href="<?php echo $adminBase; ?>/orders" class="admin-nav-item <?php echo $activeNav === 'orders' ? 'active' : ''; ?>">
                 <i class="fa-solid fa-receipt"></i> <span>الطلبات</span>
                 <?php if ($pendingOrdersCount > 0): ?><span class="admin-nav-badge"><?php echo $pendingOrdersCount; ?></span><?php endif; ?>
             </a>
-            <a href="recharges.php" class="admin-nav-item <?php echo $activeNav === 'recharges' ? 'active' : ''; ?>">
+            <a href="<?php echo $adminBase; ?>/recharges" class="admin-nav-item <?php echo $activeNav === 'recharges' ? 'active' : ''; ?>">
                 <i class="fa-solid fa-wallet"></i> <span>طلبات الشحن</span>
                 <?php if ($pendingRechargesCount > 0): ?><span class="admin-nav-badge"><?php echo $pendingRechargesCount; ?></span><?php endif; ?>
             </a>
-            <a href="payments.php" class="admin-nav-item <?php echo $activeNav === 'payments' ? 'active' : ''; ?>">
+            <a href="<?php echo $adminBase; ?>/payments" class="admin-nav-item <?php echo $activeNav === 'payments' ? 'active' : ''; ?>">
                 <i class="fa-solid fa-credit-card"></i> <span>طرق الدفع</span>
             </a>
-            <a href="users.php" class="admin-nav-item <?php echo $activeNav === 'users' ? 'active' : ''; ?>">
+            <a href="<?php echo $adminBase; ?>/users" class="admin-nav-item <?php echo $activeNav === 'users' ? 'active' : ''; ?>">
                 <i class="fa-solid fa-users"></i> <span>المستخدمين</span>
             </a>
-            <a href="chats.php" class="admin-nav-item <?php echo $activeNav === 'chats' ? 'active' : ''; ?>">
+            <a href="<?php echo $adminBase; ?>/chats" class="admin-nav-item <?php echo $activeNav === 'chats' ? 'active' : ''; ?>">
                 <i class="fa-solid fa-headset"></i> <span>الدردشة</span>
             </a>
-            <a href="settings.php" class="admin-nav-item <?php echo $activeNav === 'settings' ? 'active' : ''; ?>">
+            <a href="<?php echo $adminBase; ?>/settings" class="admin-nav-item <?php echo $activeNav === 'settings' ? 'active' : ''; ?>">
                 <i class="fa-solid fa-gear"></i> <span>الإعدادات</span>
             </a>
         </nav>
@@ -72,7 +72,7 @@ window.APP_CONFIG = {
             <a href="<?php echo $homeUrl; ?>" class="admin-nav-item">
                 <i class="fa-solid fa-arrow-right-from-bracket fa-rotate-180"></i> <span>العودة للمتجر</span>
             </a>
-            <a href="logout.php" class="admin-nav-item admin-logout" onclick="return confirm('هل تريد تسجيل الخروج؟');">
+            <a href="<?php echo $adminBase; ?>/logout" class="admin-nav-item admin-logout" onclick="return confirm('هل تريد تسجيل الخروج؟');">
                 <i class="fa-solid fa-right-from-bracket"></i> <span>تسجيل الخروج</span>
             </a>
         </div>
