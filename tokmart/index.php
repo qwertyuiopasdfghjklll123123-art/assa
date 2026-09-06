@@ -164,12 +164,14 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                 </div>
 
                 <div class="settings-item" id="favoritesMenuItem">
-                    <div class="icon-box" style="background:linear-gradient(135deg, #E91E63, #C2185B);">
-                        <i class="fa-solid fa-heart"></i>
-                    </div>
-                    <div class="text-block">
-                        <div class="title" data-i18n="favorites">المفضلة</div>
-                        <div class="subtitle" data-i18n="favorites_sub">منتجاتك المفضلة</div>
+                    <div class="left">
+                        <div class="icon-box" style="background:linear-gradient(135deg, #E91E63, #C2185B);">
+                            <i class="fa-solid fa-heart"></i>
+                        </div>
+                        <div class="text-block">
+                            <div class="title" data-i18n="favorites">المفضلة</div>
+                            <div class="subtitle" data-i18n="favorites_sub">منتجاتك المفضلة</div>
+                        </div>
                     </div>
                     <div class="right">
                         <span class="count-badge" id="favCount"></span>
@@ -178,12 +180,14 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                 </div>
 
                 <div class="settings-item" id="ordersMenuItem">
-                    <div class="icon-box" style="background:linear-gradient(135deg, #058693, #0AA6B5);">
-                        <i class="fa-solid fa-box"></i>
-                    </div>
-                    <div class="text-block">
-                        <div class="title" data-i18n="my_orders">طلباتي</div>
-                        <div class="subtitle" data-i18n="track_orders">تتبع طلباتك</div>
+                    <div class="left">
+                        <div class="icon-box" style="background:linear-gradient(135deg, #058693, #0AA6B5);">
+                            <i class="fa-solid fa-box"></i>
+                        </div>
+                        <div class="text-block">
+                            <div class="title" data-i18n="my_orders">طلباتي</div>
+                            <div class="subtitle" data-i18n="track_orders">تتبع طلباتك</div>
+                        </div>
                     </div>
                     <div class="right">
                         <span class="count-badge" id="orderCount"></span>
@@ -192,12 +196,14 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                 </div>
 
                 <div class="settings-item" id="rechargeMenuItem">
-                    <div class="icon-box" style="background:linear-gradient(135deg, #D8B07A, #C49A5E);">
-                        <i class="fa-solid fa-wallet"></i>
-                    </div>
-                    <div class="text-block">
-                        <div class="title" data-i18n="recharge_balance">شحن الرصيد</div>
-                        <div class="subtitle" data-i18n="recharge_sub">إضافة رصيد لحسابك</div>
+                    <div class="left">
+                        <div class="icon-box" style="background:linear-gradient(135deg, #D8B07A, #C49A5E);">
+                            <i class="fa-solid fa-wallet"></i>
+                        </div>
+                        <div class="text-block">
+                            <div class="title" data-i18n="recharge_balance">شحن الرصيد</div>
+                            <div class="subtitle" data-i18n="recharge_sub">إضافة رصيد لحسابك</div>
+                        </div>
                     </div>
                     <div class="right">
                         <div class="chevron"><i class="fa-solid fa-chevron-left"></i></div>
@@ -205,12 +211,14 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                 </div>
 
                 <div class="settings-item" id="accountSettingsMenuItem">
-                    <div class="icon-box" style="background:linear-gradient(135deg, #6C5CE7, #4834D4);">
-                        <i class="fa-solid fa-gear"></i>
-                    </div>
-                    <div class="text-block">
-                        <div class="title" data-i18n="account_settings">إعدادات الحساب</div>
-                        <div class="subtitle" data-i18n="edit_profile">تعديل الملف الشخصي</div>
+                    <div class="left">
+                        <div class="icon-box" style="background:linear-gradient(135deg, #6C5CE7, #4834D4);">
+                            <i class="fa-solid fa-gear"></i>
+                        </div>
+                        <div class="text-block">
+                            <div class="title" data-i18n="account_settings">إعدادات الحساب</div>
+                            <div class="subtitle" data-i18n="edit_profile">تعديل الملف الشخصي</div>
+                        </div>
                     </div>
                     <div class="right">
                         <div class="chevron"><i class="fa-solid fa-chevron-left"></i></div>
@@ -218,12 +226,14 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                 </div>
 
                 <div class="settings-item" id="chatSupportMenuItem">
-                    <div class="icon-box" style="background:linear-gradient(135deg, #00B894, #00A381);">
-                        <i class="fa-solid fa-headset"></i>
-                    </div>
-                    <div class="text-block">
-                        <div class="title" data-i18n="support">الدعم الفني</div>
-                        <div class="subtitle" data-i18n="contact_support">تواصل مع فريق الدعم</div>
+                    <div class="left">
+                        <div class="icon-box" style="background:linear-gradient(135deg, #00B894, #00A381);">
+                            <i class="fa-solid fa-headset"></i>
+                        </div>
+                        <div class="text-block">
+                            <div class="title" data-i18n="support">الدعم الفني</div>
+                            <div class="subtitle" data-i18n="contact_support">تواصل مع فريق الدعم</div>
+                        </div>
                     </div>
                     <div class="right">
                         <span class="status-pill" data-i18n="connected">متصل</span>
@@ -232,12 +242,14 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                 </div>
 
                 <div class="settings-item admin-item" id="adminPanelMenuItem" style="display:none;">
-                    <div class="icon-box" style="background:linear-gradient(135deg, #D8B07A, #C49A5E);">
-                        <i class="fa-solid fa-chart-simple"></i>
-                    </div>
-                    <div class="text-block">
-                        <div class="title" data-i18n="admin_panel">لوحة الإدارة</div>
-                        <div class="subtitle" data-i18n="admin_panel_sub">📊 التحكم الكامل بالمتجر</div>
+                    <div class="left">
+                        <div class="icon-box" style="background:linear-gradient(135deg, #D8B07A, #C49A5E);">
+                            <i class="fa-solid fa-chart-simple"></i>
+                        </div>
+                        <div class="text-block">
+                            <div class="title" data-i18n="admin_panel">لوحة الإدارة</div>
+                            <div class="subtitle" data-i18n="admin_panel_sub">📊 التحكم الكامل بالمتجر</div>
+                        </div>
                     </div>
                     <div class="right">
                         <span class="status-pill" style="background:#D8B07A;color:#1a1a2e;">Admin</span>
@@ -246,12 +258,14 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                 </div>
 
                 <div class="settings-item" id="languageMenuItem" style="margin-top:4px;">
-                    <div class="icon-box" style="background:linear-gradient(135deg, #058693, #0AA6B5);">
-                        <i class="fa-solid fa-globe"></i>
-                    </div>
-                    <div class="text-block">
-                        <div class="title" data-i18n="language">اللغة</div>
-                        <div class="subtitle" data-i18n="language_sub">اختر لغة التطبيق المفضلة</div>
+                    <div class="left">
+                        <div class="icon-box" style="background:linear-gradient(135deg, #058693, #0AA6B5);">
+                            <i class="fa-solid fa-globe"></i>
+                        </div>
+                        <div class="text-block">
+                            <div class="title" data-i18n="language">اللغة</div>
+                            <div class="subtitle" data-i18n="language_sub">اختر لغة التطبيق المفضلة</div>
+                        </div>
                     </div>
                     <div class="right">
                         <span class="account-lang-display" id="currentLangDisplay"></span>

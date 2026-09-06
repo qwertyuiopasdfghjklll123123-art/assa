@@ -13,6 +13,10 @@ function renderRechargeForm() {
     const container = $('rechargeForm');
     if (!container) return;
 
+    const bankTransfer = (state.payments || []).find(function(p) { return p.id === 'bank_transfer'; }) || {};
+    const rechargeAccountNumber = bankTransfer.accountNumber || '';
+    const rechargeBeneficiary = bankTransfer.beneficiary || '';
+
     let html = `
         <div class="payment-card-container" style="background-image: url('https://i.ibb.co/FbQvCzn3/image.png'); background-size: cover; background-position: center; background-repeat: no-repeat; border-radius: 16px; overflow: hidden; position: relative; width: 100%; aspect-ratio: 16/9; margin-bottom: 16px; box-shadow: 0 8px 32px rgba(5,134,147,.2); border: 1px solid rgba(255,255,255,0.1);">
             <div style="position:absolute;inset:0;background:rgba(0,0,0,0.3);"></div>
@@ -79,7 +83,7 @@ function renderRechargeForm() {
                 <div style="display:flex;justify-content:space-between;align-items:center;">
                     <div>
                         <div style="font-size:11px;color:var(--text3);font-weight:600;">رقم الحساب</div>
-                        <div style="font-size:18px;font-weight:900;color:var(--text2);letter-spacing:1px;" id="accountNumberDisplay">7114152353</div>
+                        <div style="font-size:18px;font-weight:900;color:var(--text2);letter-spacing:1px;" id="accountNumberDisplay">${rechargeAccountNumber || '—'}</div>
                     </div>
                     <button onclick="copyAccountNumber()" style="padding:8px 14px;border:none;border-radius:8px;background:var(--primary-light);color:#fff;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.3s;">
                         <i class="fa-regular fa-copy"></i> نسخ
@@ -89,7 +93,7 @@ function renderRechargeForm() {
 
             <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid var(--border);">
                 <div style="font-size:11px;color:var(--text3);font-weight:600;">ملاحضة</div>
-                <div style="font-size:16px;font-weight:700;color:var(--text2);" id="beneficiaryDisplay">الحوالة تتم عبر سوبر كي حصرا بعد قم بتحويل وارفاق صوره للتحويل  وانتظر موافقة والاضافة خلال دقائق</div>
+                <div style="font-size:16px;font-weight:700;color:var(--text2);" id="beneficiaryDisplay">${rechargeBeneficiary || 'يرجى التواصل مع الدعم الفني لمعرفة تفاصيل التحويل'}</div>
             </div>
 
             <div style="background:var(--bg2);border-radius:10px;padding:12px;margin-bottom:12px;border:1px solid var(--border);">

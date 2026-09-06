@@ -7,3 +7,13 @@
 </FilesMatch>
 
 AddDefaultCharset UTF-8
+
+# Clean URLs: /app for the storefront, /admin for the admin panel (which
+# already redirects non-admins away on its own - this only affects the URL
+# shown, not who can see what).
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    RewriteRule ^app/?$ index.php [L]
+    RewriteRule ^admin/?$ admin/index.php [L]
+</IfModule>

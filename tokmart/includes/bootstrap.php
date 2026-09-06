@@ -39,7 +39,19 @@ function guessBasePath(): string {
     return rtrim($basePath, '/');
 }
 
-define('CACHE_VERSION', '1.0.0');
+// Derived from the newest CSS/JS file's mtime rather than a fixed string, so
+// a redeploy that changes any asset automatically busts every returning
+// visitor's browser cache instead of them silently keeping the old file
+// under the same "?v=" URL until someone remembers to bump a version number.
+function computeAssetVersion(): string {
+    $files = array_merge(
+        glob(APP_ROOT . '/assets/css/*.css') ?: [],
+        glob(APP_ROOT . '/assets/js/*.js') ?: []
+    );
+    $mtimes = array_map('filemtime', $files);
+    return $mtimes ? (string)max($mtimes) : '1';
+}
+define('CACHE_VERSION', computeAssetVersion());
 
 $configFile = __DIR__ . '/../config/config.php';
 if (!file_exists($configFile)) {
