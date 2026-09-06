@@ -50,6 +50,41 @@
     .categories-grid {
         grid-template-columns: repeat(3, 1fr) !important;
     }
+
+    /* Full-screen overlay pages (login, notifications, product detail,
+       checkout, chat, ...) previously stayed edge-to-edge at any width,
+       so on a laptop they stretched full-bleed while the home/category
+       content next to them was already capped at 1200px above - matching
+       them to the same centered column keeps the whole site consistent. */
+    .settings-page,
+    .product-detail-page,
+    .all-products-page,
+    .category-products-page,
+    .favorites-page,
+    .orders-page,
+    .order-detail-page,
+    .recharge-page,
+    .auth-page,
+    .chat-app-user {
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: 100%;
+        max-width: 1200px;
+    }
+
+    /* Narrow, single-column bodies (forms, a single order/product) read
+       better capped and centered instead of stretched to the full 1200px
+       frame; grids/messages lists are excluded since they already reflow
+       via their own grid-template-columns / list layout. */
+    .settings-page .settings-page-body,
+    .order-detail-page .order-detail-body,
+    .recharge-page .recharge-body,
+    .auth-page .auth-body {
+        max-width: 520px;
+        margin: 0 auto;
+        width: 100%;
+    }
 }
 
 /* ===== UTILITIES ===== */

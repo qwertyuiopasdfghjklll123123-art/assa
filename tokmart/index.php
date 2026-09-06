@@ -66,7 +66,8 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                 </div>
                 <div class="topbar-right">
                     <div class="logo" onclick="switchPage('page-home')" role="button" tabindex="0">
-                        <img class="logo-icon" id="siteLogo" src="<?php echo htmlspecialchars($siteLogoUrl); ?>" alt="Logo">
+                        <img class="logo-icon" id="siteLogo" src="<?php echo htmlspecialchars($siteLogoUrl); ?>" alt="Logo" style="<?php echo $siteLogoUrl ? '' : 'display:none;'; ?>">
+                        <i class="fa-solid fa-store logo-icon" id="siteLogoFallback" style="<?php echo $siteLogoUrl ? 'display:none;' : ''; ?>"></i>
                     </div>
                 </div>
             </div>

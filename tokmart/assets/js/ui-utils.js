@@ -117,13 +117,16 @@ function loadSiteData() {
 function updateSiteUI(site) {
     const logo = site.logo_url || '';
     const logoEl = $('siteLogo');
+    const fallbackEl = $('siteLogoFallback');
     if (logo) {
         if (logoEl) {
             logoEl.src = logo;
             logoEl.style.display = 'block';
         }
-    } else if (logoEl) {
-        logoEl.style.display = 'none';
+        if (fallbackEl) fallbackEl.style.display = 'none';
+    } else {
+        if (logoEl) logoEl.style.display = 'none';
+        if (fallbackEl) fallbackEl.style.display = 'flex';
     }
 }
 
