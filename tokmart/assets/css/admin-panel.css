@@ -4,12 +4,27 @@
    so the panel stays visually part of the same app, not a separate skin.
    ============================================================ */
 
-html, body { overflow: auto; height: auto; }
+/* !important here because base.css (loaded first, shared with the customer
+   app) pins html/body to a fixed height:100% with overscroll-behavior:none
+   for its own fixed-shell layout - on some mobile browsers the cascade for
+   long, ordinary-flow admin pages like Settings can end up fighting that
+   instead of cleanly overriding it, which reads as "the page won't scroll
+   down". Forcing it here removes any ambiguity regardless of browser. */
+html, body {
+    overflow: auto !important;
+    overflow-y: auto !important;
+    height: auto !important;
+    min-height: 100%;
+    overscroll-behavior: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: auto !important;
+}
 #app { display: none; }
 
 #adminApp {
     display: flex;
     min-height: 100vh;
+    height: auto;
     background: var(--bg);
 }
 
