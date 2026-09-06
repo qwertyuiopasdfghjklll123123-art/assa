@@ -1,0 +1,9 @@
+# Never serve source/db/doc files directly, or dotfiles.
+<FilesMatch "\.(sql|md|log|env)$">
+    Require all denied
+</FilesMatch>
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+AddDefaultCharset UTF-8

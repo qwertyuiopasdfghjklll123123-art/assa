@@ -1,0 +1,12 @@
+# Uploaded files must never be executable, even if a filename ever ends up
+# with a script-like extension - only serve them as static files.
+<FilesMatch "\.(php|php\d|phtml|phar|pl|py|cgi|sh|exe)$">
+    Require all denied
+</FilesMatch>
+
+<IfModule mod_php.c>
+    php_flag engine off
+</IfModule>
+<IfModule mod_php7.c>
+    php_flag engine off
+</IfModule>

@@ -1,0 +1,130 @@
+/* ============================================================
+   Tokmart - Responsive breakpoints + utility classes
+   ============================================================ */
+
+@media(max-width:480px) {
+    .topbar {
+        padding: 6px 12px;
+        min-height: 48px;
+    }
+    .logo .logo-icon {
+        width: 40px;
+        height: 40px;
+        font-size: 16px;
+    }
+    .icon-btn {
+        width: 34px;
+        height: 34px;
+        font-size: 12px;
+    }
+    .notification-item {
+        padding: 12px;
+        flex-wrap: wrap;
+    }
+    .notification-item .notif-actions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-direction: row;
+    }
+}
+
+@media(min-width:1024px) {
+    .scroll-area {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+    .bottom-nav-wrapper {
+        max-width: 1200px;
+        left: 50%;
+        right: auto;
+        transform: translateX(-50%);
+        width: 100%;
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+    .products-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+    .categories-grid {
+        grid-template-columns: repeat(3, 1fr) !important;
+    }
+}
+
+/* ===== UTILITIES ===== */
+.hidden { display: none !important; }
+.text-center { text-align: center; }
+.mt-8 { margin-top: 8px; }
+.mt-12 { margin-top: 12px; }
+.mt-16 { margin-top: 16px; }
+.gap-8 { gap: 8px; }
+.gap-12 { gap: 12px; }
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.flex-1 { flex: 1; }
+.w-full { width: 100%; }
+
+/* ===== Per-page product grid overrides ===== */
+#app { display: flex; flex-direction: column; }
+
+.scroll-area {
+    flex: 1 1 auto !important;
+    height: 0 !important;
+    min-height: 0;
+    overflow-y: scroll !important;
+    -webkit-overflow-scrolling: touch !important;
+    touch-action: pan-y !important;
+}
+
+#page-home .products-grid {
+    display: flex;
+    overflow-x: auto;
+    overflow-y: hidden;
+    gap: 12px;
+    padding: 12px;
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+}
+
+#page-home .product-card {
+    flex: 0 0 130px;
+    width: 130px;
+    min-width: 130px;
+    max-width: none;
+    height: 160px;
+}
+
+.all-products-page .products-grid,
+.category-products-page .products-grid,
+.favorites-page .favorites-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fill, minmax(140px, 140px));
+    justify-content: center;
+    gap: 12px;
+    padding: 12px;
+    overflow: visible !important;
+}
+
+.all-products-page .product-card,
+.category-products-page .product-card,
+.favorites-page .product-card {
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: none !important;
+    height: 170px !important;
+}
+
+.favorites-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+    padding: 16px;
+}
+
+.favorites-grid .product-card {
+    width: 100%;
+    min-width: 0;
+}

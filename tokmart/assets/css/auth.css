@@ -1,0 +1,201 @@
+/* ============================================================
+   Tokmart - Auth pages, OTP inputs, logout sheet
+   ============================================================ */
+
+.auth-body {
+    background: var(--bg);
+    padding: 24px 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.auth-body .form-group input {
+    background: var(--surface);
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.3s;
+    padding: 10px 14px;
+    width: 100%;
+}
+
+.auth-body .form-group input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--acSh);
+}
+
+.auth-body .btn-submit {
+    width: 100%;
+    height: 50px;
+    padding: 0 22px;
+    border: none;
+    border-radius: 14px;
+    background: var(--primary-light);
+    color: #fff;
+    font-weight: 700;
+    font-size: var(--fs-xl);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.3s var(--ease-spring);
+}
+
+.auth-body .btn-submit:active {
+    transform: scale(0.97);
+}
+
+.auth-body .btn-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.auth-icon {
+    text-align: center;
+    font-size: 48px;
+    color: var(--primary);
+    margin-bottom: 12px;
+}
+
+/* ===== OTP ===== */
+.otp-container {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin: 20px 0;
+}
+
+.otp-input {
+    width: 50px;
+    height: 60px;
+    text-align: center;
+    font-size: 24px;
+    font-weight: 700;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg2);
+    color: var(--text2);
+    outline: none;
+    transition: all 0.3s;
+}
+
+.otp-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 4px var(--acSh);
+}
+
+.otp-input.filled {
+    border-color: var(--primary);
+    background: var(--surface);
+}
+
+@media(max-width:480px) {
+    .otp-input { width: 40px; height: 50px; font-size: 20px; }
+    .otp-container { gap: 8px; }
+}
+
+/* ===== LOGOUT BOTTOM SHEET ===== */
+.bottom-sheet-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: var(--z-overlay);
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    display: none;
+    opacity: 0;
+    transition: opacity 0.3s var(--ease-out);
+}
+
+.bottom-sheet-overlay.open {
+    display: block;
+    opacity: 1;
+}
+
+.logout-bottom-sheet {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--z-dialog);
+    background: var(--surface);
+    border-radius: 24px 24px 0 0;
+    padding: 24px 20px 32px;
+    transform: translateY(100%);
+    transition: transform 0.4s var(--ease-spring);
+    box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+    padding-bottom: calc(32px + var(--safe-area-bottom));
+}
+
+.logout-bottom-sheet.open {
+    transform: translateY(0);
+}
+
+.logout-bottom-sheet .sheet-handle {
+    width: 40px;
+    height: 4px;
+    background: var(--border);
+    border-radius: 4px;
+    margin: 0 auto 16px;
+}
+
+.logout-bottom-sheet .sheet-title {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text2);
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.logout-bottom-sheet .sheet-subtitle {
+    font-size: 14px;
+    color: var(--text3);
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.logout-bottom-sheet .sheet-actions {
+    display: flex;
+    gap: 12px;
+}
+
+.logout-bottom-sheet .sheet-actions .btn-cancel-sheet {
+    flex: 1;
+    height: 50px;
+    padding: 0 22px;
+    border: 2px solid var(--border);
+    border-radius: 14px;
+    font-size: var(--fs-xl);
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s var(--ease-spring);
+    background: var(--surface);
+    color: var(--text2);
+}
+
+.logout-bottom-sheet .sheet-actions .btn-confirm {
+    flex: 1;
+    height: 50px;
+    padding: 0 22px;
+    border: none;
+    border-radius: 14px;
+    font-size: var(--fs-xl);
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s var(--ease-spring);
+    background: var(--red);
+    color: #fff;
+}
+
+.logout-bottom-sheet .sheet-actions .btn-confirm:hover {
+    background: #C0392B;
+    transform: scale(1.02);
+}

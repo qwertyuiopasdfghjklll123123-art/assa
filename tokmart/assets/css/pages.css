@@ -1,0 +1,117 @@
+/* ============================================================
+   Tokmart - Full-screen sliding pages (settings, product detail, recharge, ...)
+   ============================================================ */
+
+.payment-card-container {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16/9;
+    border-radius: 16px;
+    overflow: hidden;
+    background: linear-gradient(135deg, #0F2B3D, #1A4A5A);
+    margin-bottom: 16px;
+    box-shadow: 0 8px 32px rgba(5,134,147,.2);
+    border: 1px solid rgba(255,255,255,0.1);
+}
+
+.recharge-status.pending { background: rgba(216,176,122,.15) !important; color: var(--secondary) !important; }
+.recharge-status.approved { background: rgba(46,204,113,.15) !important; color: var(--green) !important; }
+.recharge-status.rejected { background: rgba(231,76,60,.15) !important; color: var(--red) !important; }
+
+.recharge-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    transition: all 0.3s;
+}
+
+.recharge-item:hover {
+    border-color: var(--primary);
+}
+
+.payment-option {
+    padding: 12px;
+    border: 2px solid var(--border);
+    border-radius: 12px;
+    text-align: center;
+    cursor: pointer;
+    background: var(--surface);
+    transition: all 0.3s;
+}
+
+.payment-option.active {
+    border-color: var(--primary);
+    background: var(--acSh);
+    box-shadow: 0 0 0 3px rgba(5,134,147,.1);
+}
+
+.payment-option:hover:not(.active) {
+    border-color: var(--primary-light);
+    background: var(--bg2);
+}
+
+/* ===== SLIDING PAGES ===== */
+.settings-page,
+.product-detail-page,
+.all-products-page,
+.category-products-page,
+.favorites-page,
+.orders-page,
+.order-detail-page,
+.recharge-page,
+.auth-page,
+.chat-app-user {
+    background: var(--bg);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: none;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+    width: 100vw;
+    width: 100dvw;
+    z-index: var(--z-modal);
+    animation: slideUp 0.4s var(--ease-out);
+    padding-top: var(--safe-area-top);
+    padding-bottom: var(--safe-area-bottom);
+    overflow: hidden;
+}
+
+.settings-page.open,
+.product-detail-page.open,
+.all-products-page.open,
+.category-products-page.open,
+.favorites-page.open,
+.orders-page.open,
+.order-detail-page.open,
+.recharge-page.open,
+.auth-page.open,
+.chat-app-user.open {
+    display: flex !important;
+}
+
+@keyframes slideUp {
+    0% { opacity: 0; transform: translateY(30px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.settings-page .settings-page-body,
+.product-detail-page .detail-body,
+.all-products-page .products-grid,
+.category-products-page .products-grid,
+.favorites-page .favorites-grid,
+.orders-page .orders-list,
+.order-detail-page .order-detail-body,
+.recharge-page .recharge-body,
+.auth-page .auth-body,
+.chat-app-user .messages-container {
+    background: var(--bg);
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+}
