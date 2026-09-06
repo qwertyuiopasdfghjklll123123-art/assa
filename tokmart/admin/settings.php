@@ -6,7 +6,6 @@ $activeNav = 'settings';
 
 $site = getSiteSettings();
 $google = getGoogleOAuthConfig();
-$smtp = getSMTPConfig();
 
 require __DIR__ . '/includes/header.php';
 ?>
@@ -97,49 +96,6 @@ require __DIR__ . '/includes/header.php';
     <div class="settings-status" id="googleStatus"></div>
 </div>
 
-<!-- ===== SMTP ===== -->
-<div class="admin-settings-group">
-    <div class="group-header">
-        <div class="group-icon"><i class="fa-solid fa-envelope"></i></div>
-        <h4>إعدادات البريد الإلكتروني (SMTP)</h4>
-    </div>
-    <div class="form-group form-check">
-        <input type="checkbox" id="smtpEnabled" <?php echo !empty($smtp['enabled']) ? 'checked' : ''; ?>>
-        <label for="smtpEnabled" style="margin:0;">تفعيل الإرسال عبر SMTP</label>
-    </div>
-    <div class="form-row">
-        <div class="form-group"><label>خادم SMTP</label><input type="text" id="smtpHost" value="<?php echo htmlspecialchars($smtp['host']); ?>"></div>
-        <div class="form-group"><label>المنفذ</label><input type="number" id="smtpPort" value="<?php echo htmlspecialchars((string)$smtp['port']); ?>"></div>
-    </div>
-    <div class="form-row">
-        <div class="form-group">
-            <label>نوع التشفير</label>
-            <select id="smtpEncryption">
-                <option value="ssl" <?php echo $smtp['encryption'] === 'ssl' ? 'selected' : ''; ?>>SSL</option>
-                <option value="tls" <?php echo $smtp['encryption'] === 'tls' ? 'selected' : ''; ?>>TLS</option>
-                <option value="" <?php echo $smtp['encryption'] === '' ? 'selected' : ''; ?>>بدون تشفير</option>
-            </select>
-        </div>
-        <div class="form-group"><label>اسم المستخدم</label><input type="text" id="smtpUsername" value="<?php echo htmlspecialchars($smtp['username']); ?>"></div>
-    </div>
-    <div class="form-group"><label>كلمة المرور</label><input type="password" id="smtpPassword" value="<?php echo htmlspecialchars($smtp['password']); ?>"></div>
-    <div class="form-row">
-        <div class="form-group"><label>بريد المرسل</label><input type="email" id="smtpFromEmail" value="<?php echo htmlspecialchars($smtp['from_email']); ?>"></div>
-        <div class="form-group"><label>اسم المرسل</label><input type="text" id="smtpFromName" value="<?php echo htmlspecialchars($smtp['from_name']); ?>"></div>
-    </div>
-    <button class="btn btn-md btn-primary" onclick="saveSMTPSettings()">حفظ إعدادات البريد</button>
-    <div class="settings-status" id="smtpStatus"></div>
-
-    <div class="form-group" style="margin-top:18px; padding-top:18px; border-top:1px solid var(--border);">
-        <label>اختبار الإرسال (يرسل رسالة تجريبية بالإعدادات الحالية في الأعلى قبل الحفظ)</label>
-        <div class="form-row">
-            <input type="email" id="smtpTestEmail" placeholder="بريدك الإلكتروني لاستقبال رسالة تجريبية">
-            <button class="btn btn-md btn-outline" onclick="testSMTPSettings()" style="white-space:nowrap;">إرسال بريد تجريبي</button>
-        </div>
-    </div>
-    <div class="settings-status" id="smtpTestStatus"></div>
-</div>
-
 <script>
 previewImageInput($('siteLogoInput'), 'siteLogoPreview');
 
@@ -181,41 +137,6 @@ function saveGoogleSettings() {
     });
 }
 
-function saveSMTPSettings() {
-    adminApi('saveSMTPSettings', {
-        host: $('smtpHost').value.trim(),
-        port: $('smtpPort').value,
-        username: $('smtpUsername').value.trim(),
-        password: $('smtpPassword').value,
-        encryption: $('smtpEncryption').value,
-        from_email: $('smtpFromEmail').value.trim(),
-        from_name: $('smtpFromName').value.trim(),
-        enabled: $('smtpEnabled').checked ? '1' : '0'
-    }, 'POST').then(function(res) {
-        setStatus('smtpStatus', res.success, res.success ? '✅ ' + res.message : '❌ ' + res.message);
-    });
-}
-
-function testSMTPSettings() {
-    const testEmail = $('smtpTestEmail').value.trim();
-    if (!testEmail) {
-        setStatus('smtpTestStatus', false, '❌ الرجاء إدخال بريد إلكتروني لاستقبال الرسالة التجريبية');
-        return;
-    }
-    setStatus('smtpTestStatus', true, '⏳ جارٍ الإرسال...');
-    adminApi('testSMTPSettings', {
-        test_email: testEmail,
-        host: $('smtpHost').value.trim(),
-        port: $('smtpPort').value,
-        username: $('smtpUsername').value.trim(),
-        password: $('smtpPassword').value,
-        encryption: $('smtpEncryption').value,
-        from_email: $('smtpFromEmail').value.trim(),
-        from_name: $('smtpFromName').value.trim()
-    }, 'POST').then(function(res) {
-        setStatus('smtpTestStatus', res.success, res.message);
-    });
-}
 </script>
 
 <?php require __DIR__ . '/includes/footer.php'; ?>
