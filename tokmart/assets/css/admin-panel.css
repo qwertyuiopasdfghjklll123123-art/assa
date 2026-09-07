@@ -442,7 +442,15 @@ select.status-select {
         transition: transform 0.3s var(--ease-out);
     }
     html[dir="rtl"] .admin-sidebar { transform: translateX(100%); }
-    .admin-sidebar.open { transform: translateX(0); }
+    /* html[dir="rtl"] .admin-sidebar above outranks a plain .admin-sidebar.open
+       (one extra type-selector tier), so on this always-RTL admin panel the
+       "closed" transform kept winning even after .open was added - the mobile
+       menu button added the class but the sidebar never actually moved.
+       Repeating the [dir="rtl"] prefix here matches that specificity. */
+    .admin-sidebar.open,
+    html[dir="rtl"] .admin-sidebar.open {
+        transform: translateX(0);
+    }
     .admin-sidebar-overlay.open { display: block; }
     .admin-topbar { padding-inline-start: 64px; }
     .admin-content { padding: 16px; }

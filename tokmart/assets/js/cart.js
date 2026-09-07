@@ -35,7 +35,7 @@ function renderCart() {
                     <i class="fa-regular fa-face-frown" style="font-size:72px;margin-bottom:16px;display:block;color:var(--primary);opacity:.3;"></i>
                     <h3 style="font-size:20px;font-weight:700;color:var(--text2);margin-bottom:6px;">${t('cart_empty')}</h3>
                     <p style="font-size:14px;color:var(--text3);margin-bottom:20px;">أضف منتجاتك الآن وابدأ التسوق</p>
-                    <button class="btn btn-lg btn-primary" onclick="switchPage('page-home')">
+                    <button class="btn btn-sm btn-primary" onclick="switchPage('page-home')">
                         <i class="fa-solid fa-bag-shopping"></i> ابدأ التسوق
                     </button>
                 </div>

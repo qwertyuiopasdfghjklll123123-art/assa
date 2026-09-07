@@ -136,19 +136,12 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
 
             <!-- Cart -->
             <div class="page" id="page-cart">
-                <h2 style="font-size:var(--fs-xl);font-weight:800;margin-bottom:14px;color:var(--text2);">
-                    <span id="cartTitle" data-i18n="cart"></span>
-                </h2>
                 <div id="cartContent"></div>
                 <div id="checkoutSection" style="display:none;"></div>
             </div>
 
             <!-- Account -->
             <div class="page" id="page-account">
-                <h2 style="font-size:var(--fs-xl);font-weight:800;margin-bottom:14px;color:var(--text2);">
-                    <span id="accountTitle" data-i18n="account"></span>
-                </h2>
-
                 <div class="balance-row" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
                     <div class="balance-info" style="display:flex;align-items:center;gap:12px;">
                         <div class="bal-icon" style="width:40px;height:40px;border-radius:50%;background:var(--acSh);display:grid;place-items:center;font-size:var(--fs-xl);color:var(--primary);">

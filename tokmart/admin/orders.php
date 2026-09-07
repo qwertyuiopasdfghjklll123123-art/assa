@@ -21,6 +21,11 @@ $statusLabels = [
     'cancelled' => 'ملغي', 'approved' => 'تمت الموافقة', 'rejected' => 'مرفوض',
 ];
 
+$paymentLabels = [
+    'cash' => '💵 الدفع عند الاستلام', 'electronic' => '💳 الدفع الإلكتروني (من الرصيد)',
+    'transfer' => '🏦 تحويل بنكي', 'bank_transfer' => '🏦 تحويل بنكي',
+];
+
 require __DIR__ . '/includes/header.php';
 ?>
 
@@ -41,7 +46,7 @@ require __DIR__ . '/includes/header.php';
                     <td><?php echo htmlspecialchars($o['userName'] ?? '—'); ?></td>
                     <td><?php echo htmlspecialchars($o['phone'] ?? ''); ?></td>
                     <td><?php echo number_format((float)$o['total'], 2); ?> د.ع</td>
-                    <td><?php echo htmlspecialchars($o['payment'] ?? ''); ?></td>
+                    <td><?php echo htmlspecialchars($paymentLabels[$o['payment']] ?? $o['payment'] ?? ''); ?></td>
                     <td>
                         <select class="status-select" onchange="updateOrderStatus(<?php echo (int)$o['id']; ?>, this.value)">
                             <?php foreach ($statusLabels as $key => $label): ?>
@@ -68,6 +73,7 @@ require __DIR__ . '/includes/header.php';
 <script>
 const ORDERS = <?php echo json_encode($orders, JSON_UNESCAPED_UNICODE); ?>;
 const STATUS_LABELS = <?php echo json_encode($statusLabels, JSON_UNESCAPED_UNICODE); ?>;
+const PAYMENT_LABELS = <?php echo json_encode($paymentLabels, JSON_UNESCAPED_UNICODE); ?>;
 
 function updateOrderStatus(id, status) {
     adminApi('updateOrderStatus', { id: id, status: status }, 'POST').then(function(res) {
@@ -101,7 +107,7 @@ function viewOrder(id) {
         '<h3>📋 طلب #' + (o.orderId || o.id) + '</h3>' +
         '<div class="form-group"><label>الزبون</label><div>' + (o.userName || '—') + ' — ' + (o.phone || '') + '</div></div>' +
         '<div class="form-group"><label>العنوان</label><div>' + (o.address || '—') + '</div></div>' +
-        '<div class="form-group"><label>طريقة الدفع</label><div>' + (o.payment || '') + '</div></div>' +
+        '<div class="form-group"><label>طريقة الدفع</label><div style="font-weight:700;">' + (PAYMENT_LABELS[o.payment] || o.payment || '') + '</div></div>' +
         '<div class="form-group"><label>الحالة</label><div><span class="status-pill status-' + o.status + '">' + (STATUS_LABELS[o.status] || o.status) + '</span></div></div>' +
         '<div class="form-group"><label>العناصر</label>' + itemsHtml + '</div>' +
         '<div class="form-group"><label>الإجمالي</label><div style="font-weight:900;font-size:18px;color:var(--primary);">' + parseFloat(o.total).toFixed(2) + ' د.ع</div></div>' +
