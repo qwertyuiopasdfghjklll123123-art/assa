@@ -859,7 +859,7 @@ document.addEventListener('mouseup', function(e) {
 
 function updateBalanceDisplay() {
     const el = $('userBalance');
-    if (el) el.textContent = state.balance.toFixed(2) + ' د.ع';
+    if (el) el.textContent = state.balance.toFixed(0) + ' د.ع';
 }
 
 function updateAccountUI() {

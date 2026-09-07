@@ -37,8 +37,8 @@ require __DIR__ . '/includes/header.php';
                     <td class="cell-wrap"><strong><?php echo htmlspecialchars($p['name']); ?></strong><br><small style="color:var(--text3);"><?php echo htmlspecialchars($p['nameEn']); ?></small></td>
                     <td><?php echo htmlspecialchars($p['category'] ?? '—'); ?></td>
                     <td>
-                        <?php echo number_format((float)$p['price'], 2); ?> د.ع
-                        <?php if ($p['oldPrice']): ?><br><small style="text-decoration:line-through;color:var(--text3);"><?php echo number_format((float)$p['oldPrice'], 2); ?></small><?php endif; ?>
+                        <?php echo number_format((float)$p['price'], 0); ?> د.ع
+                        <?php if ($p['oldPrice']): ?><br><small style="text-decoration:line-through;color:var(--text3);"><?php echo number_format((float)$p['oldPrice'], 0); ?></small><?php endif; ?>
                     </td>
                     <td>
                         <?php if ($p['isNew']): ?><span class="status-pill status-approved">جديد</span><?php endif; ?>

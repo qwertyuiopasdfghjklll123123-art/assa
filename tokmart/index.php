@@ -149,7 +149,7 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                         </div>
                         <div class="bal-text">
                             <span class="bal-label" style="font-size:var(--fs-xs);color:var(--text3);" data-i18n="balance">رصيدك</span>
-                            <span class="bal-amount" id="userBalance" style="font-size:var(--fs-3xl);font-weight:900;color:var(--primary);">0.00 د.ع</span>
+                            <span class="bal-amount" id="userBalance" style="font-size:var(--fs-3xl);font-weight:900;color:var(--primary);">0 د.ع</span>
                         </div>
                     </div>
                     <button class="btn btn-sm btn-primary add-balance-btn" id="addBalanceBtn">

@@ -27,7 +27,7 @@ function renderCheckout() {
                     </div>
                     <div class="detail-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px dashed var(--border);">
                         <span class="detail-label" style="color:var(--text3);">💰 المبلغ المطلوب تحويله</span>
-                        <span class="detail-value" style="font-weight:600;color:var(--text2);">${total.toFixed(2)} د.ع</span>
+                        <span class="detail-value" style="font-weight:600;color:var(--text2);">${total.toFixed(0)} د.ع</span>
                     </div>
                     <div class="detail-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px dashed var(--border);">
                         <span class="detail-label" style="color:var(--text3);">🏦 رقم الحساب</span>
@@ -40,7 +40,7 @@ function renderCheckout() {
                     <div class="detail-row" style="display:flex;justify-content:space-between;padding:4px 0;font-size:13px;border-bottom:1px dashed var(--border);">
                         <span class="detail-label" style="color:var(--text3);">📝 المبلغ الذي حولته</span>
                         <span class="detail-value" style="font-weight:600;color:var(--text2);">
-                            <input type="number" id="transferAmount" value="${total.toFixed(2)}" step="0.01" min="0"
+                            <input type="number" id="transferAmount" value="${total.toFixed(0)}" step="0.01" min="0"
                                    style="width:120px;padding:4px 8px;border:2px solid var(--border);border-radius:6px;font-size:13px;">
                         </span>
                     </div>
@@ -107,7 +107,7 @@ function renderCheckout() {
 
             <div style="display:flex;justify-content:space-between;padding:10px 0;border-top:1px solid var(--border);margin:10px 0;">
                 <span style="font-weight:700;color:var(--text2);">${t('total')}</span>
-                <span style="font-size:20px;font-weight:900;color:var(--primary);">${total.toFixed(2)} د.ع</span>
+                <span style="font-size:20px;font-weight:900;color:var(--primary);">${total.toFixed(0)} د.ع</span>
             </div>
 
             ${state.selectedPayment === 'electronic' && state.balance < total ? `

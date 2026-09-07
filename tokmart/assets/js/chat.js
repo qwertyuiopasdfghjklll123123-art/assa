@@ -37,7 +37,7 @@ function openOrderSupportChat(orderId) {
     resetUserChat();
 
     const orderNumber = order.orderId || order.id;
-    const orderTotal = parseFloat(order.total || 0).toFixed(2);
+    const orderTotal = parseFloat(order.total || 0).toFixed(0);
     const orderDate = order.date || new Date(order.createdAt).toLocaleDateString('ar-EG');
 
     setTimeout(function() {

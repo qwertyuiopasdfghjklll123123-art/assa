@@ -48,7 +48,7 @@ function handleRechargeAction(string $action): void {
             ])) {
                 // Notify every admin account - a made-up userId of 0 (as in the
                 // original) would silently vanish, since no user has that id.
-                sendNotificationToAdmins('💰 طلب شحن رصيد جديد', 'المبلغ: ' . number_format($amount, 2) . ' د.ع', 'wallet', '/admin/recharges');
+                sendNotificationToAdmins('💰 طلب شحن رصيد جديد', 'المبلغ: ' . number_format($amount, 0) . ' د.ع', 'wallet', '/admin/recharges');
                 response(true, 'تم إرسال طلب الشحن بنجاح');
             } else {
                 response(false, 'فشل إرسال الطلب');
@@ -86,7 +86,7 @@ function handleRechargeAction(string $action): void {
                 execute("UPDATE users SET balance = balance + :amount WHERE id = :id", [
                     ':amount' => $recharge['amount'], ':id' => $recharge['userId'],
                 ]);
-                sendNotification($recharge['userId'], '💰 تم شحن الرصيد', 'تم إضافة ' . number_format($recharge['amount'], 2) . ' د.ع إلى رصيدك', 'wallet', '/account');
+                sendNotification($recharge['userId'], '💰 تم شحن الرصيد', 'تم إضافة ' . number_format($recharge['amount'], 0) . ' د.ع إلى رصيدك', 'wallet', '/account');
             } elseif ($status === 'rejected') {
                 sendNotification($recharge['userId'], '❌ تم رفض طلب الشحن', 'تم رفض طلب شحن الرصيد الخاص بك', 'wallet', '/account');
             }

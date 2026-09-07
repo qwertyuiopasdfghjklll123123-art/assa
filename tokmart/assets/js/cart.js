@@ -61,7 +61,7 @@ function renderCart() {
                     <h4 style="font-size:14px;font-weight:700;word-break:break-word;">${item.name}</h4>
                     <p style="font-size:12px;color:var(--text3);">الكمية: ${qty}</p>
                 </div>
-                <div class="price" style="font-weight:800;color:var(--primary);font-size:15px;white-space:nowrap;">${price.toFixed(2)} د.ع</div>
+                <div class="price" style="font-weight:800;color:var(--primary);font-size:15px;white-space:nowrap;">${price.toFixed(0)} د.ع</div>
                 <button class="remove-btn" onclick="removeFromCart(${index})" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:18px;padding:8px;border-radius:10px;">
                     <i class="fa-regular fa-trash-can"></i>
                 </button>
@@ -70,7 +70,7 @@ function renderCart() {
     });
     html += `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 4px;border-top:1px solid var(--border);margin-top:8px;">
-            <span style="font-weight:700;font-size:16px;color:var(--text2);">${t('total')}: <span style="color:var(--primary);font-size:18px;">${total.toFixed(2)} د.ع</span></span>
+            <span style="font-weight:700;font-size:16px;color:var(--text2);">${t('total')}: <span style="color:var(--primary);font-size:18px;">${total.toFixed(0)} د.ع</span></span>
             <button class="icon-btn" onclick="clearCart()" style="color:var(--red);border-color:rgba(231,76,60,.3);background:var(--surface);">
                 <i class="fa-regular fa-trash-can"></i>
             </button>

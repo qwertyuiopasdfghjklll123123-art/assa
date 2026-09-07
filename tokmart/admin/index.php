@@ -61,7 +61,7 @@ require __DIR__ . '/includes/header.php';
                 <tr>
                     <td>#<?php echo htmlspecialchars($o['orderId'] ?? $o['id']); ?></td>
                     <td><?php echo htmlspecialchars($o['phone'] ?? ''); ?></td>
-                    <td><?php echo number_format((float)$o['total'], 2); ?> د.ع</td>
+                    <td><?php echo number_format((float)$o['total'], 0); ?> د.ع</td>
                     <td><?php echo htmlspecialchars($o['payment'] ?? ''); ?></td>
                     <td><span class="status-pill status-<?php echo htmlspecialchars($o['status']); ?>"><?php echo $statusLabels[$o['status']] ?? htmlspecialchars($o['status']); ?></span></td>
                     <td><?php echo htmlspecialchars($o['date'] ?? ''); ?></td>
@@ -88,7 +88,7 @@ require __DIR__ . '/includes/header.php';
                 <?php foreach ($recentRecharges as $r): ?>
                 <tr>
                     <td><?php echo htmlspecialchars($r['userName'] ?? '—'); ?></td>
-                    <td><?php echo number_format((float)$r['amount'], 2); ?> د.ع</td>
+                    <td><?php echo number_format((float)$r['amount'], 0); ?> د.ع</td>
                     <td><span class="status-pill status-<?php echo htmlspecialchars($r['status']); ?>"><?php echo $statusLabels[$r['status']] ?? htmlspecialchars($r['status']); ?></span></td>
                     <td><?php echo htmlspecialchars($r['createdAt']); ?></td>
                 </tr>

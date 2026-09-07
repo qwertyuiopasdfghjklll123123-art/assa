@@ -45,7 +45,7 @@ require __DIR__ . '/includes/header.php';
                     <td>#<?php echo htmlspecialchars($o['orderId'] ?? $o['id']); ?></td>
                     <td><?php echo htmlspecialchars($o['userName'] ?? '—'); ?></td>
                     <td><?php echo htmlspecialchars($o['phone'] ?? ''); ?></td>
-                    <td><?php echo number_format((float)$o['total'], 2); ?> د.ع</td>
+                    <td><?php echo number_format((float)$o['total'], 0); ?> د.ع</td>
                     <td><?php echo htmlspecialchars($paymentLabels[$o['payment']] ?? $o['payment'] ?? ''); ?></td>
                     <td>
                         <select class="status-select" onchange="updateOrderStatus(<?php echo (int)$o['id']; ?>, this.value)">

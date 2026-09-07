@@ -119,11 +119,11 @@ function handleOrderAction(string $action): void {
 
             if ($payment === 'electronic') {
                 execute("UPDATE users SET balance = balance - :total WHERE id = :id", [':total' => $total, ':id' => $userId]);
-                sendNotification($userId, "💰 خصم رصيد", "تم خصم " . number_format($total, 2) . " د.ع من رصيدك للطلب #$orderId", 'wallet', '/order/' . $id);
+                sendNotification($userId, "💰 خصم رصيد", "تم خصم " . number_format($total, 0) . " د.ع من رصيدك للطلب #$orderId", 'wallet', '/order/' . $id);
             }
 
             $paymentName = $payment === 'cash' ? 'الدفع عند الاستلام' : ($payment === 'electronic' ? 'الدفع الإلكتروني' : 'تحويل بنكي');
-            sendNotificationToAllUsers("📋 طلب جديد: $orderId", "طريقة الدفع: $paymentName - المبلغ: " . number_format($total, 2) . ' د.ع', 'order', '/admin/orders');
+            sendNotificationToAllUsers("📋 طلب جديد: $orderId", "طريقة الدفع: $paymentName - المبلغ: " . number_format($total, 0) . ' د.ع', 'order', '/admin/orders');
 
             $order = queryOne("SELECT * FROM orders WHERE id = :id", [':id' => $id]);
             if ($order) {
@@ -165,7 +165,7 @@ function handleOrderAction(string $action): void {
             if ($shouldRefund && $total > 0 && $userId > 0) {
                 if (execute("UPDATE users SET balance = balance + :amount WHERE id = :id", [':amount' => $total, ':id' => $userId])) {
                     execute("UPDATE orders SET refunded = 1 WHERE id = :id", [':id' => $id]);
-                    sendNotification($userId, "💰 تم استرداد الرصيد", "تم استرداد مبلغ " . number_format($total, 2) . " د.ع إلى رصيدك بسبب إلغاء الطلب #{$order['orderId']}", 'wallet', '/account');
+                    sendNotification($userId, "💰 تم استرداد الرصيد", "تم استرداد مبلغ " . number_format($total, 0) . " د.ع إلى رصيدك بسبب إلغاء الطلب #{$order['orderId']}", 'wallet', '/account');
                 }
             }
 

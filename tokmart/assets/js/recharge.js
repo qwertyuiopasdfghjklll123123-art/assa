@@ -34,7 +34,7 @@ function renderRechargeForm() {
                 </div>
                 <div style="text-align:center;padding:6px 0;">
                     <div style="font-size:11px;opacity:0.8;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,0.3);">المبلغ المطلوب</div>
-                    <div style="font-size:32px;font-weight:900;letter-spacing:1px;text-shadow:0 2px 8px rgba(0,0,0,0.4);" id="cardAmountDisplay">0.00 د.ع</div>
+                    <div style="font-size:32px;font-weight:900;letter-spacing:1px;text-shadow:0 2px 8px rgba(0,0,0,0.4);" id="cardAmountDisplay">0 د.ع</div>
                     <div style="font-size:11px;opacity:0.6;margin-top:2px;text-shadow:0 1px 4px rgba(0,0,0,0.3);">أدخل المبلغ في الحقل أدناه</div>
                 </div>
                 <div style="display:flex;justify-content:space-between;align-items:flex-end;font-size:10px;opacity:0.7;border-top:1px solid rgba(255,255,255,0.15);padding-top:8px;text-shadow:0 1px 4px rgba(0,0,0,0.3);">
@@ -141,7 +141,7 @@ function renderRechargeForm() {
         amountInput.addEventListener('input', function() {
             const val = parseFloat(this.value) || 0;
             const display = $('cardAmountDisplay');
-            if (display) display.textContent = val > 0 ? val.toFixed(2) + ' د.ع' : '0.00 د.ع';
+            if (display) display.textContent = val > 0 ? val.toFixed(0) + ' د.ع' : '0 د.ع';
         });
     }
 
@@ -190,7 +190,7 @@ function showPaymentDetails() {
     }
 
     const display = $('paymentAmountDisplay');
-    if (display) display.textContent = amount.toFixed(2) + ' د.ع';
+    if (display) display.textContent = amount.toFixed(0) + ' د.ع';
     state.rechargeAmount = amount;
 }
 
@@ -302,7 +302,7 @@ function submitRechargeRequest() {
                 if (details) details.style.display = 'none';
 
                 const cardDisplay = document.getElementById('cardAmountDisplay');
-                if (cardDisplay) cardDisplay.textContent = '0.00 د.ع';
+                if (cardDisplay) cardDisplay.textContent = '0 د.ع';
 
                 state.rechargeAmount = 0;
 
@@ -367,7 +367,7 @@ function renderRechargeHistory() {
                 <div style="display:flex;align-items:flex-start;justify-content:space-between;flex-wrap:wrap;gap:8px;">
                     <div style="flex:1;min-width:140px;">
                         <div style="display:flex;align-items:center;gap:8px;">
-                            <span style="font-size:18px;font-weight:900;color:var(--primary);">${parseFloat(r.amount).toFixed(2)} د.ع</span>
+                            <span style="font-size:18px;font-weight:900;color:var(--primary);">${parseFloat(r.amount).toFixed(0)} د.ع</span>
                             <span style="font-size:11px;color:var(--text3);">${r.paymentMethod || 'تحويل بنكي'}</span>
                         </div>
                         <div style="font-size:12px;color:var(--text3);margin-top:2px;">
@@ -467,7 +467,7 @@ function openRechargeDetail(rechargeId) {
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;">
                 <div style="background:var(--bg2);border-radius:10px;padding:12px;border:1px solid var(--border);">
                     <div style="font-size:11px;color:var(--text3);font-weight:600;">💰 المبلغ</div>
-                    <div style="font-size:20px;font-weight:900;color:var(--primary);">${parseFloat(recharge.amount).toFixed(2)} د.ع</div>
+                    <div style="font-size:20px;font-weight:900;color:var(--primary);">${parseFloat(recharge.amount).toFixed(0)} د.ع</div>
                 </div>
                 <div style="background:var(--bg2);border-radius:10px;padding:12px;border:1px solid var(--border);">
                     <div style="font-size:11px;color:var(--text3);font-weight:600;">📌 الحالة</div>

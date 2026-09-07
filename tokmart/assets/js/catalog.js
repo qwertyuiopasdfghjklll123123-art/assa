@@ -156,8 +156,8 @@ function createProductCard(product) {
         '<i class="' + (product.icon || 'fa-solid fa-box') + '"></i>';
     const discountHtml = product.discount ?
         '<div class="discount-chip"><i class="fa-solid fa-tag"></i><span class="percent">' + product.discount + '</span></div>' : '';
-    const priceDisplay = parseFloat(product.price).toFixed(2) + ' د.ع';
-    const oldPriceDisplay = product.oldPrice ? parseFloat(product.oldPrice).toFixed(2) + ' د.ع' : '';
+    const priceDisplay = parseFloat(product.price).toFixed(0) + ' د.ع';
+    const oldPriceDisplay = product.oldPrice ? parseFloat(product.oldPrice).toFixed(0) + ' د.ع' : '';
 
     return `
         <div class="product-card" data-id="${product.id}" onclick="openProductDetail(${product.id})">
@@ -337,8 +337,8 @@ function openProductDetail(productId) {
             <div class="detail-desc" style="color:var(--text2);font-size:0.9rem;line-height:1.5;margin-bottom:12px;">${product.desc || ''}</div>
             ${product.discount ? `<div style="display:inline-flex;align-items:center;gap:6px;background:var(--discount-color);color:#fff;padding:4px 14px 4px 10px;border-radius:30px;font-weight:700;font-size:.8rem;box-shadow:0 4px 12px rgba(255,155,61,.4);margin-bottom:10px;"><i class="fa-solid fa-tag"></i>${product.discount} خصم</div>` : ''}
             <div class="detail-price-row" style="margin-bottom:12px;">
-                  ${product.oldPrice ? '<span class="detail-old-price" style="text-decoration:line-through;color:var(--text3);margin-left:8px;font-size:0.95rem;">' + parseFloat(product.oldPrice).toFixed(2) + ' د.ع</span>' : ''}
-                  <span class="${product.oldPrice ? 'detail-new-price' : 'detail-normal-price'}" style="font-size:1.2rem;font-weight:800;color:var(--primary);">${parseFloat(product.price).toFixed(2)} د.ع</span>
+                  ${product.oldPrice ? '<span class="detail-old-price" style="text-decoration:line-through;color:var(--text3);margin-left:8px;font-size:0.95rem;">' + parseFloat(product.oldPrice).toFixed(0) + ' د.ع</span>' : ''}
+                  <span class="${product.oldPrice ? 'detail-new-price' : 'detail-normal-price'}" style="font-size:1.2rem;font-weight:800;color:var(--primary);">${parseFloat(product.price).toFixed(0)} د.ع</span>
             </div>
             <div style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:10px 14px;margin:8px 0 14px;display:flex;align-items:center;gap:10px;">
                 <i class="fa-solid fa-truck-fast" style="color:var(--green);font-size:16px;"></i>
@@ -620,7 +620,7 @@ function renderOrders() {
                             <span style="font-size:12px;color:var(--text3);">📅 ${order.date || new Date(order.createdAt).toLocaleDateString('ar-EG')}</span>
                         </div>
                         <div style="font-size:13px;color:var(--text3);margin-top:3px;">
-                            <i class="fa-solid fa-box"></i> ${items.length} منتج • 💰 ${parseFloat(order.total).toFixed(2)} د.ع
+                            <i class="fa-solid fa-box"></i> ${items.length} منتج • 💰 ${parseFloat(order.total).toFixed(0)} د.ع
                         </div>
                         ${order.transferImage ? '<div style="font-size:11px;color:var(--primary);margin-top:2px;">🖼️ مع صورة تحويل</div>' : ''}
                     </div>
@@ -716,7 +716,7 @@ function openOrderDetail(orderId) {
             </div>
             <img src="${imgUrl}" onclick="openLightbox('${imgUrl}')"
                  style="max-width:100%;border-radius:8px;cursor:pointer;max-height:300px;object-fit:contain;border:1px solid var(--border);">
-            ${order.transferAmount ? `<div style="margin-top:8px;font-size:13px;color:var(--text3);">💰 المبلغ المحول: <strong>${parseFloat(order.transferAmount || 0).toFixed(2)} د.ع</strong></div>` : ''}
+            ${order.transferAmount ? `<div style="margin-top:8px;font-size:13px;color:var(--text3);">💰 المبلغ المحول: <strong>${parseFloat(order.transferAmount || 0).toFixed(0)} د.ع</strong></div>` : ''}
             ${order.accountNumber ? `<div style="font-size:13px;color:var(--text3);">🏦 رقم الحساب: <strong>${order.accountNumber}</strong></div>` : ''}
             ${order.beneficiary ? `<div style="font-size:13px;color:var(--text3);">👤 المستفيد: <strong>${order.beneficiary}</strong></div>` : ''}
         </div>
@@ -741,7 +741,7 @@ function openOrderDetail(orderId) {
             </div>
             <div>
                 <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">💰 المجموع</div>
-                <div style="font-size:20px;font-weight:900;color:var(--primary);margin-top:2px;">${parseFloat(order.total || 0).toFixed(2)} د.ع</div>
+                <div style="font-size:20px;font-weight:900;color:var(--primary);margin-top:2px;">${parseFloat(order.total || 0).toFixed(0)} د.ع</div>
             </div>
             <div>
                 <div style="font-size:11px;color:var(--text3);font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">🆔 رقم الطلب</div>
@@ -801,11 +801,11 @@ function openOrderDetail(orderId) {
                 <div style="flex:1;min-width:0;">
                     <div style="font-weight:700;font-size:13px;word-break:break-word;">${item.name || item.title || 'منتج'}</div>
                     <div style="font-size:11px;color:var(--text3);">
-                        الكمية: ${item.qty || item.quantity || 1} × ${parseFloat(item.price || 0).toFixed(2)} د.ع
+                        الكمية: ${item.qty || item.quantity || 1} × ${parseFloat(item.price || 0).toFixed(0)} د.ع
                     </div>
                 </div>
                 <div style="font-weight:800;font-size:14px;color:var(--primary);white-space:nowrap;">
-                    ${(parseFloat(item.price || 0) * (item.qty || item.quantity || 1)).toFixed(2)} د.ع
+                    ${(parseFloat(item.price || 0) * (item.qty || item.quantity || 1)).toFixed(0)} د.ع
                 </div>
             </div>
             `;
@@ -817,7 +817,7 @@ function openOrderDetail(orderId) {
         `}
         <div style="display:flex;justify-content:space-between;padding:12px 0 4px;border-top:2px solid var(--primary);margin-top:8px;">
             <span style="font-weight:700;font-size:15px;color:var(--text2);">المجموع الكلي</span>
-            <span style="font-size:18px;font-weight:900;color:var(--primary);">${parseFloat(order.total || 0).toFixed(2)} د.ع</span>
+            <span style="font-size:18px;font-weight:900;color:var(--primary);">${parseFloat(order.total || 0).toFixed(0)} د.ع</span>
         </div>
     </div>
 

@@ -33,7 +33,7 @@ require __DIR__ . '/includes/header.php';
                 <?php foreach ($recharges as $r): ?>
                 <tr>
                     <td><?php echo htmlspecialchars($r['userName'] ?? '—'); ?><br><small style="color:var(--text3);"><?php echo htmlspecialchars($r['userPhone'] ?? ''); ?></small></td>
-                    <td><strong><?php echo number_format((float)$r['amount'], 2); ?> د.ع</strong></td>
+                    <td><strong><?php echo number_format((float)$r['amount'], 0); ?> د.ع</strong></td>
                     <td><?php echo htmlspecialchars($r['paymentMethod'] ?? ''); ?></td>
                     <td>
                         <?php if ($r['receiptImage_url']): ?>

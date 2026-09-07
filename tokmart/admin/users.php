@@ -38,7 +38,7 @@ require __DIR__ . '/includes/header.php';
                     <td><?php echo htmlspecialchars($u['name']); ?></td>
                     <td><?php echo htmlspecialchars($u['email']); ?></td>
                     <td><?php echo htmlspecialchars($u['phone'] ?? '—'); ?></td>
-                    <td><?php echo number_format((float)$u['balance'], 2); ?> د.ع</td>
+                    <td><?php echo number_format((float)$u['balance'], 0); ?> د.ع</td>
                     <td>
                         <?php if ($u['isAdmin']): ?><span class="status-pill status-admin">مدير</span><?php else: ?><span class="status-pill status-user">مستخدم</span><?php endif; ?>
                         <?php if ($u['isVerified']): ?><span class="status-pill status-approved">موثق</span><?php endif; ?>
