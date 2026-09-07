@@ -53,6 +53,9 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800&family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <?php if (!empty($googleOAuth['enabled'])): ?>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <?php endif; ?>
     <?php foreach ($cssFiles as $cssFile): ?>
     <link rel="stylesheet" href="<?php echo $assetsBase; ?>/css/<?php echo $cssFile; ?>.css?v=<?php echo CACHE_VERSION; ?>">
     <?php endforeach; ?>
@@ -244,21 +247,6 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                     </div>
                     <div class="right">
                         <span class="status-pill" data-i18n="connected">متصل</span>
-                        <div class="chevron"><i class="fa-solid fa-chevron-left"></i></div>
-                    </div>
-                </div>
-
-                <div class="settings-item" id="installAppMenuItem" onclick="installPWA()" style="display:none;">
-                    <div class="left">
-                        <div class="icon-box" style="background:linear-gradient(135deg, #058693, #0AA6B5);">
-                            <i class="fa-solid fa-download"></i>
-                        </div>
-                        <div class="text-block">
-                            <div class="title">تثبيت التطبيق</div>
-                            <div class="subtitle">أضف الموقع لشاشتك الرئيسية</div>
-                        </div>
-                    </div>
-                    <div class="right">
                         <div class="chevron"><i class="fa-solid fa-chevron-left"></i></div>
                     </div>
                 </div>
@@ -786,6 +774,18 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                         <span data-i18n="account">الحساب</span>
                     </button>
                 </nav>
+            </div>
+
+            <!-- PWA install suggestion - appears on its own once the browser
+                 signals the site is installable, not a menu item to find. -->
+            <div id="pwaInstallBanner" class="pwa-install-banner">
+                <div class="icon-box"><i class="fa-solid fa-download"></i></div>
+                <div class="text-block">
+                    <div class="title">ثبّت التطبيق</div>
+                    <div class="subtitle">وصول أسرع من شاشتك الرئيسية</div>
+                </div>
+                <button class="pwa-install-btn" onclick="installPWA()">تثبيت</button>
+                <button class="pwa-dismiss-btn" onclick="dismissPWABanner()" aria-label="إغلاق"><i class="fa-solid fa-xmark"></i></button>
             </div>
 
             <div id="toast"></div>

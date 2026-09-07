@@ -20,13 +20,13 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 16px 18px;
+    padding: 12px 14px;
     background: var(--surface);
     border: 1px solid var(--border);
-    border-radius: 14px;
+    border-radius: 12px;
     cursor: pointer;
     transition: all 0.3s var(--ease-spring);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
     box-shadow: 0 2px 8px rgba(0,0,0,.04);
 }
 .settings-item:active { transform: scale(0.98); }
@@ -41,22 +41,22 @@
 .settings-item .left {
     display: flex;
     align-items: center;
-    gap: 14px;
+    gap: 12px;
     min-width: 0;
 }
 .settings-item .icon-box {
-    width: 42px;
-    height: 42px;
-    border-radius: 12px;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
     display: grid;
     place-items: center;
-    font-size: 18px;
+    font-size: 15px;
     color: #fff;
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(0,0,0,.15);
 }
-.settings-item .title { font-weight: 700; font-size: 15px; color: var(--text2); }
-.settings-item .subtitle { font-size: 11px; color: var(--text3); margin-top: 2px; }
+.settings-item .title { font-weight: 700; font-size: 13.5px; color: var(--text2); }
+.settings-item .subtitle { font-size: 10.5px; color: var(--text3); margin-top: 1px; }
 
 .settings-item .right {
     display: flex;
@@ -74,13 +74,13 @@
 }
 .settings-item .count-badge:empty { display: none; }
 .settings-item .chevron {
-    width: 32px;
-    height: 32px;
+    width: 26px;
+    height: 26px;
     border-radius: 50%;
     background: var(--bg2);
     display: grid;
     place-items: center;
-    font-size: 14px;
+    font-size: 12px;
     color: var(--text3);
 }
 .settings-item .status-pill {
@@ -162,6 +162,69 @@
 .g_id_signin > div {
     width: 100% !important;
     max-width: 320px !important;
+}
+
+/* ============================================================
+   اقتراح تثبيت التطبيق (PWA) - يظهر تلقائياً، ليس عبر قائمة الإعدادات
+   ============================================================ */
+.pwa-install-banner {
+    display: none;
+    align-items: center;
+    gap: 12px;
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(100px + var(--safe-area-bottom));
+    z-index: var(--z-modal);
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow-lg);
+    max-width: 480px;
+    margin: 0 auto;
+    animation: pwaBannerIn 0.4s var(--ease-out);
+}
+.pwa-install-banner.show { display: flex; }
+
+@keyframes pwaBannerIn {
+    0% { opacity: 0; transform: translateY(16px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.pwa-install-banner .icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #058693, #0AA6B5);
+    color: #fff;
+    display: grid;
+    place-items: center;
+    font-size: 17px;
+    flex-shrink: 0;
+}
+.pwa-install-banner .text-block { flex: 1; min-width: 0; }
+.pwa-install-banner .title { font-weight: 700; font-size: 13.5px; color: var(--text2); }
+.pwa-install-banner .subtitle { font-size: 11px; color: var(--text3); margin-top: 1px; }
+.pwa-install-banner .pwa-install-btn {
+    flex-shrink: 0;
+    border: none;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    font-size: 12.5px;
+    padding: 8px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+}
+.pwa-install-banner .pwa-dismiss-btn {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    color: var(--text3);
+    font-size: 15px;
+    padding: 6px;
+    cursor: pointer;
 }
 
 /* ============================================================

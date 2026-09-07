@@ -207,30 +207,39 @@ document.addEventListener('touchmove', function(e) {
 }, { passive: true });
 
 // ============================================================
-// PWA: install prompt + service worker
+// PWA: install suggestion banner + service worker
 // ============================================================
 let deferredInstallPrompt = null;
 
 window.addEventListener('beforeinstallprompt', function(e) {
     e.preventDefault();
     deferredInstallPrompt = e;
-    const item = $('installAppMenuItem');
-    if (item) item.style.display = 'flex';
+    if (localStorage.getItem('pwaInstallDismissed')) return;
+    setTimeout(function() {
+        const banner = $('pwaInstallBanner');
+        if (banner && deferredInstallPrompt) banner.classList.add('show');
+    }, 2500);
 });
 
 window.addEventListener('appinstalled', function() {
     deferredInstallPrompt = null;
-    const item = $('installAppMenuItem');
-    if (item) item.style.display = 'none';
+    const banner = $('pwaInstallBanner');
+    if (banner) banner.classList.remove('show');
 });
+
+function dismissPWABanner() {
+    const banner = $('pwaInstallBanner');
+    if (banner) banner.classList.remove('show');
+    try { localStorage.setItem('pwaInstallDismissed', '1'); } catch (e) {}
+}
 
 function installPWA() {
     if (!deferredInstallPrompt) return;
+    const banner = $('pwaInstallBanner');
+    if (banner) banner.classList.remove('show');
     deferredInstallPrompt.prompt();
     deferredInstallPrompt.userChoice.finally(function() {
         deferredInstallPrompt = null;
-        const item = $('installAppMenuItem');
-        if (item) item.style.display = 'none';
     });
 }
 
