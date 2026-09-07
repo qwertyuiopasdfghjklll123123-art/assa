@@ -357,16 +357,16 @@ header {
     display: flex;
     align-items: center;
     gap: 12px;
-    padding: 14px 18px;
+    padding: 12px 18px;
     background: var(--primary);
     color: #fff;
     position: sticky;
     top: 0;
     z-index: 10;
     flex-shrink: 0;
-    min-height: 60px;
+    min-height: 64px;
     box-shadow: 0 2px 20px rgba(5,134,147,.15);
-    padding-top: calc(14px + var(--safe-area-top));
+    padding-top: calc(12px + var(--safe-area-top));
 }
 
 .detail-header h2,

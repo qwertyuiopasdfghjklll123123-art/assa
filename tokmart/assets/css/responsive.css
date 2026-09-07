@@ -17,6 +17,45 @@
         height: 34px;
         font-size: 12px;
     }
+    /* Match the shrunk .topbar above so every sub-page's own header
+       (notifications, login/register/forgot-password, favorites, orders,
+       recharge, account settings, chat) is the same size as the main
+       header instead of visibly taller. */
+    .detail-header,
+    .settings-page .detail-header,
+    .product-detail-page .detail-header,
+    .all-products-page .detail-header,
+    .category-products-page .detail-header,
+    .favorites-page .detail-header,
+    .orders-page .detail-header,
+    .order-detail-page .detail-header,
+    .recharge-page .detail-header,
+    .auth-page .detail-header,
+    .chat-app-user .chat-header {
+        padding: 6px 12px;
+        padding-top: calc(6px + var(--safe-area-top));
+        min-height: 52px;
+    }
+    .detail-header h2,
+    .settings-page .detail-header h2,
+    .product-detail-page .detail-header h2,
+    .all-products-page .detail-header h2,
+    .category-products-page .detail-header h2,
+    .favorites-page .detail-header h2,
+    .orders-page .detail-header h2,
+    .order-detail-page .detail-header h2,
+    .recharge-page .detail-header h2,
+    .auth-page .detail-header h2,
+    .chat-app-user .chat-header .chat-info .name {
+        font-size: 16px;
+    }
+    .back-btn {
+        width: 34px;
+        height: 34px;
+        min-width: 34px;
+        min-height: 34px;
+        font-size: 15px;
+    }
     .notification-item {
         padding: 12px;
         flex-wrap: wrap;
@@ -136,9 +175,8 @@
 .category-products-page .products-grid,
 .favorites-page .favorites-grid {
     display: grid !important;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 140px));
-    justify-content: center;
-    gap: 12px;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
     padding: 12px;
     overflow: visible !important;
 }
@@ -149,17 +187,5 @@
     width: 100% !important;
     min-width: 0 !important;
     max-width: none !important;
-    height: 170px !important;
-}
-
-.favorites-grid {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-    padding: 16px;
-}
-
-.favorites-grid .product-card {
-    width: 100%;
-    min-width: 0;
+    height: 185px !important;
 }
