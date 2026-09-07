@@ -11,7 +11,13 @@ function renderCheckout() {
     }
     section.style.display = 'block';
     const total = getCartTotal();
-    const paymentOptions = state.payments.filter(function(p) { return p.enabled && !p.isRechargeOnly; });
+    // Fixed by design, not admin-configurable: checkout always offers exactly
+    // these two, regardless of what's in the payments table (bank transfer
+    // stays admin-configurable, but only as a balance recharge method).
+    const paymentOptions = [
+        { id: 'cash', name: 'الدفع عند الاستلام', icon: 'fa-solid fa-hand-holding-dollar' },
+        { id: 'electronic', name: 'الدفع الإلكتروني', icon: 'fa-solid fa-credit-card' }
+    ];
 
     let transferHtml = '';
     if (state.selectedPayment === 'transfer' || state.selectedPayment === 'bank_transfer') {
