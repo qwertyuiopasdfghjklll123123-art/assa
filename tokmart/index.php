@@ -42,6 +42,12 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="theme-color" content="#0f3d1c">
+    <link rel="manifest" href="<?php echo APP_BASE_PATH; ?>/manifest.php">
+    <link rel="icon" href="<?php echo APP_BASE_PATH; ?>/icon.php?size=192">
+    <link rel="apple-touch-icon" href="<?php echo APP_BASE_PATH; ?>/icon.php?size=192">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="<?php echo htmlspecialchars($siteName); ?>">
     <title><?php echo htmlspecialchars($siteName . ' - ' . ($siteDescription ?: 'المتجر')); ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -238,6 +244,21 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
                     </div>
                     <div class="right">
                         <span class="status-pill" data-i18n="connected">متصل</span>
+                        <div class="chevron"><i class="fa-solid fa-chevron-left"></i></div>
+                    </div>
+                </div>
+
+                <div class="settings-item" id="installAppMenuItem" onclick="installPWA()" style="display:none;">
+                    <div class="left">
+                        <div class="icon-box" style="background:linear-gradient(135deg, #058693, #0AA6B5);">
+                            <i class="fa-solid fa-download"></i>
+                        </div>
+                        <div class="text-block">
+                            <div class="title">تثبيت التطبيق</div>
+                            <div class="subtitle">أضف الموقع لشاشتك الرئيسية</div>
+                        </div>
+                    </div>
+                    <div class="right">
                         <div class="chevron"><i class="fa-solid fa-chevron-left"></i></div>
                     </div>
                 </div>
@@ -781,6 +802,7 @@ $jsFiles = ['core', 'auth', 'cart', 'catalog', 'chat', 'checkout', 'recharge', '
 <script>
 window.APP_CONFIG = {
     apiUrl: 'api/index.php',
+    basePath: '<?php echo APP_BASE_PATH; ?>',
     adminUrl: '<?php echo APP_BASE_PATH; ?>/admin',
     isLoggedIn: <?php echo $isLoggedIn ? 'true' : 'false'; ?>,
     isAdmin: <?php echo $isAdmin ? 'true' : 'false'; ?>,

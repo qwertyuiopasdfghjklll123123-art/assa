@@ -142,7 +142,7 @@ function openAddProduct() {
 }
 
 function editProduct(id) {
-    const p = PRODUCTS.find(function(x) { return x.id === id; });
+    const p = PRODUCTS.find(function(x) { return x.id == id; });
     if (!p) return;
 
     $('productModalTitle').textContent = '📦 تعديل المنتج';

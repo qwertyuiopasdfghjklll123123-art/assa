@@ -181,7 +181,7 @@ function createProductCard(product) {
 }
 
 function addToCartById(productId) {
-    const product = state.products.find(function(p) { return p.id === productId; });
+    const product = state.products.find(function(p) { return p.id == productId; });
     if (product) addToCart(product);
 }
 
@@ -304,7 +304,7 @@ function openCategoryProducts(categoryId) {
 }
 
 function openProductDetail(productId) {
-    const product = state.products.find(function(p) { return p.id === productId; });
+    const product = state.products.find(function(p) { return p.id == productId; });
     if (!product) { showToast('المنتج غير موجود'); return; }
 
     const openPages = document.querySelectorAll('.settings-page.open, .product-detail-page.open, .all-products-page.open, .category-products-page.open, .favorites-page.open, .orders-page.open, .order-detail-page.open, .recharge-page.open, .auth-page.open, .chat-app-user.open');
@@ -413,7 +413,7 @@ function updateDetailQty(delta) {
 }
 
 function addDetailToCart(productId) {
-    const product = state.products.find(function(p) { return p.id === productId; });
+    const product = state.products.find(function(p) { return p.id == productId; });
     if (!product) return;
     for (let i = 0; i < state.detailQty; i++) {
         addToCart(product);
@@ -513,9 +513,9 @@ function toggleFavorite(productId) {
         openLoginPage();
         return;
     }
-    const product = state.products.find(function(p) { return p.id === productId; });
+    const product = state.products.find(function(p) { return p.id == productId; });
     if (!product) return;
-    const index = state.favorites.findIndex(function(f) { return f.id === productId; });
+    const index = state.favorites.findIndex(function(f) { return f.id == productId; });
     if (index > -1) {
         state.favorites.splice(index, 1);
         showToast('تمت الإزالة من المفضلة');

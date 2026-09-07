@@ -80,7 +80,7 @@ function updateOrderStatus(id, status) {
 }
 
 function viewOrder(id) {
-    const o = ORDERS.find(function(x) { return x.id === id; });
+    const o = ORDERS.find(function(x) { return x.id == id; });
     if (!o) return;
 
     let itemsHtml = (o.items || []).map(function(it) {

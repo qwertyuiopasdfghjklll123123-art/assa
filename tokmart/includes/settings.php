@@ -23,3 +23,11 @@ function getSiteSettings(): array {
         'app_version' => $data['app_version'] ?? '1.0.0',
     ];
 }
+
+/** Raw uploaded logo filename (not a URL) - for server-side code that needs
+ *  to read the actual file, e.g. resizing it for a PWA icon. */
+function getSiteLogoFile(): string {
+    $row = queryOne("SELECT value FROM settings WHERE `key` = 'site'");
+    $data = $row ? json_decode($row['value'], true) : [];
+    return $data['logo'] ?? '';
+}

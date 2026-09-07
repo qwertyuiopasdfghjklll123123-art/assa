@@ -700,7 +700,7 @@ function renderNotifications() {
 }
 
 function toggleNotificationRead(id) {
-    const notification = state.notifications.find(function(n) { return n.id === id; });
+    const notification = state.notifications.find(function(n) { return n.id == id; });
     if (!notification) return;
 
     const newStatus = notification.isRead ? 0 : 1;
@@ -746,7 +746,7 @@ function deleteAllNotifications() {
 function deleteNotification(id) {
     if (!requireLogin()) return;
 
-    const index = state.notifications.findIndex(function(n) { return n.id === id; });
+    const index = state.notifications.findIndex(function(n) { return n.id == id; });
     if (index !== -1) {
         state.notifications.splice(index, 1);
         updateNotifBadge();

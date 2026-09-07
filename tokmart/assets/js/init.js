@@ -205,3 +205,37 @@ document.addEventListener('touchmove', function(e) {
         scroll.style.overflowY = 'auto';
     }
 }, { passive: true });
+
+// ============================================================
+// PWA: install prompt + service worker
+// ============================================================
+let deferredInstallPrompt = null;
+
+window.addEventListener('beforeinstallprompt', function(e) {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    const item = $('installAppMenuItem');
+    if (item) item.style.display = 'flex';
+});
+
+window.addEventListener('appinstalled', function() {
+    deferredInstallPrompt = null;
+    const item = $('installAppMenuItem');
+    if (item) item.style.display = 'none';
+});
+
+function installPWA() {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    deferredInstallPrompt.userChoice.finally(function() {
+        deferredInstallPrompt = null;
+        const item = $('installAppMenuItem');
+        if (item) item.style.display = 'none';
+    });
+}
+
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function() {
+        navigator.serviceWorker.register(window.APP_CONFIG.basePath + '/sw.php').catch(function() {});
+    });
+}

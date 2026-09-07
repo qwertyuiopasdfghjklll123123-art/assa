@@ -397,7 +397,7 @@ function renderRechargeHistory() {
 // ============================================================
 
 function openRechargeDetail(rechargeId) {
-    const recharge = state.recharges.find(function(r) { return r.id === rechargeId; });
+    const recharge = state.recharges.find(function(r) { return r.id == rechargeId; });
     if (!recharge) {
         showToast('⚠️ طلب الشحن غير موجود');
         return;
