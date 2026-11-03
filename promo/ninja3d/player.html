@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ninja Mascot 3D</title>
+<style>
+  html,body{margin:0;height:100%;background:#0b2a35;overflow:hidden}
+  #out{display:block;margin:0 auto;height:100vh;width:auto;aspect-ratio:9/16;max-width:100vw}
+  body.capture #out{height:1920px;width:1080px}
+</style>
+<script type="importmap">{"imports":{"three":"./node_modules/three/build/three.module.js","three/addons/":"./node_modules/three/examples/jsm/"}}</script>
+</head>
+<body>
+<canvas id="out" width="1080" height="1920"></canvas>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const W = 1080, H = 1920, DURATION = 7.4;
+const capture = new URLSearchParams(location.search).has('capture');
+if (capture) document.body.classList.add('capture');
+
+const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+renderer.setPixelRatio(1); renderer.setSize(W, H, false);
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.05;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const out = document.getElementById('out'), ctx = out.getContext('2d');
+
+const scene = new THREE.Scene();
+// clean turquoise/cyan gradient background
+{
+  const c = document.createElement('canvas'); c.width = 540; c.height = 960;
+  const g = c.getContext('2d');
+  const rg = g.createRadialGradient(270, 380, 40, 270, 480, 760);
+  rg.addColorStop(0, '#9ff3f6'); rg.addColorStop(0.45, '#45d3df'); rg.addColorStop(1, '#0d93ab');
+  g.fillStyle = rg; g.fillRect(0, 0, 540, 960);
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
+  scene.background = tex;
+}
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+scene.environmentIntensity = 0.55;
+
+// lighting: soft key + cool rim + sky/ground fill
+scene.add(new THREE.HemisphereLight(0xffffff, 0x2aaab8, 1.1));
+const key = new THREE.DirectionalLight(0xfff3e6, 2.4);
+key.position.set(4, 9, 7); key.castShadow = true;
+key.shadow.mapSize.set(2048, 2048); key.shadow.bias = -0.0004; key.shadow.normalBias = 0.02;
+Object.assign(key.shadow.camera, { left: -5, right: 5, top: 7, bottom: -2, near: 1, far: 30 });
+key.shadow.radius = 6;
+scene.add(key);
+const rim = new THREE.DirectionalLight(0xd8fbff, 2.2); rim.position.set(-6, 5, -6); scene.add(rim);
+const fill = new THREE.DirectionalLight(0xbff6ff, 0.6); fill.position.set(-5, 2, 6); scene.add(fill);
+
+// ground: shadow catcher + soft contact blob
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.22, color: 0x05505e }));
+ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+const blob = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  const rg = g.createRadialGradient(64, 64, 0, 64, 64, 64); rg.addColorStop(0, 'rgba(4,60,72,.55)'); rg.addColorStop(1, 'rgba(4,60,72,0)');
+  g.fillStyle = rg; g.fillRect(0, 0, 128, 128);
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 2.6), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.position.y = 0.005; scene.add(m); return m;
+})();
+// soft disc platform
+const disc = new THREE.Mesh(new THREE.CircleGeometry(2.4, 64), new THREE.MeshStandardMaterial({ color: 0x7fe6ee, roughness: 0.6, transparent: true, opacity: 0.35 }));
+disc.rotation.x = -Math.PI / 2; disc.position.y = 0.002; disc.receiveShadow = true; scene.add(disc);
+
+// subtle floating geometric shapes
+const shapes = [];
+{
+  const geos = [new THREE.OctahedronGeometry(0.6), new THREE.TorusGeometry(0.55, 0.14, 16, 48), new THREE.TetrahedronGeometry(0.6),
+    new THREE.IcosahedronGeometry(0.5), new THREE.TorusGeometry(0.8, 0.05, 8, 64), new THREE.BoxGeometry(0.7, 0.7, 0.7)];
+  const rnd = (() => { let s = 7; return () => ((s = (s * 16807) % 2147483647) / 2147483647); })();
+  for (let i = 0; i < 16; i++) {
+    const m = new THREE.Mesh(geos[i % geos.length], new THREE.MeshStandardMaterial({
+      color: 0xe9feff, roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.18 + rnd() * 0.25, emissive: 0x52dbe6, emissiveIntensity: 0.15 }));
+    const ang = rnd() * Math.PI * 2;
+    m.position.set(Math.cos(ang) * (4 + rnd() * 6), 0.5 + rnd() * 7, -4 - rnd() * 12);
+    m.userData = { rx: (rnd() - 0.5) * 1.2, ry: (rnd() - 0.5) * 1.2, bob: rnd() * 6, base: m.position.clone(), s: 0.6 + rnd() * 1.2 };
+    m.scale.setScalar(m.userData.s);
+    scene.add(m); shapes.push(m);
+  }
+}
+
+// camera keys: [t, pos, target, fov, ease]
+const CAM = [
+  [0.0, [0, 2.62, 3.3], [0, 2.6, 0], 40],
+  [0.85, [0, 2.6, 3.0], [0, 2.6, 0], 40, 'io'],
+  [1.45, [0, 2.1, 11.2], [0, 1.8, 0], 40, 'expo'],
+  [2.2, [0.6, 2.3, 11.4], [0, 2.1, 0], 40, 'io'],
+  [2.45, [1.3, 1.9, 10.2], [0, 1.75, 0], 40, 'io'],
+  [3.0, [1.6, 2.3, 8.6], [0, 2.0, 0], 40, 'io'],
+  [3.3, [0.55, 2.62, 4.4], [0.1, 2.5, 0], 40, 'io'],
+  [3.5, [0.4, 2.0, 11.2], [0, 1.6, 0], 40, 'o'],
+  [4.25, [-0.8, 1.9, 11.6], [0, 1.65, 0], 40, 'io'],
+  [5.3, [-1.6, 1.7, 10.6], [0, 1.7, 0], 40, 'io'],
+  [5.75, [-1.5, 0.85, 9.2], [0, 1.95, 0], 40, 'o'],
+  [7.4, [-1.25, 0.9, 8.7], [0, 1.95, 0], 40, 'io'],
+];
+const EASE = {
+  io: (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
+  o: (x) => 1 - Math.pow(1 - x, 3),
+  expo: (x) => (x < 0.5 ? Math.pow(2, 20 * x - 10) / 2 : (2 - Math.pow(2, -20 * x + 10)) / 2),
+};
+const camera = new THREE.PerspectiveCamera(40, W / H, 0.05, 200);
+const tmpT = new THREE.Vector3();
+function cameraAt(t) {
+  let i = 0; while (i < CAM.length - 2 && t > CAM[i + 1][0]) i++;
+  const a = CAM[i], b = CAM[i + 1];
+  const u = Math.min(1, Math.max(0, (t - a[0]) / (b[0] - a[0])));
+  const k = EASE[b[4] || 'io'](u);
+  camera.position.set(...a[1].map((v, j) => v + (b[1][j] - v) * k));
+  tmpT.set(...a[2].map((v, j) => v + (b[2][j] - v) * k));
+  camera.fov = a[3] + (b[3] - a[3]) * k;
+  // impact shakes (landing, slash)
+  let sh = 0;
+  for (const [t0, amp] of [[2.18, 0.09], [3.78, 0.12], [5.68, 0.05]]) { const d = t - t0; if (d > 0 && d < 0.4) sh += amp * Math.exp(-d * 9); }
+  camera.position.x += sh * Math.sin(t * 90); camera.position.y += sh * Math.cos(t * 77);
+  camera.lookAt(tmpT); camera.updateProjectionMatrix();
+}
+
+// ---------- load the GLB mascot ----------
+const gltf = await new GLTFLoader().loadAsync('./assets/ninja.glb');
+const ninja = gltf.scene; scene.add(ninja);
+ninja.traverse((o) => { if (o.isMesh) { o.castShadow = !o.name.startsWith('Shine'); o.receiveShadow = true; } });
+const mixer = new THREE.AnimationMixer(ninja);
+const action = mixer.clipAction(gltf.animations[0]); action.play();
+const nRoot = ninja.getObjectByName('Ninja') || ninja;
+const swordTip = ninja.getObjectByName('SwordTip'), swordMid = ninja.getObjectByName('SwordMid');
+const headC = ninja.getObjectByName('HeadCenter');
+
+function poseAt(t) { mixer.setTime(Math.min(t, DURATION - 1e-3)); ninja.updateMatrixWorld(true); }
+
+// ---------- sword slash trail (precomputed from the baked animation) ----------
+const TRAIL = { t0: 3.3, t1: 4.4, step: 1 / 240, tip: [], mid: [] };
+for (let t = TRAIL.t0; t <= TRAIL.t1; t += TRAIL.step) {
+  poseAt(t);
+  TRAIL.tip.push(swordTip.getWorldPosition(new THREE.Vector3()));
+  TRAIL.mid.push(swordMid.getWorldPosition(new THREE.Vector3()));
+}
+const TN = 48;
+const trailGeo = new THREE.BufferGeometry();
+trailGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(TN * 2 * 3), 3));
+trailGeo.setAttribute('color', new THREE.BufferAttribute(new Float32Array(TN * 2 * 3), 3));
+const idx = []; for (let i = 0; i < TN - 1; i++) { const a = i * 2; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+trailGeo.setIndex(idx);
+const trail = new THREE.Mesh(trailGeo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, blending: THREE.AdditiveBlending, side: THREE.DoubleSide, depthWrite: false, toneMapped: false }));
+trail.frustumCulled = false; scene.add(trail);
+function updateTrail(t) {
+  const len = 0.16; // seconds of trail
+  const vis = t > 3.5 && t < 4.35;
+  trail.visible = vis; if (!vis) return;
+  const P = trailGeo.attributes.position.array, Cc = trailGeo.attributes.color.array;
+  for (let i = 0; i < TN; i++) {
+    const tt = t - len * (i / (TN - 1));
+    const f = Math.max(0, Math.min(TRAIL.tip.length - 1, (tt - TRAIL.t0) / TRAIL.step));
+    const i0 = Math.floor(f), i1 = Math.min(i0 + 1, TRAIL.tip.length - 1), u = f - i0;
+    const tip = TRAIL.tip[i0].clone().lerp(TRAIL.tip[i1], u), mid = TRAIL.mid[i0].clone().lerp(TRAIL.mid[i1], u);
+    tip.toArray(P, i * 6); mid.toArray(P, i * 6 + 3);
+    const fade = Math.pow(1 - i / (TN - 1), 1.6) * Math.min(1, (4.35 - t) / 0.25);
+    Cc.set([0.75 * fade, 1.0 * fade, 1.0 * fade], i * 6); Cc.set([0.1 * fade, 0.55 * fade, 0.75 * fade], i * 6 + 3);
+  }
+  trailGeo.attributes.position.needsUpdate = true; trailGeo.attributes.color.needsUpdate = true;
+}
+
+// ---------- scene update ----------
+const hp = new THREE.Vector3();
+function sceneAt(t) {
+  poseAt(t);
+  updateTrail(t);
+  nRoot.getWorldPosition(hp);
+  blob.position.x = hp.x; blob.position.z = hp.z;
+  const air = Math.max(0, hp.y); blob.scale.setScalar(1 + air * 0.4); blob.material.opacity = 1 - Math.min(0.7, air * 0.6);
+  for (const m of shapes) {
+    const u = m.userData;
+    m.rotation.set(t * u.rx, t * u.ry, 0);
+    m.position.y = u.base.y + Math.sin(t * 0.8 + u.bob) * 0.25;
+  }
+  cameraAt(t);
+}
+
+// ---------- 4-point shuriken star transition ----------
+function starPath(c, cx, cy, R, rot, inner = 0.36) {
+  for (let i = 0; i < 8; i++) {
+    const a = rot + (i * Math.PI) / 4 - Math.PI / 2, r = i % 2 === 0 ? R : R * inner;
+    const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+    i ? c.lineTo(x, y) : c.moveTo(x, y);
+  }
+  c.closePath();
+}
+const T_STAR = 6.3, T_CLOSE = 6.95;
+function drawStar(t) {
+  if (t < T_STAR) return;
+  headC.getWorldPosition(hp); hp.project(camera);
+  const cx = (hp.x * 0.5 + 0.5) * W, cy = (-hp.y * 0.5 + 0.5) * H;
+  const p = Math.min(1, (t - T_STAR) / (T_CLOSE - T_STAR));
+  const e = p * p;
+  const R = 1900 * (1 - e) + 0.001, rot = p * Math.PI * 0.9;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0, 0, W, H); starPath(ctx, cx, cy, R, rot);
+  ctx.fillStyle = '#062a36'; ctx.fill('evenodd');
+  if (p < 1) { ctx.beginPath(); starPath(ctx, cx, cy, R, rot); ctx.lineWidth = 22; ctx.strokeStyle = '#25e0ee'; ctx.shadowColor = '#7ff6ff'; ctx.shadowBlur = 40; ctx.stroke(); }
+  // closing shuriken pop
+  if (t > T_CLOSE) {
+    const q = Math.min(1, (t - T_CLOSE) / 0.3);
+    const s = q < 1 ? 1.25 * Math.sin(q * Math.PI * 0.62) : 1;
+    ctx.translate(W / 2, H / 2); ctx.rotate((t - T_CLOSE) * 9 * Math.max(0.15, 1 - q));
+    ctx.beginPath(); starPath(ctx, 0, 0, 200 * s, 0, 0.32);
+    const g = ctx.createLinearGradient(-200, -200, 200, 200); g.addColorStop(0, '#7ff6ff'); g.addColorStop(1, '#08a9e0');
+    ctx.fillStyle = g; ctx.shadowColor = '#25e0ee'; ctx.shadowBlur = 60; ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, 34 * s, 0, Math.PI * 2); ctx.fillStyle = '#062a36'; ctx.shadowBlur = 0; ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ---------- render with optional motion blur (temporal supersampling) ----------
+function blurSamplesAt(t) {
+  if ((t > 3.5 && t < 4.15) || (t > 1.76 && t < 2.2)) return 8;
+  if (t > 0.9 && t < 1.45) return 5;
+  return 1;
+}
+window.renderAt = (t, samples = blurSamplesAt(t), fps = 30) => {
+  const shutter = 0.5 / fps;
+  ctx.globalCompositeOperation = 'source-over';
+  for (let i = 0; i < samples; i++) {
+    const ts = samples === 1 ? t : t + (i / (samples - 1) - 0.5) * shutter;
+    sceneAt(Math.max(0, ts));
+    renderer.render(scene, camera);
+    ctx.globalAlpha = 1 / (i + 1);
+    ctx.drawImage(renderer.domElement, 0, 0, W, H);
+  }
+  ctx.globalAlpha = 1;
+  sceneAt(t);
+  drawStar(t);
+};
+window.DURATION = DURATION;
+window.__ready = true;
+
+if (!capture) {
+  const start = performance.now();
+  const loop = () => { const t = ((performance.now() - start) / 1000) % (DURATION + 0.8); window.renderAt(Math.min(t, DURATION), 1); requestAnimationFrame(loop); };
+  loop();
+}
+</script>
+</body>
+</html>

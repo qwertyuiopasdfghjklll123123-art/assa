@@ -1,0 +1,13 @@
+{
+  "name": "ninja3d-mascot",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "export-glb": "node scripts/export-glb.cjs",
+    "render": "node scripts/render.cjs",
+    "serve": "node scripts/serve.cjs"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  }
+}
