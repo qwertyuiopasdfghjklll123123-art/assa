@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Ninja Weekly Offer</title>
+<style>
+@font-face{font-family:Cairo;src:url(fonts/Cairo-400.ttf);font-weight:400}
+@font-face{font-family:Cairo;src:url(fonts/Cairo-700.ttf);font-weight:700}
+@font-face{font-family:Cairo;src:url(fonts/Cairo-900.ttf);font-weight:900}
+:root{
+  --bg:#07070d; --red:#ff2e4d; --yellow:#ffd23f; --cyan:#2ee6ff; --white:#fff; --muted:#9aa0b4;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);font-family:Cairo,sans-serif;color:var(--white)}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;
+  background:radial-gradient(1200px 900px at 80% 10%,#2a0b18 0%,transparent 60%),
+             radial-gradient(1000px 900px at 10% 95%,#081a2e 0%,transparent 60%),var(--bg)}
+/* moving grid */
+.grid{position:absolute;inset:-200px;background-image:
+  linear-gradient(rgba(255,255,255,.05) 2px,transparent 2px),
+  linear-gradient(90deg,rgba(255,255,255,.05) 2px,transparent 2px);
+  background-size:90px 90px;animation:gridMove 16.5s linear both;transform:perspective(900px) rotateX(35deg)}
+@keyframes gridMove{from{transform:perspective(900px) rotateX(35deg) translateY(0)}to{transform:perspective(900px) rotateX(35deg) translateY(540px)}}
+.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55}
+.b1{width:620px;height:620px;background:var(--red);top:-160px;right:-180px;animation:float1 16.5s ease-in-out both}
+.b2{width:560px;height:560px;background:#3b2bff;bottom:-160px;left:-160px;animation:float2 16.5s ease-in-out both}
+@keyframes float1{0%{transform:translate(0,0)}50%{transform:translate(-200px,500px)}100%{transform:translate(-40px,900px)}}
+@keyframes float2{0%{transform:translate(0,0)}50%{transform:translate(260px,-500px)}100%{transform:translate(80px,-1000px)}}
+.sym{position:absolute;font-family:monospace;font-weight:700;color:rgba(255,255,255,.08);font-size:120px;direction:ltr}
+.s1{top:180px;left:60px;animation:drift 16.5s linear both}
+.s2{top:980px;right:40px;animation:drift 16.5s linear both reverse}
+.s3{bottom:200px;left:120px;animation:drift 16.5s linear both}
+@keyframes drift{from{transform:translateY(0) rotate(-8deg)}to{transform:translateY(-300px) rotate(8deg)}}
+
+/* scenes */
+.scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;opacity:0;
+  animation:sIn .25s var(--s) both, sOut .3s var(--e) forwards}
+@keyframes sIn{from{opacity:0}to{opacity:1}}
+@keyframes sOut{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.15);filter:blur(12px)}}
+
+.pop{animation:pop .55s cubic-bezier(.2,1.6,.4,1) var(--d) both}
+@keyframes pop{from{opacity:0;transform:scale(.2) rotate(-6deg)}to{opacity:1;transform:scale(1) rotate(0)}}
+.slam{animation:slam .45s cubic-bezier(.2,.9,.3,1.2) var(--d) both}
+@keyframes slam{0%{opacity:0;transform:scale(3.2)}70%{opacity:1;transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
+.up{animation:up .5s cubic-bezier(.2,.9,.2,1) var(--d) both}
+@keyframes up{from{opacity:0;transform:translateY(90px)}to{opacity:1;transform:translateY(0)}}
+.left{animation:fromL .5s cubic-bezier(.2,.9,.2,1) var(--d) both}
+@keyframes fromL{from{opacity:0;transform:translateX(-500px)}to{opacity:1;transform:translateX(0)}}
+.right{animation:fromR .5s cubic-bezier(.2,.9,.2,1) var(--d) both}
+@keyframes fromR{from{opacity:0;transform:translateX(500px)}to{opacity:1;transform:translateX(0)}}
+.wipe{animation:wipe .5s cubic-bezier(.7,0,.2,1) var(--d) both}
+@keyframes wipe{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0 0 0 0)}}
+
+/* shuriken */
+.shuriken{width:300px;height:300px;animation:spinIn 1s cubic-bezier(.2,.9,.2,1) var(--d) both, spin 2.2s linear var(--d) both}
+@keyframes spinIn{from{opacity:0;transform:translateX(-900px) rotate(-720deg)}to{opacity:1;transform:translateX(0) rotate(0)}}
+@keyframes spin{from{rotate:0deg}to{rotate:540deg}}
+
+.kicker{font-size:58px;font-weight:700;color:var(--yellow);letter-spacing:2px}
+.huge{font-size:200px;font-weight:900;line-height:1.05}
+.big{font-size:130px;font-weight:900;line-height:1.1}
+.mid{font-size:76px;font-weight:700}
+.url{direction:ltr;font-size:64px;font-weight:900;color:var(--cyan);letter-spacing:1px}
+.red{color:var(--red)} .yel{color:var(--yellow)}
+.glow{text-shadow:0 0 40px rgba(255,46,77,.7),0 0 90px rgba(255,46,77,.4)}
+
+.pill{display:inline-block;padding:10px 46px;border-radius:999px;background:var(--red);font-weight:900;font-size:60px;box-shadow:0 0 60px rgba(255,46,77,.6)}
+.pill.yel{background:var(--yellow);color:#111;box-shadow:0 0 60px rgba(255,210,63,.5)}
+
+.card{position:relative;width:900px;padding:70px 60px 80px;border-radius:56px;
+  background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.03));
+  border:3px solid rgba(255,255,255,.14);box-shadow:0 40px 120px rgba(0,0,0,.6)}
+.card .icon{width:210px;height:210px;margin:0 auto 20px}
+.card .title{font-size:104px;font-weight:900;line-height:1.15}
+.card .sub{font-size:46px;color:var(--muted);font-weight:700;margin-top:6px}
+.prices{display:flex;align-items:center;justify-content:center;gap:50px;margin-top:40px;direction:ltr}
+.old{position:relative;font-size:96px;font-weight:700;color:var(--muted)}
+.old::after{content:"";position:absolute;left:-10px;right:-10px;top:52%;height:12px;background:var(--red);border-radius:6px;transform-origin:left;
+  transform:scaleX(0);animation:strike .35s ease-out var(--k) forwards}
+@keyframes strike{to{transform:scaleX(1) rotate(-8deg)}}
+.new{font-size:230px;font-weight:900;color:var(--yellow);line-height:1;text-shadow:0 0 60px rgba(255,210,63,.45)}
+.new small{font-size:110px;vertical-align:top}
+.badge{position:absolute;top:-70px;left:-40px;width:230px;height:230px;border-radius:50%;background:var(--red);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;
+  box-shadow:0 0 70px rgba(255,46,77,.7);transform:rotate(-14deg)}
+.badge b{font-size:86px;direction:ltr}.badge span{font-size:40px}
+.flash{position:absolute;inset:0;background:#fff;opacity:0;animation:flash .35s ease-out var(--d) both;pointer-events:none}
+@keyframes flash{0%{opacity:.85}100%{opacity:0}}
+.bar{position:absolute;bottom:0;left:0;height:14px;background:linear-gradient(90deg,var(--red),var(--yellow));animation:bar 16.5s linear both}
+@keyframes bar{from{width:0}to{width:100%}}
+.brand{position:absolute;top:70px;left:0;right:0;text-align:center;font-weight:900;font-size:44px;letter-spacing:2px;opacity:.85}
+.brand span{color:var(--red)}
+.shake{animation:shake .4s linear var(--d) both}
+@keyframes shake{0%,100%{transform:translate(0)}20%{transform:translate(-14px,8px)}40%{transform:translate(12px,-10px)}60%{transform:translate(-8px,6px)}80%{transform:translate(6px,-4px)}}
+.pulse{animation:pulse .8s ease-in-out var(--d) infinite}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="grid"></div>
+  <div class="blob b1"></div><div class="blob b2"></div>
+  <div class="sym s1">&lt;/&gt;</div><div class="sym s2">{ }</div><div class="sym s3">( );</div>
+  <div class="brand up" style="--d:.2s">نينجا <span>✦</span> NINJA</div>
+
+  <!-- 1. Intro 0 – 2.3 -->
+  <div class="scene" style="--s:0s;--e:2.1s">
+    <svg class="shuriken" style="--d:0s" viewBox="-100 -100 200 200">
+      <g fill="#ff2e4d">
+        <path d="M0-95 L18-18 L95 0 L18 18 L0 95 L-18 18 L-95 0 L-18-18Z"/>
+      </g>
+      <circle r="20" fill="#07070d"/><circle r="9" fill="#ff2e4d"/>
+    </svg>
+    <div class="kicker up" style="--d:.55s;margin-top:40px">برمجة مواقع وتطبيقات</div>
+    <div class="huge slam glow" style="--d:.8s">عرض<br><span class="red">الأسبوع</span></div>
+  </div>
+
+  <!-- 2. 50% slam 2.3 – 3.7 -->
+  <div class="scene" style="--s:2.3s;--e:3.6s">
+    <div class="flash" style="--d:2.3s"></div>
+    <div class="mid up" style="--d:2.35s">خصم يصل إلى</div>
+    <div class="shake" style="--d:2.55s"><div class="slam yel" style="--d:2.4s;font-size:330px;font-weight:900;line-height:1;direction:ltr;text-shadow:0 0 80px rgba(255,210,63,.5)">50%</div></div>
+    <div class="pill pop" style="--d:2.9s">لفترة محدودة</div>
+  </div>
+
+  <!-- 3. Website 3.9 – 7.1 -->
+  <div class="scene" style="--s:3.9s;--e:6.9s">
+    <div class="card right" style="--d:3.9s">
+      <div class="badge pop" style="--d:4.5s"><b>-50%</b><span>خصم</span></div>
+      <svg class="icon pop" style="--d:4.05s" viewBox="0 0 100 100" fill="none" stroke="#2ee6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="8" y="16" width="84" height="64" rx="8"/><path d="M8 32h84"/><circle cx="18" cy="24" r="2" fill="#2ee6ff"/><circle cx="27" cy="24" r="2" fill="#2ee6ff"/>
+        <path d="M38 50l-10 8 10 8M62 50l10 8-10 8M54 46l-8 24" stroke="#ffd23f"/></svg>
+      <div class="title up" style="--d:4.15s">موقع تعريفي</div>
+      <div class="sub up" style="--d:4.3s">صفحة احترافية تعرّف بنشاطك</div>
+      <div class="prices">
+        <div class="old up" style="--d:4.5s;--k:4.95s">$70</div>
+        <div class="new slam" style="--d:5.1s"><small>$</small>35</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. App 7.1 – 10.3 -->
+  <div class="scene" style="--s:7.1s;--e:10.1s">
+    <div class="card left" style="--d:7.1s">
+      <div class="badge pop" style="--d:7.7s"><b>-50%</b><span>خصم</span></div>
+      <svg class="icon pop" style="--d:7.25s" viewBox="0 0 100 100" fill="none" stroke="#2ee6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="27" y="6" width="46" height="88" rx="10"/><path d="M43 14h14"/><circle cx="50" cy="84" r="3" fill="#2ee6ff"/>
+        <rect x="36" y="28" width="12" height="12" rx="3" stroke="#ffd23f"/><rect x="52" y="28" width="12" height="12" rx="3" stroke="#ffd23f"/>
+        <rect x="36" y="46" width="12" height="12" rx="3" stroke="#ffd23f"/><rect x="52" y="46" width="12" height="12" rx="3" stroke="#ffd23f"/></svg>
+      <div class="title up" style="--d:7.35s">تطبيق جوال</div>
+      <div class="sub up" style="--d:7.5s">iOS و Android</div>
+      <div class="prices">
+        <div class="old up" style="--d:7.7s;--k:8.15s">$190</div>
+        <div class="new slam" style="--d:8.3s"><small>$</small>95</div>
+      </div>
+      <div class="kicker up" style="--d:8.6s;margin-top:20px">فقط!</div>
+    </div>
+  </div>
+
+  <!-- 5. Store 10.3 – 13.4 -->
+  <div class="scene" style="--s:10.3s;--e:13.2s">
+    <div class="card up" style="--d:10.3s">
+      <div class="badge pop" style="--d:10.9s;background:var(--yellow);color:#111;box-shadow:0 0 70px rgba(255,210,63,.6)"><b style="font-size:58px">سعر</b><span>خاص</span></div>
+      <svg class="icon pop" style="--d:10.45s" viewBox="0 0 100 100" fill="none" stroke="#2ee6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M10 18h12l10 46h46l10-34H28"/><circle cx="38" cy="80" r="6" stroke="#ffd23f"/><circle cx="72" cy="80" r="6" stroke="#ffd23f"/>
+        <path d="M44 44l8 8 16-16" stroke="#ffd23f"/></svg>
+      <div class="title up" style="--d:10.55s">متجر إلكتروني</div>
+      <div class="sub up" style="--d:10.7s">بيع منتجاتك أونلاين بسهولة</div>
+      <div class="prices">
+        <div class="new slam" style="--d:11.1s"><small>$</small>49</div>
+      </div>
+      <div class="kicker up" style="--d:11.5s;margin-top:20px">فقط!</div>
+    </div>
+  </div>
+
+  <!-- 6. CTA 13.4 – 16.5 -->
+  <div class="scene" style="--s:13.4s;--e:99s">
+    <div class="flash" style="--d:13.4s"></div>
+    <svg class="shuriken" style="--d:13.4s;width:200px;height:200px" viewBox="-100 -100 200 200">
+      <path fill="#ff2e4d" d="M0-95 L18-18 L95 0 L18 18 L0 95 L-18 18 L-95 0 L-18-18Z"/><circle r="20" fill="#07070d"/><circle r="9" fill="#ff2e4d"/>
+    </svg>
+    <div class="big slam" style="--d:13.7s;margin-top:30px">العرض <span class="red">هذا الأسبوع</span><br>فقط</div>
+    <div class="pill yel pop" style="--d:14.3s;margin-top:40px"><span class="pulse" style="--d:14.9s;display:inline-block">اطلب الآن</span></div>
+    <div class="url wipe" style="--d:14.7s;margin-top:60px">ananinja.com</div>
+  </div>
+
+  <div class="bar"></div>
+</div>
+<script>
+// Deterministic frame control: pause every animation and seek it to time t (seconds)
+window.seek = (t) => {
+  for (const a of document.getAnimations()) { a.pause(); a.currentTime = t * 1000; }
+};
+</script>
+</body>
+</html>
