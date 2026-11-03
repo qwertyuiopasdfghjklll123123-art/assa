@@ -2,7 +2,7 @@
 <html lang="ar">
 <head>
 <meta charset="utf-8">
-<title>Fast Grand Offer Film</title>
+<title>FastCrand Offer Film</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
@@ -75,6 +75,14 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:var(--page);font
 .win .bar{height:34px;background:#F1F6FF;display:flex;align-items:center;gap:8px;padding:0 14px}
 .win .bar i{width:11px;height:11px;border-radius:50%;background:#cdd8e8}
 .win .bar u{margin-left:20px;height:14px;width:200px;border-radius:7px;background:#e3ebf6;display:block}
+
+.vis{height:478px !important;background:#E6F0FA !important;gap:34px !important}
+.vis .bd{position:absolute;inset:-60px;background-size:cover;background-position:center;filter:blur(34px) saturate(1.2);opacity:.55}
+.vis .ph{position:relative;width:228px;height:446px;border-radius:38px;background:#0f1830;padding:7px;box-shadow:0 24px 50px rgba(15,30,70,.35), inset 0 0 0 1.5px rgba(255,255,255,.25)}
+.vis .ph img{display:block;width:100%;height:100%;object-fit:cover;border-radius:31px}
+.vis .stores{position:relative}
+.ctitle{top:524px !important}
+.csub{top:598px !important;font-size:26px !important}
 </style>
 </head>
 <body>
@@ -83,9 +91,9 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:var(--page);font
     <filter id="mb" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur id="mbB" stdDeviation="0 0"/></filter>
     <filter id="mbs1" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur id="mbS1" stdDeviation="0 0"/></filter>
     <symbol id="fg" viewBox="0 0 100 100">
-      <!-- original Fast Grand mark: F + G with speed lines -->
+      <!-- FastCrand mark: F + C with speed lines -->
       <path d="M20 22h34M20 22v56M20 48h26" stroke="#fff" stroke-width="11" stroke-linecap="round" fill="none"/>
-      <path d="M86 36a24 24 0 1 0 2 22H70" stroke="#3CC8F0" stroke-width="11" stroke-linecap="round" fill="none"/>
+      <path d="M84 33A24 24 0 1 0 84 67" stroke="#3CC8F0" stroke-width="11" stroke-linecap="round" fill="none"/>
       <path d="M4 66h8M4 80h14" stroke="#3CC8F0" stroke-width="6" stroke-linecap="round"/>
     </symbol>
   </defs>
@@ -96,7 +104,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:var(--page);font
   <div id="light" class="abs" style="width:1920px;height:1080px">
     <div id="floor"></div>
     <div id="haze"></div>
-    <div id="word" class="abs">Fast Grand</div>
+    <div id="word" class="abs">FastCrand</div>
     <div id="tag" class="abs c">شركة عراقية متخصصة في صناعة التطبيقات</div>
     <div id="pill" class="abs c">بأفضل جودة <b>·</b> وبسعر مناسب</div>
     <div id="h2" class="abs c">جودة <span>لا تُقارن</span>… بسعر مناسب</div>
@@ -120,64 +128,24 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:var(--page);font
     <div id="offer" class="abs c">عروض الأسبوع <b>·</b> خصم 50%</div>
     <div id="track">
       <div class="card" id="card0">
-        <div class="vis">
-          <div class="stores">
+        <div class="vis"><div class="bd" style="background-image:url(assets/shot-store-app.jpg)"></div><div class="ph"><img src="assets/shot-store-app.jpg" style="object-position:50% 0%"></div><div class="stores">
             <div class="store"><svg viewBox="0 0 24 24"><path d="M5 3.5v17c0 .4.4.6.7.4l14.6-8.5c.3-.2.3-.6 0-.8L5.7 3.1c-.3-.2-.7 0-.7.4z"/></svg>Google Play</div>
             <div class="store"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><rect x="8" y="5" width="8" height="12" rx="1" fill="#1E2F52"/></svg>iPhone</div>
-          </div>
-          <div class="phone"><div class="scr">
-            <i style="background:#2F6BFF"></i><i style="background:#3CC8F0"></i><i style="background:#4ED6A0"></i>
-            <i style="background:#294376"></i><i style="background:#769CC2"></i><i style="background:#2F6BFF"></i>
-            <i style="background:#4ED6A0"></i><i style="background:#3CC8F0"></i><i style="background:#294376"></i>
           </div></div>
-        </div>
         <div class="ctitle">تطبيق متكامل 100%</div>
         <div class="csub">نشر على Google Play · قابل للتثبيت على iPhone</div>
         <div class="prow"><div class="badge">خصم 50%</div><div class="price"><small>$</small>99</div></div>
         <div class="sheen"></div>
       </div>
       <div class="card" id="card1">
-        <div class="vis">
-          <div class="win"><div class="bar"><i></i><i></i><i></i><u></u></div>
-            <div style="display:flex;height:266px">
-              <div style="width:96px;background:#1E2F52;padding:20px 14px;display:flex;flex-direction:column;gap:14px">
-                <i style="height:10px;border-radius:5px;background:#3CC8F0;display:block"></i><i style="height:10px;border-radius:5px;background:rgba(255,255,255,.35);display:block"></i><i style="height:10px;border-radius:5px;background:rgba(255,255,255,.35);display:block"></i><i style="height:10px;border-radius:5px;background:rgba(255,255,255,.35);display:block"></i></div>
-              <div style="flex:1;padding:18px">
-                <div style="display:flex;gap:12px">
-                  <div style="flex:1;height:62px;border-radius:12px;background:#EEF4FF;padding:10px"><i style="display:block;width:50%;height:9px;border-radius:5px;background:#c3d2ea"></i><i style="display:block;width:70%;height:16px;margin-top:9px;border-radius:6px;background:#2F6BFF"></i></div>
-                  <div style="flex:1;height:62px;border-radius:12px;background:#EEF4FF;padding:10px"><i style="display:block;width:50%;height:9px;border-radius:5px;background:#c3d2ea"></i><i style="display:block;width:60%;height:16px;margin-top:9px;border-radius:6px;background:#4ED6A0"></i></div>
-                  <div style="flex:1;height:62px;border-radius:12px;background:#EEF4FF;padding:10px"><i style="display:block;width:50%;height:9px;border-radius:5px;background:#c3d2ea"></i><i style="display:block;width:80%;height:16px;margin-top:9px;border-radius:6px;background:#3CC8F0"></i></div>
-                </div>
-                <div class="bars" style="display:flex;align-items:flex-end;gap:12px;height:150px;margin-top:16px;padding:0 6px;border-bottom:2px solid #e3ebf6">
-                  <i style="flex:1;height:40%;border-radius:8px 8px 0 0;background:#c9dafc"></i><i style="flex:1;height:62%;border-radius:8px 8px 0 0;background:#9dbcff"></i><i style="flex:1;height:48%;border-radius:8px 8px 0 0;background:#c9dafc"></i><i style="flex:1;height:78%;border-radius:8px 8px 0 0;background:#6f9bff"></i><i style="flex:1;height:66%;border-radius:8px 8px 0 0;background:#9dbcff"></i><i style="flex:1;height:92%;border-radius:8px 8px 0 0;background:#2F6BFF"></i><i style="flex:1;height:84%;border-radius:8px 8px 0 0;background:#3CC8F0"></i>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="vis"><div class="bd" style="background-image:url(assets/shot-business-app.jpg)"></div><div class="ph"><img src="assets/shot-business-app.jpg" style="object-position:50% 7%"></div></div>
         <div class="ctitle">موقع إدارة ومبيعات</div>
         <div class="csub">لوحة تحكم لإدارة نشاطك ومبيعاتك</div>
         <div class="prow"><div class="badge">خصم 50%</div><div class="price"><small>$</small>55</div></div>
         <div class="sheen"></div>
       </div>
       <div class="card" id="card2">
-        <div class="vis">
-          <div class="win"><div class="bar"><i></i><i></i><i></i><u></u></div>
-            <div style="display:flex;height:266px;padding:26px;gap:24px;direction:rtl">
-              <div style="flex:1.1;display:flex;flex-direction:column;gap:14px;padding-top:10px">
-                <i style="display:block;height:24px;width:92%;border-radius:8px;background:#1E2F52"></i>
-                <i style="display:block;height:24px;width:70%;border-radius:8px;background:#1E2F52"></i>
-                <i style="display:block;height:11px;width:85%;border-radius:6px;background:#d3ddeb;margin-top:6px"></i>
-                <i style="display:block;height:11px;width:65%;border-radius:6px;background:#d3ddeb"></i>
-                <i style="display:block;height:40px;width:150px;border-radius:20px;background:#2F6BFF;margin-top:12px"></i>
-              </div>
-              <div style="flex:1;border-radius:18px;background:linear-gradient(180deg,#769CC2,#B7CFEB);position:relative;overflow:hidden">
-                <i style="position:absolute;width:70px;height:70px;border-radius:50%;background:#E6F0FA;right:24px;top:24px"></i>
-                <i style="position:absolute;left:-30px;right:-30px;bottom:-60px;height:130px;border-radius:50%;background:#4ED6A0;opacity:.8"></i>
-              </div>
-            </div>
-          </div>
-        </div>
+        <div class="vis"><div class="bd" style="background-image:url(assets/shot-fastcrand-site.jpg)"></div><div class="ph"><img src="assets/shot-fastcrand-site.jpg" style="object-position:50% 0%"></div></div>
         <div class="ctitle">موقع تعريفي احترافي</div>
         <div class="csub">واجهة أنيقة تعرّف بنشاطك وخدماتك</div>
         <div class="prow"><div class="badge mint">سعر خاص</div><div class="price"><small>$</small>35</div></div>
@@ -189,7 +157,7 @@ html,body{width:1920px;height:1080px;overflow:hidden;background:var(--page);font
     <div id="ring" class="abs c" style="border-radius:999px;border:3px solid rgba(214,243,255,.9)"></div>
     <div id="ctaBrand" class="abs c" style="display:flex;align-items:center;gap:22px;direction:ltr;white-space:nowrap">
       <div class="icon" style="width:84px;height:84px;box-shadow:none;border:1.5px solid rgba(255,255,255,.35)"><svg><use href="#fg"/></svg></div>
-      <div style="font-weight:600;font-size:54px;color:#fff;letter-spacing:-1px">Fast Grand</div>
+      <div style="font-weight:600;font-size:54px;color:#fff;letter-spacing:-1px">FastCrand</div>
       <div style="width:2px;height:46px;background:rgba(255,255,255,.35)"></div>
       <div style="font-weight:500;font-size:34px;color:#cfe3f6;direction:rtl">شركة عراقية لصناعة التطبيقات</div>
     </div>
@@ -237,13 +205,13 @@ const vblur = (v, k = 1 / 90, max = 16) => Math.min(max, v * k);
 
 // ---------- timeline (seconds) — matched to the voice-over ----------
 const T = {
-  dur: 15.0,
-  s2: 2.8,    // why-us
-  reveal: 5.6,// icon expands into the blue world
-  c1: 5.95, p1: 7.75,
-  c2: 8.85, p2: 10.2,
-  c3: 11.2, p3: 12.35,
-  over: 12.72, cta: 13.45,
+  dur: 16.0,
+  s2: 3.1,     // why-us (beat)
+  reveal: 5.6, // drop: icon expands into the blue world
+  c1: 6.1, p1: 7.6,
+  c2: 8.95, p2: 10.1,
+  c3: 11.42, p3: 12.6,
+  over: 13.22, cta: 13.8,
 };
 
 // ---------- S1: lockup ----------
@@ -379,6 +347,7 @@ function seek(t) {
     const bk = ramp(t, PRICE_T[i] + 0.2, PRICE_T[i] + 0.6, 'back');
     const bd = el.querySelector('.badge');
     bd.style.transform = `scale(${0.6 + 0.4 * bk})`; bd.style.opacity = clamp(bk * 1.5);
+    const ph = el.querySelector('.ph'); if (ph) ph.style.transform = `translateY(${Math.sin(t * 1.6 + i) * 6 - ramp(t, FOCUS_T[i], FOCUS_T[i] + 1.2, 'o') * 10}px)`;
     const sk = ramp(t, FOCUS_T[i] + 0.35, FOCUS_T[i] + 1.35, 'io');
     el.querySelector('.sheen').style.transform = `translateX(${-130 + sk * 260}%)`;
   }
@@ -393,7 +362,7 @@ function seek(t) {
 
   // ----- CTA -----
   const pIn = E.xo(clamp((t - (T.cta + 0.3)) / 0.6));
-  const pPress = t > 14.4 && t < 14.6 ? Math.sin(((t - 14.4) / 0.2) * Math.PI) : 0;
+  const pPress = t > 15.0 && t < 15.2 ? Math.sin(((t - 15.0) / 0.2) * Math.PI) : 0;
   place($('ctaPill'), 960, 600, { s: (0.55 + 0.45 * pIn) * (1 - 0.05 * pPress), o: t > T.cta + 0.3 ? 1 : 0, blur: (1 - pIn) * 8 });
   const hk = ramp(t, T.cta + 0.4, T.cta + 1.0, 'xo');
   place($('ctaHead'), 960, 420 + (1 - hk) * 50, { o: hk, blur: (1 - hk) * 14 });
@@ -401,15 +370,15 @@ function seek(t) {
   place($('ctaBrand'), 960, 900 + (1 - bk2) * 30, { o: bk2, blur: (1 - bk2) * 12 });
   // cursor glides in, decelerating, and clicks the pill
   const cur = $('cursor');
-  if (t > 14.0) {
-    const cx = kf(t, [[14.0, 1500], [14.4, 1080, 'xo']]), cy = kf(t, [[14.0, 900], [14.4, 640, 'xo']]);
-    const cs = 1.3 + 0.35 * ramp(t, 14.25, 14.4, 'o') - 0.2 * pPress;
-    cur.style.transform = `translate(${cx}px,${cy}px) scale(${cs})`; cur.style.opacity = ramp(t, 14.0, 14.12); cur.style.visibility = 'visible';
+  if (t > 14.6) {
+    const cx = kf(t, [[14.6, 1500], [15.0, 1080, 'xo']]), cy = kf(t, [[14.6, 900], [15.0, 640, 'xo']]);
+    const cs = 1.3 + 0.35 * ramp(t, 14.85, 15.0, 'o') - 0.2 * pPress;
+    cur.style.transform = `translate(${cx}px,${cy}px) scale(${cs})`; cur.style.opacity = ramp(t, 14.6, 14.72); cur.style.visibility = 'visible';
   } else cur.style.visibility = 'hidden';
-  const rg = ramp(t, 14.45, 14.95, 'o');
+  const rg = ramp(t, 15.1, 15.7, 'o');
   const ring = $('ring');
   ring.style.width = 470 + rg * 120 + 'px'; ring.style.height = 116 + rg * 70 + 'px';
-  place(ring, 960, 600, { o: t > 14.45 ? (1 - rg) * 0.9 : 0 });
+  place(ring, 960, 600, { o: t > 15.1 ? (1 - rg) * 0.9 : 0 });
 }
 
 // build tiles

@@ -1,6 +1,6 @@
-# Fast Grand — weekly offer film (16:9)
+# FastCrand — weekly offer film (16:9 + Reels 9:16)
 
-- `fast-grand-offer-16x9.mp4`: 1920×1080, 60fps, 15.0s, H.264 + AAC, Arabic voice-over, loudness ≈ −14 LUFS
+- `fastcrand-offer-16x9.mp4` and `fastcrand-offer-reel-9x16.mp4`: 60fps, 16.0s, music scored to the picture + SFX (no voice yet — see voice-script.md), ≈ −14 LUFS. `assets/`: client screenshots shown in the offer cards
 - `film.html`: every frame is a pure function of time `seek(t)` (no timers, no CSS transitions, no randomness)
 - `voice.sh`: Arabic voice-over (offline espeak-ng); `audio.py`: synthesized music bed + SFX + ducked VO
 - `render.cjs`: Playwright frame renderer; `contact-sheet.jpg`, `poster.jpg`
