@@ -3,194 +3,308 @@
 <head>
 <meta charset="utf-8">
 <title>Ninja Weekly Offer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
-@font-face{font-family:Cairo;src:url(fonts/Cairo-400.ttf);font-weight:400}
-@font-face{font-family:Cairo;src:url(fonts/Cairo-700.ttf);font-weight:700}
-@font-face{font-family:Cairo;src:url(fonts/Cairo-900.ttf);font-weight:900}
-:root{
-  --bg:#07070d; --red:#ff2e4d; --yellow:#ffd23f; --cyan:#2ee6ff; --white:#fff; --muted:#9aa0b4;
-}
+:root{--paper:#f3e9d4;--ink:#111014;--red:#e3242b;--red2:#b5121b;--cream:#fff7e6;--gold:#f2b632}
 *{margin:0;padding:0;box-sizing:border-box}
-html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);font-family:Cairo,sans-serif;color:var(--white)}
-#stage{position:relative;width:1080px;height:1920px;overflow:hidden;
-  background:radial-gradient(1200px 900px at 80% 10%,#2a0b18 0%,transparent 60%),
-             radial-gradient(1000px 900px at 10% 95%,#081a2e 0%,transparent 60%),var(--bg)}
-/* moving grid */
-.grid{position:absolute;inset:-200px;background-image:
-  linear-gradient(rgba(255,255,255,.05) 2px,transparent 2px),
-  linear-gradient(90deg,rgba(255,255,255,.05) 2px,transparent 2px);
-  background-size:90px 90px;animation:gridMove 16.5s linear both;transform:perspective(900px) rotateX(35deg)}
-@keyframes gridMove{from{transform:perspective(900px) rotateX(35deg) translateY(0)}to{transform:perspective(900px) rotateX(35deg) translateY(540px)}}
-.blob{position:absolute;border-radius:50%;filter:blur(90px);opacity:.55}
-.b1{width:620px;height:620px;background:var(--red);top:-160px;right:-180px;animation:float1 16.5s ease-in-out both}
-.b2{width:560px;height:560px;background:#3b2bff;bottom:-160px;left:-160px;animation:float2 16.5s ease-in-out both}
-@keyframes float1{0%{transform:translate(0,0)}50%{transform:translate(-200px,500px)}100%{transform:translate(-40px,900px)}}
-@keyframes float2{0%{transform:translate(0,0)}50%{transform:translate(260px,-500px)}100%{transform:translate(80px,-1000px)}}
-.sym{position:absolute;font-family:monospace;font-weight:700;color:rgba(255,255,255,.08);font-size:120px;direction:ltr}
-.s1{top:180px;left:60px;animation:drift 16.5s linear both}
-.s2{top:980px;right:40px;animation:drift 16.5s linear both reverse}
-.s3{bottom:200px;left:120px;animation:drift 16.5s linear both}
-@keyframes drift{from{transform:translateY(0) rotate(-8deg)}to{transform:translateY(-300px) rotate(8deg)}}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--paper);font-family:'IBM Plex Sans Arabic',sans-serif;color:var(--ink)}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--paper)}
+.paper{position:absolute;inset:0;opacity:.55;mix-blend-mode:multiply}
+.sun{position:absolute;width:900px;height:900px;border-radius:50%;background:radial-gradient(circle,var(--red) 0 60%,#d01e25 100%);
+  left:90px;top:420px;animation:sunMove 24.5s cubic-bezier(.6,0,.3,1) both}
+@keyframes sunMove{
+  0%{transform:translate(0,0) scale(.2)}4%{transform:translate(0,0) scale(1)}
+  10%{transform:translate(0,0) scale(1)}12%{transform:translate(0,-80px) scale(1.25)}
+  28%{transform:translate(0,-80px) scale(1.25)}30%{transform:translate(260px,-420px) scale(.75)}
+  45%{transform:translate(260px,-420px) scale(.75)}47%{transform:translate(-300px,-460px) scale(.65)}
+  60%{transform:translate(-300px,-460px) scale(.65)}62%{transform:translate(280px,-430px) scale(.7)}
+  75%{transform:translate(280px,-430px) scale(.7)}77%{transform:translate(0,-120px) scale(1.1)}
+  100%{transform:translate(0,-120px) scale(1.15)}}
+.ray{position:absolute;left:540px;top:870px;width:2400px;height:2400px;margin:-1200px 0 0 -1200px;
+  background:repeating-conic-gradient(rgba(227,36,43,.10) 0 6deg,transparent 6deg 18deg);animation:rot 24.5s linear both}
+@keyframes rot{to{transform:rotate(90deg)}}
+.splat{position:absolute;background:var(--ink);border-radius:50%}
+.frame{position:absolute;inset:28px;border:6px solid var(--ink);pointer-events:none}
+.frame::after{content:"";position:absolute;inset:10px;border:2px solid var(--ink)}
+.brand{position:absolute;top:70px;left:0;right:0;display:flex;justify-content:center;gap:18px;align-items:center;font-weight:700;font-size:42px;z-index:20}
+.brand i{display:block;width:16px;height:16px;background:var(--red);transform:rotate(45deg)}
 
-/* scenes */
-.scene{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;opacity:0;
-  animation:sIn .25s var(--s) both, sOut .3s var(--e) forwards}
+.scene{position:absolute;inset:0;opacity:0;animation:sIn .15s var(--s) both, sOut .25s var(--e) forwards;z-index:5}
 @keyframes sIn{from{opacity:0}to{opacity:1}}
-@keyframes sOut{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(1.15);filter:blur(12px)}}
+@keyframes sOut{from{opacity:1}to{opacity:0;transform:translateX(-120px) skewX(-8deg)}}
+.c{position:absolute;left:0;right:0;text-align:center}
 
-.pop{animation:pop .55s cubic-bezier(.2,1.6,.4,1) var(--d) both}
-@keyframes pop{from{opacity:0;transform:scale(.2) rotate(-6deg)}to{opacity:1;transform:scale(1) rotate(0)}}
-.slam{animation:slam .45s cubic-bezier(.2,.9,.3,1.2) var(--d) both}
-@keyframes slam{0%{opacity:0;transform:scale(3.2)}70%{opacity:1;transform:scale(.92)}100%{opacity:1;transform:scale(1)}}
-.up{animation:up .5s cubic-bezier(.2,.9,.2,1) var(--d) both}
-@keyframes up{from{opacity:0;transform:translateY(90px)}to{opacity:1;transform:translateY(0)}}
-.left{animation:fromL .5s cubic-bezier(.2,.9,.2,1) var(--d) both}
-@keyframes fromL{from{opacity:0;transform:translateX(-500px)}to{opacity:1;transform:translateX(0)}}
-.right{animation:fromR .5s cubic-bezier(.2,.9,.2,1) var(--d) both}
-@keyframes fromR{from{opacity:0;transform:translateX(500px)}to{opacity:1;transform:translateX(0)}}
-.wipe{animation:wipe .5s cubic-bezier(.7,0,.2,1) var(--d) both}
-@keyframes wipe{from{clip-path:inset(0 0 0 100%)}to{clip-path:inset(0 0 0 0)}}
+.slam{animation:slam .42s cubic-bezier(.2,.9,.3,1.25) var(--d) both}
+@keyframes slam{0%{opacity:0;transform:scale(3) rotate(-8deg)}65%{opacity:1;transform:scale(.9) rotate(1deg)}100%{opacity:1;transform:scale(1) rotate(0)}}
+.pop{animation:pop .45s cubic-bezier(.2,1.7,.4,1) var(--d) both}
+@keyframes pop{from{opacity:0;transform:scale(.1) rotate(-25deg)}to{opacity:1;transform:scale(1) rotate(var(--rr,0deg))}}
+.up{animation:up .4s cubic-bezier(.2,.9,.2,1) var(--d) both}
+@keyframes up{from{opacity:0;transform:translateY(80px)}to{opacity:1;transform:none}}
+.cutL{animation:cutL .35s cubic-bezier(.7,0,.2,1) var(--d) both}
+@keyframes cutL{from{clip-path:polygon(100% 0,100% 0,100% 100%,100% 100%)}to{clip-path:polygon(-10% 0,100% 0,100% 100%,-10% 100%)}}
+.halfT,.halfB{position:absolute;inset:0}
+.halfT{clip-path:polygon(0 0,100% 0,100% 42%,0 58%);animation:hT .35s cubic-bezier(.2,.9,.2,1) var(--d) both}
+.halfB{clip-path:polygon(0 58%,100% 42%,100% 100%,0 100%);animation:hB .35s cubic-bezier(.2,.9,.2,1) var(--d) both}
+@keyframes hT{from{transform:translate(-160px,-40px);opacity:0}to{transform:none;opacity:1}}
+@keyframes hB{from{transform:translate(160px,40px);opacity:0}to{transform:none;opacity:1}}
 
-/* shuriken */
-.shuriken{width:300px;height:300px;animation:spinIn 1s cubic-bezier(.2,.9,.2,1) var(--d) both, spin 2.2s linear var(--d) both}
-@keyframes spinIn{from{opacity:0;transform:translateX(-900px) rotate(-720deg)}to{opacity:1;transform:translateX(0) rotate(0)}}
-@keyframes spin{from{rotate:0deg}to{rotate:540deg}}
+.brush{position:absolute;left:40px;right:40px;height:430px}
+.brush svg.bg{position:absolute;inset:0;width:100%;height:100%}
+.brush .in{position:relative;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--cream)}
+.t-huge{font-size:160px;font-weight:700;line-height:1.05}
+.t-big{font-size:130px;font-weight:700;line-height:1.1}
+.t-mid{font-size:64px;font-weight:600}
+.t-sm{font-size:44px;font-weight:500}
+.redt{color:var(--red)}
 
-.kicker{font-size:58px;font-weight:700;color:var(--yellow);letter-spacing:2px}
-.huge{font-size:200px;font-weight:900;line-height:1.05}
-.big{font-size:130px;font-weight:900;line-height:1.1}
-.mid{font-size:76px;font-weight:700}
-.url{direction:ltr;font-size:64px;font-weight:900;color:var(--cyan);letter-spacing:1px}
-.red{color:var(--red)} .yel{color:var(--yellow)}
-.glow{text-shadow:0 0 40px rgba(255,46,77,.7),0 0 90px rgba(255,46,77,.4)}
+.slash{position:absolute;left:-100px;width:1400px;height:22px;transform-origin:0 50%;
+  background:linear-gradient(180deg,transparent,var(--red) 20%,#fff 45%,#fff 55%,var(--red) 80%,transparent);
+  filter:drop-shadow(0 0 18px rgba(227,36,43,.9));opacity:0;animation:slash .5s ease-out var(--d) both;z-index:30}
+@keyframes slash{0%{opacity:1;transform:rotate(var(--r)) scaleX(0)}25%{opacity:1;transform:rotate(var(--r)) scaleX(1)}100%{opacity:0;transform:rotate(var(--r)) scaleX(1) scaleY(.1)}}
 
-.pill{display:inline-block;padding:10px 46px;border-radius:999px;background:var(--red);font-weight:900;font-size:60px;box-shadow:0 0 60px rgba(255,46,77,.6)}
-.pill.yel{background:var(--yellow);color:#111;box-shadow:0 0 60px rgba(255,210,63,.5)}
+.smoke{position:absolute;width:0;height:0;z-index:25}
+.smoke b{position:absolute;border-radius:50%;background:#d9cfbd;border:5px solid var(--ink);opacity:0;animation:puff .7s ease-out var(--d) both}
+@keyframes puff{0%{opacity:1;transform:translate(0,0) scale(.1)}60%{opacity:1}100%{opacity:0;transform:translate(var(--x),var(--y)) scale(1)}}
 
-.card{position:relative;width:900px;padding:70px 60px 80px;border-radius:56px;
-  background:linear-gradient(160deg,rgba(255,255,255,.10),rgba(255,255,255,.03));
-  border:3px solid rgba(255,255,255,.14);box-shadow:0 40px 120px rgba(0,0,0,.6)}
-.card .icon{width:210px;height:210px;margin:0 auto 20px}
-.card .title{font-size:104px;font-weight:900;line-height:1.15}
-.card .sub{font-size:46px;color:var(--muted);font-weight:700;margin-top:6px}
-.prices{display:flex;align-items:center;justify-content:center;gap:50px;margin-top:40px;direction:ltr}
-.old{position:relative;font-size:96px;font-weight:700;color:var(--muted)}
-.old::after{content:"";position:absolute;left:-10px;right:-10px;top:52%;height:12px;background:var(--red);border-radius:6px;transform-origin:left;
-  transform:scaleX(0);animation:strike .35s ease-out var(--k) forwards}
-@keyframes strike{to{transform:scaleX(1) rotate(-8deg)}}
-.new{font-size:230px;font-weight:900;color:var(--yellow);line-height:1;text-shadow:0 0 60px rgba(255,210,63,.45)}
-.new small{font-size:110px;vertical-align:top}
-.badge{position:absolute;top:-70px;left:-40px;width:230px;height:230px;border-radius:50%;background:var(--red);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:900;line-height:1;
-  box-shadow:0 0 70px rgba(255,46,77,.7);transform:rotate(-14deg)}
-.badge b{font-size:86px;direction:ltr}.badge span{font-size:40px}
-.flash{position:absolute;inset:0;background:#fff;opacity:0;animation:flash .35s ease-out var(--d) both;pointer-events:none}
-@keyframes flash{0%{opacity:.85}100%{opacity:0}}
-.bar{position:absolute;bottom:0;left:0;height:14px;background:linear-gradient(90deg,var(--red),var(--yellow));animation:bar 16.5s linear both}
-@keyframes bar{from{width:0}to{width:100%}}
-.brand{position:absolute;top:70px;left:0;right:0;text-align:center;font-weight:900;font-size:44px;letter-spacing:2px;opacity:.85}
-.brand span{color:var(--red)}
-.shake{animation:shake .4s linear var(--d) both}
-@keyframes shake{0%,100%{transform:translate(0)}20%{transform:translate(-14px,8px)}40%{transform:translate(12px,-10px)}60%{transform:translate(-8px,6px)}80%{transform:translate(6px,-4px)}}
-.pulse{animation:pulse .8s ease-in-out var(--d) infinite}
-@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.nw{position:absolute;width:300px;height:390px;z-index:22}
+.nw div{width:100%;height:100%}
+.ninja{width:100%;height:100%;overflow:visible}
+.tails{transform-origin:190px 55px;animation:wave .35s ease-in-out infinite alternate}
+@keyframes wave{from{transform:rotate(-6deg)}to{transform:rotate(8deg)}}
+.idle{animation:idle .9s ease-in-out infinite alternate}
+@keyframes idle{from{transform:translateY(0) scaleY(1)}to{transform:translateY(8px) scaleY(.97)}}
+
+.prices{position:absolute;left:0;right:0;display:flex;justify-content:center;align-items:center;gap:60px;direction:ltr}
+.old{position:relative;font-size:110px;font-weight:700;color:#5a544a}
+.old .cut{position:absolute;left:-20px;right:-20px;top:48%;height:14px;background:var(--red);transform-origin:left;transform:rotate(-12deg) scaleX(0);
+  animation:cut .18s ease-out var(--k) forwards;box-shadow:0 0 0 4px var(--paper)}
+@keyframes cut{to{transform:rotate(-12deg) scaleX(1)}}
+.new{font-size:290px;font-weight:700;line-height:.9;color:var(--red);text-shadow:10px 10px 0 var(--ink)}
+.new small{font-size:130px;vertical-align:top;line-height:1.4}
+.stamp{position:absolute;width:250px;height:250px;border:10px double var(--red);color:var(--red);border-radius:24px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:700;line-height:1;z-index:26;
+  background:rgba(243,233,212,.85);animation:stamp .3s cubic-bezier(.3,1.6,.5,1) var(--d) both}
+.stamp b{font-size:84px;direction:ltr}.stamp span{font-size:44px;margin-top:6px}
+@keyframes stamp{0%{opacity:0;transform:scale(2.4) rotate(var(--rr))}100%{opacity:1;transform:scale(1) rotate(var(--rr))}}
+.icon{width:150px;height:150px}
+.btn{display:inline-block;background:var(--ink);color:var(--cream);font-size:96px;font-weight:700;padding:14px 70px 24px;border-radius:20px;box-shadow:12px 12px 0 var(--red)}
+.url{direction:ltr;font-size:84px;font-weight:700;letter-spacing:1px}
+.url b{display:inline-block;background:var(--cream);border:6px solid var(--ink);padding:0 50px 14px;border-radius:18px;box-shadow:10px 10px 0 var(--ink);font-weight:700}
+.url span{color:var(--red)}
+.flash{position:absolute;inset:0;background:#fff;z-index:40;opacity:0;animation:flash .3s ease-out var(--d) both;pointer-events:none}
+@keyframes flash{0%{opacity:.9}100%{opacity:0}}
+.shake{animation:shake .35s linear var(--d) both}
+@keyframes shake{0%,100%{transform:none}20%{transform:translate(-16px,10px)}40%{transform:translate(14px,-12px)}60%{transform:translate(-10px,8px)}80%{transform:translate(6px,-4px)}}
+.spinS{animation:spinS .3s linear infinite}
+@keyframes spinS{to{transform:rotate(360deg)}}
+.pulse{animation:pulse .7s ease-in-out var(--d) infinite alternate}
+@keyframes pulse{to{transform:scale(1.07)}}
+.lines{position:absolute;left:540px;width:0;height:0;z-index:4}
+.lines i{position:absolute;left:0;top:0;width:520px;height:10px;background:var(--ink);transform-origin:0 50%;opacity:0;animation:speed .5s ease-out var(--d) both}
+@keyframes speed{0%{opacity:1;transform:rotate(var(--a)) translateX(120px) scaleX(.1)}100%{opacity:0;transform:rotate(var(--a)) translateX(420px) scaleX(1)}}
+@keyframes flipIn{0%{transform:translate(-520px,700px) rotate(-40deg)}55%{transform:translate(-160px,-420px) rotate(-250deg)}100%{transform:translate(0,0) rotate(-360deg)}}
+@keyframes land{0%{transform:scale(1.15,.8) translateY(40px)}100%{transform:none}}
+@keyframes hopIn{0%{transform:translate(400px,200px) rotate(30deg)}100%{transform:none}}
+@keyframes throw{0%{transform:translate(0,0) scale(.6)}100%{transform:translate(-420px,-760px) scale(1.3);opacity:0}}
+@keyframes flipAcross{0%{transform:translate(var(--fx),300px) rotate(0)}60%{transform:translate(calc(var(--fx) * .3),-160px) rotate(-560deg)}100%{transform:translate(0,0) rotate(-720deg)}}
+@keyframes dropIn{0%{transform:translateY(-1500px) rotate(-720deg)}100%{transform:none}}
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <filter id="grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="3" seed="4"/><feColorMatrix values="0 0 0 0 .45  0 0 0 0 .38  0 0 0 0 .28  0 0 0 .55 0"/></filter>
+    <filter id="rough"><feTurbulence type="fractalNoise" baseFrequency=".035" numOctaves="2" seed="9"/><feDisplacementMap in="SourceGraphic" scale="26"/></filter>
+    <symbol id="ninjaSym" viewBox="0 0 300 390" overflow="visible">
+      <g class="tails"><path d="M190 52 C240 30 260 70 300 48" stroke="#e3242b" stroke-width="16" fill="none" stroke-linecap="round"/>
+        <path d="M188 62 C230 70 250 100 288 92" stroke="#e3242b" stroke-width="13" fill="none" stroke-linecap="round"/></g>
+      <line x1="70" y1="120" x2="250" y2="290" stroke="#c9c2b4" stroke-width="10" stroke-linecap="round"/>
+      <line x1="70" y1="120" x2="110" y2="158" stroke="#e3242b" stroke-width="14" stroke-linecap="round"/>
+      <path d="M128 250 L108 330 L80 350" stroke="#111014" stroke-width="34" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M172 250 L196 326 L226 340" stroke="#111014" stroke-width="34" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <rect x="104" y="128" width="92" height="132" rx="40" fill="#111014"/>
+      <rect x="104" y="210" width="92" height="16" fill="#e3242b"/>
+      <path d="M150 128 L130 200 M150 128 L170 200" stroke="#2a272e" stroke-width="6"/>
+      <path d="M122 150 L82 200 L62 168" stroke="#111014" stroke-width="28" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M178 150 L222 196 L246 160" stroke="#111014" stroke-width="28" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="150" cy="78" r="62" fill="#111014"/>
+      <rect x="92" y="38" width="116" height="18" rx="6" fill="#e3242b"/>
+      <rect x="100" y="66" width="100" height="32" rx="16" fill="#f1d3a8"/>
+      <path d="M114 82 Q126 72 138 82 Q126 90 114 82Z" fill="#111014"/>
+      <path d="M162 82 Q174 72 186 82 Q174 90 162 82Z" fill="#111014"/>
+      <path d="M112 70 L138 76 M188 70 L162 76" stroke="#111014" stroke-width="6" stroke-linecap="round"/>
+      <circle cx="129" cy="81" r="2.5" fill="#fff"/><circle cx="177" cy="81" r="2.5" fill="#fff"/>
+    </symbol>
+    <symbol id="star" viewBox="-100 -100 200 200">
+      <path fill="#111014" d="M0-95 L20-20 L95 0 L20 20 L0 95 L-20 20 L-95 0 L-20-20Z"/><circle r="18" fill="#f3e9d4"/><circle r="8" fill="#e3242b"/>
+    </symbol>
+    <symbol id="brushPath" viewBox="0 0 1000 430" preserveAspectRatio="none">
+      <path filter="url(#rough)" fill="#111014" d="M30 90 C120 40 300 60 480 44 C650 30 820 50 975 70 C990 140 960 220 985 300 C990 350 960 380 900 392 C700 410 520 380 340 400 C200 410 90 395 40 380 C10 300 50 220 22 160Z"/>
+      <path filter="url(#rough)" fill="#111014" d="M940 60 L1000 40 L985 90Z M10 380 L-10 410 L50 395Z"/>
+    </symbol>
+  </defs>
+</svg>
+
 <div id="stage">
-  <div class="grid"></div>
-  <div class="blob b1"></div><div class="blob b2"></div>
-  <div class="sym s1">&lt;/&gt;</div><div class="sym s2">{ }</div><div class="sym s3">( );</div>
-  <div class="brand up" style="--d:.2s">نينجا <span>✦</span> NINJA</div>
+  <svg class="paper" width="1080" height="1920"><rect width="100%" height="100%" filter="url(#grain)"/></svg>
+  <div class="ray"></div>
+  <div class="sun"></div>
+  <div class="splat" style="width:40px;height:40px;left:120px;top:300px"></div>
+  <div class="splat" style="width:18px;height:18px;left:180px;top:270px"></div>
+  <div class="splat" style="width:26px;height:26px;right:140px;top:1700px"></div>
+  <div class="splat" style="width:12px;height:12px;right:200px;top:1660px"></div>
+  <div class="frame"></div>
+  <div class="brand up" style="--d:.1s"><i></i> نينجا NINJA <i></i></div>
 
-  <!-- 1. Intro 0 – 2.3 -->
-  <div class="scene" style="--s:0s;--e:2.1s">
-    <svg class="shuriken" style="--d:0s" viewBox="-100 -100 200 200">
-      <g fill="#ff2e4d">
-        <path d="M0-95 L18-18 L95 0 L18 18 L0 95 L-18 18 L-95 0 L-18-18Z"/>
-      </g>
-      <circle r="20" fill="#07070d"/><circle r="9" fill="#ff2e4d"/>
-    </svg>
-    <div class="kicker up" style="--d:.55s;margin-top:40px">برمجة مواقع وتطبيقات</div>
-    <div class="huge slam glow" style="--d:.8s">عرض<br><span class="red">الأسبوع</span></div>
+  <!-- 1 · Intro 0–2.5 -->
+  <div class="scene" style="--s:0s;--e:2.35s">
+    <div class="lines" style="top:1370px">
+      <i style="--a:200deg;--d:.75s"></i><i style="--a:230deg;--d:.75s"></i><i style="--a:310deg;--d:.75s"></i><i style="--a:340deg;--d:.75s"></i><i style="--a:270deg;--d:.75s"></i>
+    </div>
+    <div class="nw" style="left:390px;top:1000px;animation:flipIn .8s cubic-bezier(.3,.7,.4,1) 0s both">
+      <div style="animation:land .3s ease-out .78s both"><div class="idle"><svg class="ninja"><use href="#ninjaSym"/></svg></div></div>
+    </div>
+    <div class="smoke" style="left:540px;top:1380px">
+      <b style="--d:.75s;width:160px;height:160px;left:-80px;top:-80px;--x:-200px;--y:-30px"></b>
+      <b style="--d:.75s;width:130px;height:130px;left:-65px;top:-65px;--x:210px;--y:-20px"></b>
+      <b style="--d:.78s;width:110px;height:110px;left:-55px;top:-55px;--x:-110px;--y:-90px"></b>
+      <b style="--d:.78s;width:120px;height:120px;left:-60px;top:-60px;--x:120px;--y:-100px"></b>
+    </div>
+    <div class="slash" style="top:520px;--r:14deg;--d:1.0s"></div>
+    <div class="brush" style="top:430px">
+      <div class="halfT" style="--d:1.05s"><svg class="bg"><use href="#brushPath"/></svg><div class="in"><div class="t-huge">عرض الأسبوع</div></div></div>
+      <div class="halfB" style="--d:1.05s"><svg class="bg"><use href="#brushPath"/></svg><div class="in"><div class="t-huge">عرض الأسبوع</div></div></div>
+    </div>
+    <div class="c t-mid up" style="top:900px;--d:1.4s">برمجة <span class="redt">مواقع</span> و<span class="redt">تطبيقات</span></div>
   </div>
 
-  <!-- 2. 50% slam 2.3 – 3.7 -->
-  <div class="scene" style="--s:2.3s;--e:3.6s">
-    <div class="flash" style="--d:2.3s"></div>
-    <div class="mid up" style="--d:2.35s">خصم يصل إلى</div>
-    <div class="shake" style="--d:2.55s"><div class="slam yel" style="--d:2.4s;font-size:330px;font-weight:900;line-height:1;direction:ltr;text-shadow:0 0 80px rgba(255,210,63,.5)">50%</div></div>
-    <div class="pill pop" style="--d:2.9s">لفترة محدودة</div>
-  </div>
-
-  <!-- 3. Website 3.9 – 7.1 -->
-  <div class="scene" style="--s:3.9s;--e:6.9s">
-    <div class="card right" style="--d:3.9s">
-      <div class="badge pop" style="--d:4.5s"><b>-50%</b><span>خصم</span></div>
-      <svg class="icon pop" style="--d:4.05s" viewBox="0 0 100 100" fill="none" stroke="#2ee6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="8" y="16" width="84" height="64" rx="8"/><path d="M8 32h84"/><circle cx="18" cy="24" r="2" fill="#2ee6ff"/><circle cx="27" cy="24" r="2" fill="#2ee6ff"/>
-        <path d="M38 50l-10 8 10 8M62 50l10 8-10 8M54 46l-8 24" stroke="#ffd23f"/></svg>
-      <div class="title up" style="--d:4.15s">موقع تعريفي</div>
-      <div class="sub up" style="--d:4.3s">صفحة احترافية تعرّف بنشاطك</div>
-      <div class="prices">
-        <div class="old up" style="--d:4.5s;--k:4.95s">$70</div>
-        <div class="new slam" style="--d:5.1s"><small>$</small>35</div>
-      </div>
+  <!-- 2 · 50% 2.5–7.0 -->
+  <div class="scene" style="--s:2.5s;--e:6.85s">
+    <div class="nw" style="left:640px;top:1380px;animation:hopIn .4s cubic-bezier(.3,.7,.4,1) 2.5s both">
+      <div class="idle"><svg class="ninja"><use href="#ninjaSym"/></svg></div>
+    </div>
+    <div style="position:absolute;left:740px;top:1460px;width:150px;height:150px;animation:throw .38s cubic-bezier(.4,0,.8,.6) 2.72s both;z-index:24">
+      <svg class="spinS" width="150" height="150"><use href="#star"/></svg>
+    </div>
+    <div class="flash" style="--d:3.08s"></div>
+    <div class="c t-big up" style="top:330px;--d:2.6s">خصم</div>
+    <div class="c shake" style="top:520px;--d:3.15s">
+      <div class="slam new" style="--d:3.08s;font-size:400px;direction:ltr;color:var(--cream)">50%</div>
+    </div>
+    <div style="position:absolute;top:470px;left:830px;z-index:6">
+      <svg width="160" height="160" class="pop" style="--d:3.1s;--rr:20deg"><use href="#star"/></svg>
+    </div>
+    <div class="brush" style="top:1000px;height:300px">
+      <div class="cutL" style="--d:4.1s;position:absolute;inset:0"><svg class="bg"><use href="#brushPath"/></svg>
+        <div class="in"><div class="t-mid">على برمجة المواقع والتطبيقات</div><div class="t-sm" style="color:var(--gold)">لفترة محدودة</div></div></div>
     </div>
   </div>
 
-  <!-- 4. App 7.1 – 10.3 -->
-  <div class="scene" style="--s:7.1s;--e:10.1s">
-    <div class="card left" style="--d:7.1s">
-      <div class="badge pop" style="--d:7.7s"><b>-50%</b><span>خصم</span></div>
-      <svg class="icon pop" style="--d:7.25s" viewBox="0 0 100 100" fill="none" stroke="#2ee6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="27" y="6" width="46" height="88" rx="10"/><path d="M43 14h14"/><circle cx="50" cy="84" r="3" fill="#2ee6ff"/>
-        <rect x="36" y="28" width="12" height="12" rx="3" stroke="#ffd23f"/><rect x="52" y="28" width="12" height="12" rx="3" stroke="#ffd23f"/>
-        <rect x="36" y="46" width="12" height="12" rx="3" stroke="#ffd23f"/><rect x="52" y="46" width="12" height="12" rx="3" stroke="#ffd23f"/></svg>
-      <div class="title up" style="--d:7.35s">تطبيق جوال</div>
-      <div class="sub up" style="--d:7.5s">iOS و Android</div>
-      <div class="prices">
-        <div class="old up" style="--d:7.7s;--k:8.15s">$190</div>
-        <div class="new slam" style="--d:8.3s"><small>$</small>95</div>
-      </div>
-      <div class="kicker up" style="--d:8.6s;margin-top:20px">فقط!</div>
+  <!-- 3 · Website 7.0–11.0 -->
+  <div class="scene" style="--s:7.0s;--e:10.85s">
+    <div class="nw" style="left:60px;top:150px;animation:flipAcross .6s cubic-bezier(.3,.7,.4,1) 7.0s both;--fx:900px">
+      <div class="idle"><svg class="ninja" style="transform:scale(.8)"><use href="#ninjaSym"/></svg></div>
     </div>
-  </div>
-
-  <!-- 5. Store 10.3 – 13.4 -->
-  <div class="scene" style="--s:10.3s;--e:13.2s">
-    <div class="card up" style="--d:10.3s">
-      <div class="badge pop" style="--d:10.9s;background:var(--yellow);color:#111;box-shadow:0 0 70px rgba(255,210,63,.6)"><b style="font-size:58px">سعر</b><span>خاص</span></div>
-      <svg class="icon pop" style="--d:10.45s" viewBox="0 0 100 100" fill="none" stroke="#2ee6ff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M10 18h12l10 46h46l10-34H28"/><circle cx="38" cy="80" r="6" stroke="#ffd23f"/><circle cx="72" cy="80" r="6" stroke="#ffd23f"/>
-        <path d="M44 44l8 8 16-16" stroke="#ffd23f"/></svg>
-      <div class="title up" style="--d:10.55s">متجر إلكتروني</div>
-      <div class="sub up" style="--d:10.7s">بيع منتجاتك أونلاين بسهولة</div>
-      <div class="prices">
-        <div class="new slam" style="--d:11.1s"><small>$</small>49</div>
-      </div>
-      <div class="kicker up" style="--d:11.5s;margin-top:20px">فقط!</div>
+    <div class="smoke" style="left:210px;top:470px">
+      <b style="--d:7.55s;width:140px;height:140px;left:-70px;top:-70px;--x:-120px;--y:20px"></b>
+      <b style="--d:7.55s;width:120px;height:120px;left:-60px;top:-60px;--x:140px;--y:10px"></b>
     </div>
+    <div class="brush" style="top:620px">
+      <div class="cutL" style="--d:7.25s;position:absolute;inset:0"><svg class="bg"><use href="#brushPath"/></svg>
+        <div class="in">
+          <svg class="icon" viewBox="0 0 100 100" fill="none" stroke="#fff7e6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="8" y="16" width="84" height="64" rx="8"/><path d="M8 32h84"/><path d="M38 50l-10 8 10 8M62 50l10 8-10 8" stroke="#e3242b"/></svg>
+          <div class="t-big">موقع تعريفي</div>
+        </div></div>
+    </div>
+    <div class="prices" style="top:1170px">
+      <div class="old up" style="--d:7.8s">$70<span class="cut" style="--k:8.5s"></span></div>
+      <div class="shake" style="--d:8.65s"><div class="new slam" style="--d:8.55s"><small>$</small>35</div></div>
+    </div>
+    <div class="slash" style="top:1270px;--r:-12deg;--d:8.45s"></div>
+    <div class="stamp" style="left:70px;top:1500px;--d:9.1s;--rr:-12deg"><b>-50%</b><span>خصم</span></div>
+    <div class="c t-mid up" style="top:1560px;left:300px;--d:9.3s">فقط!</div>
   </div>
 
-  <!-- 6. CTA 13.4 – 16.5 -->
-  <div class="scene" style="--s:13.4s;--e:99s">
-    <div class="flash" style="--d:13.4s"></div>
-    <svg class="shuriken" style="--d:13.4s;width:200px;height:200px" viewBox="-100 -100 200 200">
-      <path fill="#ff2e4d" d="M0-95 L18-18 L95 0 L18 18 L0 95 L-18 18 L-95 0 L-18-18Z"/><circle r="20" fill="#07070d"/><circle r="9" fill="#ff2e4d"/>
-    </svg>
-    <div class="big slam" style="--d:13.7s;margin-top:30px">العرض <span class="red">هذا الأسبوع</span><br>فقط</div>
-    <div class="pill yel pop" style="--d:14.3s;margin-top:40px"><span class="pulse" style="--d:14.9s;display:inline-block">اطلب الآن</span></div>
-    <div class="url wipe" style="--d:14.7s;margin-top:60px">ananinja.com</div>
+  <!-- 4 · App 11.0–14.7 -->
+  <div class="scene" style="--s:11.0s;--e:14.55s">
+    <div class="nw" style="left:740px;top:150px;animation:flipAcross .6s cubic-bezier(.3,.7,.4,1) 11.0s both;--fx:-900px">
+      <div class="idle"><svg class="ninja" style="transform:scale(-.8,.8)"><use href="#ninjaSym"/></svg></div>
+    </div>
+    <div class="smoke" style="left:880px;top:470px">
+      <b style="--d:11.55s;width:140px;height:140px;left:-70px;top:-70px;--x:-140px;--y:20px"></b>
+      <b style="--d:11.55s;width:120px;height:120px;left:-60px;top:-60px;--x:120px;--y:10px"></b>
+    </div>
+    <div class="brush" style="top:620px">
+      <div class="cutL" style="--d:11.25s;position:absolute;inset:0"><svg class="bg" style="transform:scaleX(-1)"><use href="#brushPath"/></svg>
+        <div class="in">
+          <svg class="icon" viewBox="0 0 100 100" fill="none" stroke="#fff7e6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="27" y="6" width="46" height="88" rx="10"/><path d="M43 15h14"/><rect x="37" y="30" width="11" height="11" rx="3" stroke="#e3242b"/><rect x="53" y="30" width="11" height="11" rx="3" stroke="#e3242b"/><rect x="37" y="47" width="11" height="11" rx="3" stroke="#e3242b"/><rect x="53" y="47" width="11" height="11" rx="3" stroke="#e3242b"/></svg>
+          <div class="t-big">تطبيق جوال</div>
+        </div></div>
+    </div>
+    <div class="prices" style="top:1170px">
+      <div class="old up" style="--d:11.7s">$190<span class="cut" style="--k:12.2s"></span></div>
+      <div class="shake" style="--d:12.35s"><div class="new slam" style="--d:12.25s"><small>$</small>95</div></div>
+    </div>
+    <div class="slash" style="top:1260px;--r:12deg;--d:12.15s"></div>
+    <div class="stamp" style="right:70px;top:1500px;--d:12.8s;--rr:12deg"><b>-50%</b><span>خصم</span></div>
+    <div class="c t-mid up" style="top:1560px;right:300px;--d:13.0s">فقط!</div>
   </div>
 
-  <div class="bar"></div>
+  <!-- 5 · Store 14.7–18.5 -->
+  <div class="scene" style="--s:14.7s;--e:18.35s">
+    <div class="nw" style="left:60px;top:150px;animation:flipAcross .6s cubic-bezier(.3,.7,.4,1) 14.7s both;--fx:900px">
+      <div class="idle"><svg class="ninja" style="transform:scale(.8)"><use href="#ninjaSym"/></svg></div>
+    </div>
+    <div class="smoke" style="left:210px;top:470px">
+      <b style="--d:15.25s;width:140px;height:140px;left:-70px;top:-70px;--x:-120px;--y:20px"></b>
+      <b style="--d:15.25s;width:120px;height:120px;left:-60px;top:-60px;--x:140px;--y:10px"></b>
+    </div>
+    <div class="brush" style="top:620px">
+      <div class="cutL" style="--d:14.95s;position:absolute;inset:0"><svg class="bg"><use href="#brushPath"/></svg>
+        <div class="in">
+          <svg class="icon" viewBox="0 0 100 100" fill="none" stroke="#fff7e6" stroke-width="6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M10 18h12l10 46h46l10-34H28"/><circle cx="38" cy="80" r="6" stroke="#e3242b"/><circle cx="72" cy="80" r="6" stroke="#e3242b"/></svg>
+          <div class="t-big">متجر إلكتروني</div>
+        </div></div>
+    </div>
+    <div class="slash" style="top:1240px;--r:-8deg;--d:15.95s"></div>
+    <div class="prices" style="top:1160px">
+      <div class="shake" style="--d:16.1s"><div class="new slam" style="--d:16.0s;font-size:340px"><small>$</small>49</div></div>
+    </div>
+    <div class="stamp" style="left:70px;top:1500px;--d:16.5s;--rr:-10deg"><b style="font-size:62px">سعر</b><span>خاص</span></div>
+    <div class="c t-mid up" style="top:1560px;left:300px;--d:16.7s">فقط!</div>
+  </div>
+
+  <!-- 6 · CTA 18.5–24.5 -->
+  <div class="scene" style="--s:18.5s;--e:99s">
+    <div class="flash" style="--d:18.5s"></div>
+    <div class="lines" style="top:1740px">
+      <i style="--a:200deg;--d:19.0s"></i><i style="--a:230deg;--d:19.0s"></i><i style="--a:310deg;--d:19.0s"></i><i style="--a:340deg;--d:19.0s"></i><i style="--a:270deg;--d:19.0s"></i>
+    </div>
+    <div class="nw" style="left:390px;top:1370px;animation:dropIn .5s cubic-bezier(.5,0,.7,1) 18.5s both">
+      <div style="animation:land .3s ease-out 19.0s both"><div class="idle"><svg class="ninja"><use href="#ninjaSym"/></svg></div></div>
+    </div>
+    <div class="smoke" style="left:540px;top:1740px">
+      <b style="--d:19.0s;width:170px;height:170px;left:-85px;top:-85px;--x:-230px;--y:-30px"></b>
+      <b style="--d:19.0s;width:140px;height:140px;left:-70px;top:-70px;--x:230px;--y:-20px"></b>
+      <b style="--d:19.05s;width:110px;height:110px;left:-55px;top:-55px;--x:-120px;--y:-110px"></b>
+      <b style="--d:19.05s;width:120px;height:120px;left:-60px;top:-60px;--x:130px;--y:-100px"></b>
+    </div>
+    <div class="brush" style="top:260px;height:520px">
+      <div class="cutL" style="--d:18.7s;position:absolute;inset:0"><svg class="bg"><use href="#brushPath"/></svg>
+        <div class="in"><div class="t-big">العرض لهذا</div><div class="t-big"><span style="color:var(--red)">الأسبوع</span> فقط</div></div></div>
+    </div>
+    <div class="slash" style="top:500px;--r:-10deg;--d:18.65s"></div>
+    <div class="c" style="top:850px"><div class="btn slam" style="--d:20.3s"><span class="pulse" style="--d:20.8s;display:inline-block">اطلب الآن</span></div></div>
+    <div class="c url cutL" style="top:1040px;--d:21.1s"><b>ana<span>ninja</span>.com</b></div>
+  </div>
 </div>
 <script>
-// Deterministic frame control: pause every animation and seek it to time t (seconds)
-window.seek = (t) => {
-  for (const a of document.getAnimations()) { a.pause(); a.currentTime = t * 1000; }
-};
+window.seek = (t) => { for (const a of document.getAnimations()) { a.pause(); a.currentTime = t * 1000; } };
 </script>
 </body>
 </html>
