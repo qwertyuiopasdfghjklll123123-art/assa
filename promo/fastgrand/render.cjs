@@ -1,4 +1,4 @@
-// Renders film.html frame by frame. Usage: node render.cjs <outDir> [fps] [comma,separated,test,times]
+// Renders film.html (or PAGE=reel.html) frame by frame. Usage: node render.cjs <outDir> [fps] [comma,separated,test,times]
 const { chromium } = require('playwright');
 const path = require('path'), fs = require('fs');
 (async () => {
@@ -6,9 +6,11 @@ const path = require('path'), fs = require('fs');
   const only = process.argv[4] ? process.argv[4].split(',').map(Number) : null;
   fs.mkdirSync(out, { recursive: true });
   const browser = await chromium.launch();
-  const page = await browser.newPage({ viewport: { width: 1920, height: 1080 }, deviceScaleFactor: 1 });
+  const PAGE = process.env.PAGE || 'film.html';
+  const [VW, VH] = PAGE.startsWith('reel') ? [1080, 1920] : [1920, 1080];
+  const page = await browser.newPage({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 });
   page.on('pageerror', (e) => console.error('[pageerror]', e.message));
-  await page.goto('file://' + path.join(__dirname, 'film.html'), { waitUntil: 'networkidle' });
+  await page.goto('file://' + path.join(__dirname, PAGE), { waitUntil: 'networkidle' });
   await page.waitForFunction(() => window.__ready, null, { timeout: 60000 });
   const dur = await page.evaluate(() => window.DURATION);
   const times = only || Array.from({ length: Math.round(dur * fps) }, (_, i) => i / fps);

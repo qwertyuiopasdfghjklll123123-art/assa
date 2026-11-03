@@ -1,5 +1,5 @@
 """Fast Grand film soundtrack: soft 120 BPM synth bed + SFX + Arabic voice-over (ducked).
-Usage: python3 audio.py <voDir> <out.wav>"""
+Usage: python3 audio.py <voDir|-> <out.wav>   ("-" = music + SFX only, no voice)"""
 import sys, wave
 import numpy as np
 SR, DUR = 48000, 15.0
@@ -69,7 +69,7 @@ def read(path):
     x = np.interp(np.arange(int(len(x) * SR / sr)) * sr / SR, np.arange(len(x)), x)
     nz = np.nonzero(np.abs(x) > .01)[0]; return x[nz[0]:nz[-1] + 1]
 act = np.zeros(N + SR)
-for k, t in enumerate(VO_AT, 1):
+for k, t in (enumerate(VO_AT, 1) if VO_DIR != "-" else []):
     x = read(f"{VO_DIR}/{k}.wav"); x = np.tanh(x / np.max(np.abs(x)) * 1.5)
     x = x - lp(x, .02) * .6  # thin out mud
     add(vo, x, t); i = int(t * SR); act[i:i + len(x)] = 1

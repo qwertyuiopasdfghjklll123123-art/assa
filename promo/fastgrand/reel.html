@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="ar">
+<head>
+<meta charset="utf-8">
+<title>Fast Grand Offer Reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --page:#FDFDFB; --haze:#B7CFEB; --ice:#E6F0FA; --deep:#294376; --sky:#769CC2; --navy:#1E2F52;
+  --blue:#2F6BFF; --cyan:#3CC8F0; --mint:#4ED6A0; --grey:#5d6b88;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--page);font-family:'IBM Plex Sans Arabic',sans-serif}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--page)}
+.abs{position:absolute;left:0;top:0;will-change:transform,filter,opacity}
+.c{transform-origin:50% 50%}
+
+/* light world */
+#floor{position:absolute;left:-200px;right:-200px;bottom:-420px;height:760px;border-radius:50%;
+  background:radial-gradient(closest-side,#DBEEFD,rgba(219,238,253,0));}
+#haze{position:absolute;inset:0;background:radial-gradient(1400px 900px at 50% 60%,#cfe0f3,var(--haze))}
+#word{font-weight:600;font-size:150px;color:var(--navy);letter-spacing:-2px;direction:ltr;white-space:nowrap;line-height:1}
+#tag{font-weight:600;font-size:64px;line-height:1.35;color:var(--navy);direction:rtl;white-space:nowrap;text-align:center}
+#pill{background:#1E2F52;color:#fff;font-weight:600;font-size:46px;padding:12px 40px 18px;border-radius:999px;direction:rtl;white-space:nowrap}
+#pill b{color:var(--cyan);font-weight:600}
+
+/* app icon / logo mark */
+.icon{width:200px;height:200px;border-radius:28%;background:linear-gradient(160deg,#294376,#1E2F52);
+  box-shadow:0 24px 50px rgba(30,47,82,.28), inset 0 2px 0 rgba(255,255,255,.18);display:flex;align-items:center;justify-content:center}
+.icon svg{width:62%;height:62%}
+
+#h2{font-weight:700;font-size:118px;line-height:1.25;color:var(--navy);direction:rtl;white-space:nowrap;text-align:center}
+#h2 span{color:var(--blue)}
+.tile{width:150px;height:150px;border-radius:40px;display:flex;align-items:center;justify-content:center;
+  box-shadow:0 14px 30px rgba(30,47,82,.18)}
+.tile svg{width:68px;height:68px;fill:none;stroke:#fff;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.tile.white{background:#fff;border:1px solid #E3E8EF}
+.tile.white svg{stroke:var(--navy)}
+.lbl{font-weight:600;font-size:40px;color:var(--navy);direction:rtl;white-space:nowrap}
+
+/* blue world */
+#blue{position:absolute;inset:0;overflow:hidden}
+#bgNavy{position:absolute;inset:0;background:linear-gradient(180deg,#294376,#1E2F52)}
+#bgSky{position:absolute;inset:0;background:linear-gradient(180deg,#294376 0%,#4d6f9e 55%,#769CC2 100%)}
+#glow{position:absolute;right:-300px;top:-380px;width:1100px;height:1100px;border-radius:50%;background:radial-gradient(closest-side,rgba(60,200,240,.38),rgba(60,200,240,0))}
+#lines{position:absolute;inset:0}
+#offer{background:rgba(255,255,255,.14);border:1.5px solid rgba(255,255,255,.4);color:#fff;font-weight:600;font-size:44px;
+  padding:10px 34px 16px;border-radius:999px;direction:rtl;white-space:nowrap;backdrop-filter:blur(14px);box-shadow:inset 0 1px 0 rgba(255,255,255,.5)}
+#offer b{color:var(--cyan)}
+#track{position:absolute;left:0;top:0;width:1080px;height:1920px}
+.card{position:absolute;width:640px;height:820px;border-radius:56px;background:#fff;overflow:hidden;
+  box-shadow:0 50px 90px rgba(10,22,52,.38), 0 2px 0 rgba(255,255,255,.9) inset;direction:rtl}
+.vis{position:absolute;left:22px;right:22px;top:22px;height:390px;border-radius:40px;overflow:hidden;
+  background:linear-gradient(160deg,#E6F0FA,#f8fbff 70%);display:flex;align-items:center;justify-content:center;gap:40px}
+.ctitle{position:absolute;right:44px;left:44px;top:440px;font-weight:700;font-size:56px;color:var(--navy);line-height:1.2}
+.csub{position:absolute;right:44px;left:44px;top:518px;font-weight:500;font-size:28px;color:var(--grey);line-height:1.45}
+.prow{position:absolute;right:44px;left:44px;bottom:40px;height:150px}
+.price{position:absolute;right:0;bottom:0;font-weight:700;font-size:136px;line-height:1;color:var(--navy);direction:ltr;letter-spacing:-3px}
+.price small{font-size:70px;vertical-align:top;line-height:1.45;margin-right:4px;color:var(--blue)}
+.only{position:absolute;bottom:22px;font-weight:600;font-size:30px;color:var(--grey)}
+.badge{position:absolute;left:0;bottom:30px;background:var(--blue);color:#fff;font-weight:700;font-size:32px;padding:8px 26px 14px;border-radius:999px;white-space:nowrap}
+.badge.mint{background:var(--mint);color:var(--navy)}
+.sheen{position:absolute;inset:0;background:linear-gradient(105deg,rgba(255,255,255,0) 38%,rgba(255,255,255,.65) 50%,rgba(255,255,255,0) 62%);mix-blend-mode:soft-light;pointer-events:none}
+
+/* mockups */
+.phone{width:176px;height:340px;border-radius:38px;background:#1E2F52;padding:9px;box-shadow:0 20px 40px rgba(30,47,82,.3)}
+.phone .scr{width:100%;height:100%;border-radius:30px;background:linear-gradient(180deg,#eef5ff,#fff);padding:34px 16px 0;display:grid;grid-template-columns:repeat(3,1fr);gap:12px;align-content:start}
+.phone .scr i{display:block;aspect-ratio:1;border-radius:11px}
+.stores{display:flex;flex-direction:column;gap:16px}
+.store{display:flex;align-items:center;gap:12px;background:#1E2F52;color:#fff;border-radius:18px;padding:12px 22px 16px;font-weight:600;font-size:26px;direction:ltr;white-space:nowrap}
+.store svg{width:30px;height:30px;fill:#fff}
+.win{width:500px;height:300px;border-radius:20px;background:#fff;box-shadow:0 20px 44px rgba(30,47,82,.18);overflow:hidden;direction:ltr}
+.win .bar{height:34px;background:#F1F6FF;display:flex;align-items:center;gap:8px;padding:0 14px}
+.win .bar i{width:11px;height:11px;border-radius:50%;background:#cdd8e8}
+.win .bar u{margin-left:20px;height:14px;width:200px;border-radius:7px;background:#e3ebf6;display:block}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute">
+  <defs>
+    <filter id="mb" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur id="mbB" stdDeviation="0 0"/></filter>
+    <filter id="mbs1" x="-20%" y="-40%" width="140%" height="180%"><feGaussianBlur id="mbS1" stdDeviation="0 0"/></filter>
+    <symbol id="fg" viewBox="0 0 100 100">
+      <!-- original Fast Grand mark: F + G with speed lines -->
+      <path d="M20 22h34M20 22v56M20 48h26" stroke="#fff" stroke-width="11" stroke-linecap="round" fill="none"/>
+      <path d="M86 36a24 24 0 1 0 2 22H70" stroke="#3CC8F0" stroke-width="11" stroke-linecap="round" fill="none"/>
+      <path d="M4 66h8M4 80h14" stroke="#3CC8F0" stroke-width="6" stroke-linecap="round"/>
+    </symbol>
+  </defs>
+</svg>
+
+<div id="stage">
+  <!-- light world -->
+  <div id="light" class="abs" style="width:1080px;height:1920px">
+    <div id="floor"></div>
+    <div id="haze"></div>
+    <div id="word" class="abs">Fast Grand</div>
+    <div id="tag" class="abs c">شركة عراقية متخصصة<br>في صناعة التطبيقات</div>
+    <div id="pill" class="abs c">بأفضل جودة <b>·</b> وبسعر مناسب</div>
+    <div id="h2" class="abs c">جودة <span>لا تُقارن</span><br>بسعر مناسب</div>
+    <div id="tiles"></div>
+  </div>
+  <div id="icon" class="abs c icon"><svg><use href="#fg"/></svg></div>
+
+  <!-- blue world, revealed through the expanding icon -->
+  <div id="blue">
+    <div id="bgNavy"></div>
+    <div id="bgSky"></div>
+    <div id="glow"></div>
+    <svg id="lines" width="1080" height="1920" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="1.5">
+      <circle cx="900" cy="560" r="560"/>
+      <line x1="0" y1="430" x2="1080" y2="430"/><line x1="0" y1="1640" x2="1080" y2="1640"/>
+      <line x1="150" y1="0" x2="150" y2="1920"/>
+      <path d="M150 400 Q154 426 180 430 Q154 434 150 460 Q146 434 120 430 Q146 426 150 400Z" fill="rgba(255,255,255,.85)" stroke="none"/>
+    </svg>
+    <div id="iconGhost" class="abs c" style="width:200px;height:200px"><svg style="width:62%;height:62%;position:absolute;left:19%;top:19%"><use href="#fg"/></svg></div>
+    <div id="offer" class="abs c">عروض الأسبوع <b>·</b> خصم 50%</div>
+    <div id="track">
+      <div class="card" id="card0">
+        <div class="vis">
+          <div class="stores">
+            <div class="store"><svg viewBox="0 0 24 24"><path d="M5 3.5v17c0 .4.4.6.7.4l14.6-8.5c.3-.2.3-.6 0-.8L5.7 3.1c-.3-.2-.7 0-.7.4z"/></svg>Google Play</div>
+            <div class="store"><svg viewBox="0 0 24 24"><rect x="6" y="2" width="12" height="20" rx="3"/><rect x="8" y="5" width="8" height="12" rx="1" fill="#1E2F52"/></svg>iPhone</div>
+          </div>
+          <div class="phone"><div class="scr">
+            <i style="background:#2F6BFF"></i><i style="background:#3CC8F0"></i><i style="background:#4ED6A0"></i>
+            <i style="background:#294376"></i><i style="background:#769CC2"></i><i style="background:#2F6BFF"></i>
+            <i style="background:#4ED6A0"></i><i style="background:#3CC8F0"></i><i style="background:#294376"></i>
+          </div></div>
+        </div>
+        <div class="ctitle">تطبيق متكامل 100%</div>
+        <div class="csub">نشر على Google Play · قابل للتثبيت على iPhone</div>
+        <div class="prow"><div class="badge">خصم 50%</div><div class="price"><small>$</small>99</div></div>
+        <div class="sheen"></div>
+      </div>
+      <div class="card" id="card1">
+        <div class="vis">
+          <div class="win"><div class="bar"><i></i><i></i><i></i><u></u></div>
+            <div style="display:flex;height:266px">
+              <div style="width:96px;background:#1E2F52;padding:20px 14px;display:flex;flex-direction:column;gap:14px">
+                <i style="height:10px;border-radius:5px;background:#3CC8F0;display:block"></i><i style="height:10px;border-radius:5px;background:rgba(255,255,255,.35);display:block"></i><i style="height:10px;border-radius:5px;background:rgba(255,255,255,.35);display:block"></i><i style="height:10px;border-radius:5px;background:rgba(255,255,255,.35);display:block"></i></div>
+              <div style="flex:1;padding:18px">
+                <div style="display:flex;gap:12px">
+                  <div style="flex:1;height:62px;border-radius:12px;background:#EEF4FF;padding:10px"><i style="display:block;width:50%;height:9px;border-radius:5px;background:#c3d2ea"></i><i style="display:block;width:70%;height:16px;margin-top:9px;border-radius:6px;background:#2F6BFF"></i></div>
+                  <div style="flex:1;height:62px;border-radius:12px;background:#EEF4FF;padding:10px"><i style="display:block;width:50%;height:9px;border-radius:5px;background:#c3d2ea"></i><i style="display:block;width:60%;height:16px;margin-top:9px;border-radius:6px;background:#4ED6A0"></i></div>
+                  <div style="flex:1;height:62px;border-radius:12px;background:#EEF4FF;padding:10px"><i style="display:block;width:50%;height:9px;border-radius:5px;background:#c3d2ea"></i><i style="display:block;width:80%;height:16px;margin-top:9px;border-radius:6px;background:#3CC8F0"></i></div>
+                </div>
+                <div class="bars" style="display:flex;align-items:flex-end;gap:12px;height:150px;margin-top:16px;padding:0 6px;border-bottom:2px solid #e3ebf6">
+                  <i style="flex:1;height:40%;border-radius:8px 8px 0 0;background:#c9dafc"></i><i style="flex:1;height:62%;border-radius:8px 8px 0 0;background:#9dbcff"></i><i style="flex:1;height:48%;border-radius:8px 8px 0 0;background:#c9dafc"></i><i style="flex:1;height:78%;border-radius:8px 8px 0 0;background:#6f9bff"></i><i style="flex:1;height:66%;border-radius:8px 8px 0 0;background:#9dbcff"></i><i style="flex:1;height:92%;border-radius:8px 8px 0 0;background:#2F6BFF"></i><i style="flex:1;height:84%;border-radius:8px 8px 0 0;background:#3CC8F0"></i>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ctitle">موقع إدارة ومبيعات</div>
+        <div class="csub">لوحة تحكم لإدارة نشاطك ومبيعاتك</div>
+        <div class="prow"><div class="badge">خصم 50%</div><div class="price"><small>$</small>55</div></div>
+        <div class="sheen"></div>
+      </div>
+      <div class="card" id="card2">
+        <div class="vis">
+          <div class="win"><div class="bar"><i></i><i></i><i></i><u></u></div>
+            <div style="display:flex;height:266px;padding:26px;gap:24px;direction:rtl">
+              <div style="flex:1.1;display:flex;flex-direction:column;gap:14px;padding-top:10px">
+                <i style="display:block;height:24px;width:92%;border-radius:8px;background:#1E2F52"></i>
+                <i style="display:block;height:24px;width:70%;border-radius:8px;background:#1E2F52"></i>
+                <i style="display:block;height:11px;width:85%;border-radius:6px;background:#d3ddeb;margin-top:6px"></i>
+                <i style="display:block;height:11px;width:65%;border-radius:6px;background:#d3ddeb"></i>
+                <i style="display:block;height:40px;width:150px;border-radius:20px;background:#2F6BFF;margin-top:12px"></i>
+              </div>
+              <div style="flex:1;border-radius:18px;background:linear-gradient(180deg,#769CC2,#B7CFEB);position:relative;overflow:hidden">
+                <i style="position:absolute;width:70px;height:70px;border-radius:50%;background:#E6F0FA;right:24px;top:24px"></i>
+                <i style="position:absolute;left:-30px;right:-30px;bottom:-60px;height:130px;border-radius:50%;background:#4ED6A0;opacity:.8"></i>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="ctitle">موقع تعريفي احترافي</div>
+        <div class="csub">واجهة أنيقة تعرّف بنشاطك وخدماتك</div>
+        <div class="prow"><div class="badge mint">سعر خاص</div><div class="price"><small>$</small>35</div></div>
+        <div class="sheen"></div>
+      </div>
+    </div>
+    <div id="ctaHead" class="abs c" style="font-weight:700;font-size:130px;line-height:1.25;text-align:center;color:#fff;direction:rtl;white-space:nowrap">مشروعك يبدأ<br>برسالة</div>
+    <div id="ctaPill" class="abs c" style="background:#fff;color:#1E2F52;font-weight:700;font-size:66px;padding:22px 84px 32px;border-radius:999px;white-space:nowrap;direction:rtl;box-shadow:0 30px 60px rgba(10,22,52,.35)">تواصل معنا الآن</div>
+    <div id="ring" class="abs c" style="border-radius:999px;border:3px solid rgba(214,243,255,.9)"></div>
+    <div id="ctaBrand" class="abs c" style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:22px;width:900px;direction:ltr;white-space:nowrap">
+      <div class="icon" style="width:84px;height:84px;box-shadow:none;border:1.5px solid rgba(255,255,255,.35)"><svg><use href="#fg"/></svg></div>
+      <div style="font-weight:600;font-size:54px;color:#fff;letter-spacing:-1px">Fast Grand</div>
+      <div style="flex-basis:100%;height:0"></div>
+      <div style="font-weight:500;font-size:40px;color:#cfe3f6;direction:rtl">شركة عراقية لصناعة التطبيقات</div>
+    </div>
+    <svg id="cursor" class="abs" width="44" height="54" viewBox="0 0 32 39" style="filter:drop-shadow(0 4px 6px rgba(0,0,0,.3))">
+      <path d="M2 2 L2 31 L9.5 24.5 L14.5 36 L19 34 L14 23 L24 23 Z" fill="#000" stroke="#fff" stroke-width="2.2" stroke-linejoin="round"/>
+    </svg>
+  </div>
+</div>
+
+<script>
+// ---------- helpers (pure functions of time) ----------
+const E = {
+  lin: (x) => x,
+  io: (x) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2),
+  i: (x) => x * x * x,
+  o: (x) => 1 - Math.pow(1 - x, 3),
+  xo: (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x)), // exponential ease-out
+  xi: (x) => (x <= 0 ? 0 : Math.pow(2, 10 * x - 10)),
+  back: (x) => { const c = 1.25; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); }, // <2% overshoot
+};
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+// kf(t, [[t0,v0],[t1,v1,ease],...]) — ease belongs to the segment ending at that key
+function kf(t, tb) {
+  if (t <= tb[0][0]) return tb[0][1];
+  for (let i = 1; i < tb.length; i++) {
+    if (t <= tb[i][0]) {
+      const [t0, v0] = tb[i - 1], [t1, v1, e = 'io'] = tb[i];
+      const k = E[e](clamp((t - t0) / (t1 - t0)));
+      return Array.isArray(v0) ? v0.map((v, j) => v + (v1[j] - v) * k) : v0 + (v1 - v0) * k;
+    }
+  }
+  return tb[tb.length - 1][1];
+}
+const ramp = (t, a, b, e = 'io') => E[e](clamp((t - a) / (b - a)));
+const $ = (id) => document.getElementById(id);
+function place(el, x, y, { s = 1, sx = s, sy = s, r = 0, o = 1, blur = 0, bx = null, by = null } = {}) {
+  el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${r}deg) scale(${sx},${sy})`;
+  el.style.opacity = o;
+  el.style.visibility = o <= 0.001 ? 'hidden' : 'visible';
+  el.style.filter = blur > 0.05 ? `blur(${blur.toFixed(2)}px)` : 'none';
+}
+const DT = 1 / 60;
+const speed = (f, t) => { const a = f(t), b = f(t - DT); return Array.isArray(a) ? Math.hypot(...a.map((v, i) => v - b[i])) / DT : Math.abs(a - b) / DT; };
+const vblur = (v, k = 1 / 90, max = 16) => Math.min(max, v * k);
+
+// ---------- timeline (seconds) — matched to the voice-over ----------
+const T = {
+  dur: 15.0,
+  s2: 2.8,    // why-us
+  reveal: 5.6,// icon expands into the blue world
+  c1: 5.95, p1: 7.75,
+  c2: 8.85, p2: 10.2,
+  c3: 11.2, p3: 12.35,
+  over: 12.72, cta: 13.45,
+};
+
+// ---------- S1: lockup ----------
+const lockY = (t) => kf(t, [[0, 2050], [0.12, 1400, 'lin'], [0.3, 1000, 'o'], [0.62, 830, 'xo'], [1.4, 810, 'o']]) - Math.max(0, t - 1.4) * 10
+  - (t > T.s2 - 0.15 ? 1300 * E.xi(clamp((t - (T.s2 - 0.15)) / 0.4)) : 0);
+let WORD_W = 640;
+function iconState(t) {
+  // [x, y, size]
+  if (t < T.s2 - 0.2) return [540, lockY(t) - 190, 230];
+  return kf(t, [[T.s2 - 0.2, [540, lockY(T.s2 - 0.2) - 190, 230]], [T.s2 + 0.35, [540, 1070, 250], 'io']])
+    .map((v, i) => (i === 2 ? v : v));
+}
+
+// ---------- S2: feature tiles ----------
+const FEATURES = [
+  ['white', 'الجودة', '<path d="M12 2.8l2.8 5.8 6.4.9-4.6 4.5 1.1 6.3L12 17.3l-5.7 3 1.1-6.3L2.8 9.5l6.4-.9z"/>'],
+  ['#2F6BFF', 'السعر المناسب', '<path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.6"/>'],
+  ['#3CC8F0', 'سرعة التنفيذ', '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>'],
+  ['#4ED6A0', 'خدمات مستقبلية', '<path d="M4.5 16.5c-1.5 1.3-2 5-2 5s3.7-.5 5-2c.7-.8.7-2.1-.1-2.9a2.2 2.2 0 0 0-2.9-.1z"/><path d="M12 15l-3-3a22 22 0 0 1 2-3.9A12.9 12.9 0 0 1 22 2c0 2.7-.8 7.5-6 11a22.4 22.4 0 0 1-4 2z"/><path d="M9 12H4s.6-3 2-4c1.6-1.1 5 0 5 0M12 15v5s3-.6 4-2c1.1-1.6 0-5 0-5"/>'],
+  ['#294376', 'حماية وأمان', '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/>'],
+  ['#769CC2', 'والمزيد', '<path d="M12 5v14M5 12h14"/>'],
+];
+const RING = { cx: 540, cy: 1070, rx: 330, ry: 410 };
+const ANG = [330, 30, 90, 150, 210, 270].map((d) => (d * Math.PI) / 180);
+function tilePos(i, t) {
+  const st = T.s2 + 0.15 + i * 0.05;
+  const inK = E.xo(clamp((t - st) / 0.85));
+  const outK = E.i(clamp((t - (T.reveal - 0.35 + (5 - i) * 0.015)) / 0.32));
+  const a = ANG[i] + (1 - inK) * 3.4 - outK * 2.2;
+  const r = (1 + (1 - inK) * 0.9) * (1 - outK * 0.97);
+  return [RING.cx + Math.cos(a) * RING.rx * r, RING.cy + Math.sin(a) * RING.ry * r, inK, outK];
+}
+
+// ---------- S3: cards ----------
+const SPACING = 680;
+function trackState(t) {
+  // [offsetX (px), y offset, scale]
+  const off = kf(t, [[T.c1, 0], [T.c2 - 0.35, 0], [T.c2 + 0.15, SPACING, 'io'], [T.c3 - 0.3, SPACING], [T.c3 + 0.18, SPACING * 2, 'io'],
+    [T.over, SPACING * 2], [T.over + 0.38, SPACING, 'io']]);
+  const y = kf(t, [[T.c1 - 0.05, 900], [T.c1 + 0.55, 0, 'xo']]);
+  const s = BASE * kf(t, [[T.over, 1], [T.over + 0.38, 0.4, 'io']]);
+  const drift = (t - T.c1) * 4; // constant slow camera creep
+  return [off + drift * (t < T.over ? 1 : 0), y, s];
+}
+const CARD_Y = 1010; const BASE = 1.24;
+const PRICE_T = [T.p1, T.p2, T.p3];
+const FOCUS_T = [T.c1, T.c2, T.c3];
+
+function seek(t) {
+  // ----- light world -----
+  $('haze').style.opacity = 1 - ramp(t, 0.05, 0.55, 'o');
+  const ly = lockY(t), vy = speed(lockY, t);
+  const lx0 = 540 - WORD_W / 2;
+  const wordIn = ramp(t, 0.18, 0.75, 'xo');
+  const w = $('word');
+  w.style.transform = `translate(${lx0}px,${ly + 30 - (1 - wordIn) * 50}px) translate(0,-50%)`;
+  w.style.opacity = wordIn * (1 - ramp(t, T.s2 + 0.05, T.s2 + 0.25));
+  w.style.clipPath = `inset(-20% 0 ${(1 - wordIn) * 100}% 0)`;
+  w.style.filter = `blur(${(vblur(vy) * 0.6 + (1 - wordIn) * 10).toFixed(2)}px)`;
+  const tagIn = ramp(t, 0.75, 1.3, 'xo'), tagOut = ramp(t, T.s2 - 0.4, T.s2 - 0.1, 'i');
+  place($('tag'), 540, lockY(Math.min(t, T.s2 - 0.4)) + 250 + (1 - tagIn) * 40 + tagOut * 70, { o: tagIn * (1 - tagOut), blur: (1 - tagIn) * 12 + tagOut * 14 });
+  const pillIn = ramp(t, 1.35, 1.9, 'xo'), pillOut = ramp(t, T.s2 - 0.36, T.s2 - 0.08, 'i');
+  place($('pill'), 540 + (1 - pillIn) * 30, lockY(Math.min(t, T.s2 - 0.36)) + 450 + pillOut * 90, { o: pillIn * (1 - pillOut), blur: (1 - pillIn) * 16 + pillOut * 14 });
+
+  // icon (shared element S1 → S2 → blue world)
+  const [ix, iy, isz] = iconState(t);
+  const iv = speed((tt) => iconState(tt).slice(0, 2), t);
+  const iconEl = $('icon');
+  const iconVisible = t < T.reveal + 0.02;
+  iconEl.style.width = iconEl.style.height = isz + 'px';
+  place(iconEl, ix, iy, { o: iconVisible ? ramp(t, 0.0, 0.12) : 0, blur: vblur(iv, 1 / 120, 10) });
+
+  // S2 headline + tiles
+  const hIn = ramp(t, T.s2 + 0.25, T.s2 + 0.8, 'xo'), hOut = E.xi(clamp((t - (T.reveal - 0.3)) / 0.35));
+  place($('h2'), 540, 350 + (1 - hIn) * 50 - hOut * 300, { o: hIn * (1 - hOut), blur: (1 - hIn) * 14 + hOut * 12 });
+  FEATURES.forEach((f, i) => {
+    const el = $('tile' + i), lb = $('lbl' + i);
+    const [x, y, inK, outK] = tilePos(i, t);
+    const v = speed((tt) => tilePos(i, tt).slice(0, 2), t);
+    const vis = t > T.s2 + 0.1 && outK < 0.999;
+    place(el, x, y, { s: 0.7 + 0.3 * inK - outK * 0.6, o: vis ? Math.min(1, inK * 3) : 0, blur: vblur(v, 1 / 140, 9), r: (1 - inK) * -40 });
+    const lIn = ramp(t, T.s2 + 0.85 + i * 0.07, T.s2 + 1.25 + i * 0.07, 'xo'), lOut = ramp(t, T.reveal - 0.45, T.reveal - 0.3, 'i');
+    place(lb, x, y + 122 + (1 - lIn) * 16, { o: lIn * (1 - lOut), blur: (1 - lIn) * 12 + lOut * 10 });
+  });
+
+  // ----- blue world through the expanding icon -----
+  const rk = E.io(clamp((t - T.reveal) / 0.5));
+  const blue = $('blue');
+  if (t < T.reveal) { blue.style.visibility = 'hidden'; }
+  else {
+    blue.style.visibility = 'visible';
+    const sz = isz + rk * 2600, cx = ix + (540 - ix) * rk, cy = iy + (960 - iy) * rk;
+    const rad = sz * 0.28 * (1 - rk) + 0 * rk;
+    blue.style.clipPath = rk >= 1 ? 'none' : `inset(${cy - sz / 2}px ${1080 - cx - sz / 2}px ${1920 - cy - sz / 2}px ${cx - sz / 2}px round ${rad}px)`;
+    const g = $('iconGhost'); g.style.width = g.style.height = sz + 'px';
+    const gk = ramp(t, T.reveal, T.reveal + 0.3, 'i');
+    place(g, cx, cy, { s: 1 + gk * 0.5, o: 1 - gk, blur: gk * 18 });
+  }
+  $('bgSky').style.opacity = ramp(t, T.reveal + 0.15, T.reveal + 0.75, 'o');
+  $('glow').style.opacity = ramp(t, T.reveal + 0.3, T.reveal + 1.2, 'o');
+  $('lines').style.opacity = ramp(t, T.reveal + 0.35, T.reveal + 1.1, 'o');
+  $('lines').style.transform = `translateX(${(t - T.reveal) * -12}px)`;
+
+  const oIn = ramp(t, T.c1 + 0.25, T.c1 + 0.8, 'xo'), oOut = ramp(t, T.cta - 0.1, T.cta + 0.25, 'i');
+  place($('offer'), 540, 330 + (1 - oIn) * -30 - oOut * 140, { o: oIn * (1 - oOut), blur: (1 - oIn) * 10 + oOut * 10 });
+
+  // cards on the track
+  const [off, ty, ts] = trackState(t);
+  const tv = speed((tt) => { const s = trackState(tt); return [s[0], s[1]]; }, t);
+  const tvx = speed((tt) => trackState(tt)[0], t), tvy = speed((tt) => trackState(tt)[1], t);
+  const conv = E.i(clamp((t - T.cta) / 0.38)); // cards converge into the CTA pill
+  for (let i = 0; i < 3; i++) {
+    const el = $('card' + i);
+    let x = 960 + (off - i * SPACING - SPACING) * ts + SPACING * ts; // centred on the focused card
+    x = 540 + (off - i * SPACING) * ts;
+    let y = CARD_Y + ty * (1 + i * 0.12);
+    let s = ts * (1 - (i !== Math.round(off / SPACING) && ts > 0.99 ? 0.06 : 0));
+    // neighbours sit slightly smaller and dimmer while one card is the hero
+    const focusIdx = off / SPACING;
+    const d = Math.min(1, Math.abs(focusIdx - i));
+    const heroMix = 1 - ramp(t, T.over, T.over + 0.3);
+    s = ts * (1 - 0.1 * d * heroMix);
+    const dim = 1 - 0.35 * d * heroMix;
+    x = x + (540 - x) * conv; y = y + (1000 - y) * conv; s = s * (1 - conv * 0.8);
+    el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) scale(${s})`;
+    el.style.opacity = t < T.c1 - 0.05 ? 0 : (conv > 0.97 ? 0 : 1);
+    el.style.filter = `brightness(${dim})`;
+    // price reveal
+    const pk = ramp(t, PRICE_T[i] - 0.05, PRICE_T[i] + 0.45, 'xo');
+    const pr = el.querySelector('.price');
+    pr.style.transform = `translateY(${(1 - pk) * 60}px)`; pr.style.opacity = pk; pr.style.filter = pk < 0.99 ? `blur(${(1 - pk) * 14}px)` : 'none';
+    const bk = ramp(t, PRICE_T[i] + 0.2, PRICE_T[i] + 0.6, 'back');
+    const bd = el.querySelector('.badge');
+    bd.style.transform = `scale(${0.6 + 0.4 * bk})`; bd.style.opacity = clamp(bk * 1.5);
+    const sk = ramp(t, FOCUS_T[i] + 0.35, FOCUS_T[i] + 1.35, 'io');
+    el.querySelector('.sheen').style.transform = `translateX(${-130 + sk * 260}%)`;
+  }
+  // directional motion blur on the whole track
+  const tr = $('track');
+  const bx = Math.min(18, tvx * ts * 0.008), byy = Math.min(18, tvy * 0.012);
+  const cb = conv * 10;
+  if (bx + byy + cb > 0.25) {
+    document.getElementById('mbB').setAttribute('stdDeviation', `${(bx + cb).toFixed(2)} ${(byy + cb).toFixed(2)}`);
+    tr.style.filter = 'url(#mb)';
+  } else tr.style.filter = 'none';
+
+  // ----- CTA -----
+  const pIn = E.xo(clamp((t - (T.cta + 0.3)) / 0.6));
+  const pPress = t > 14.4 && t < 14.6 ? Math.sin(((t - 14.4) / 0.2) * Math.PI) : 0;
+  place($('ctaPill'), 540, 1040, { s: (0.55 + 0.45 * pIn) * (1 - 0.05 * pPress), o: t > T.cta + 0.3 ? 1 : 0, blur: (1 - pIn) * 8 });
+  const hk = ramp(t, T.cta + 0.4, T.cta + 1.0, 'xo');
+  place($('ctaHead'), 540, 760 + (1 - hk) * 50, { o: hk, blur: (1 - hk) * 14 });
+  const bk2 = ramp(t, T.cta + 0.75, T.cta + 1.35, 'xo');
+  place($('ctaBrand'), 540, 1330 + (1 - bk2) * 30, { o: bk2, blur: (1 - bk2) * 12 });
+  // cursor glides in, decelerating, and clicks the pill
+  const cur = $('cursor');
+  if (t > 14.0) {
+    const cx = kf(t, [[14.0, 1000], [14.4, 690, 'xo']]), cy = kf(t, [[14.0, 1500], [14.4, 1085, 'xo']]);
+    const cs = 1.3 + 0.35 * ramp(t, 14.25, 14.4, 'o') - 0.2 * pPress;
+    cur.style.transform = `translate(${cx}px,${cy}px) scale(${cs})`; cur.style.opacity = ramp(t, 14.0, 14.12); cur.style.visibility = 'visible';
+  } else cur.style.visibility = 'hidden';
+  const rg = ramp(t, 14.45, 14.95, 'o');
+  const ring = $('ring');
+  ring.style.width = 620 + rg * 140 + 'px'; ring.style.height = 150 + rg * 80 + 'px';
+  place(ring, 540, 1040, { o: t > 14.45 ? (1 - rg) * 0.9 : 0 });
+}
+
+// build tiles
+const tl = $('tiles');
+FEATURES.forEach(([bg, label, path], i) => {
+  const d = document.createElement('div'); d.id = 'tile' + i; d.className = 'abs c tile' + (bg === 'white' ? ' white' : '');
+  if (bg !== 'white') d.style.background = bg;
+  d.innerHTML = `<svg viewBox="0 0 24 24">${path}</svg>`; tl.appendChild(d);
+  const l = document.createElement('div'); l.id = 'lbl' + i; l.className = 'abs c lbl'; l.textContent = label; tl.appendChild(l);
+});
+// card track positions use absolute centring
+document.querySelectorAll('.card').forEach((c) => { c.style.left = '0px'; c.style.top = '0px'; });
+
+window.seek = seek;
+window.DURATION = T.dur;
+document.fonts.ready.then(() => { WORD_W = $('word').offsetWidth; seek(0); window.__ready = true; });
+</script>
+</body>
+</html>
