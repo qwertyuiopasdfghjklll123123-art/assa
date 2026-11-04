@@ -2,105 +2,104 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<title>fast_crand carousel</title>
+<title>fast_crand campaign</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--bg:#050607;--cyan:#36C9F2;--cyan2:#1fa6cf;--teal:#0e3a44;--card:#0b1114;--line:rgba(54,201,242,.35);--txt:#f2f7f9;--sub:#9db2bc;--mute:#5d7079}
+:root{--bg:#050607;--cyan:#36C9F2;--line:rgba(54,201,242,.35);--txt:#f2f7f9;--sub:#9db2bc;--mute:#5d7079}
 *{margin:0;padding:0;box-sizing:border-box}
-body{background:#111;font-family:'IBM Plex Sans Arabic',sans-serif;color:var(--txt);display:flex;flex-direction:column;gap:40px;padding:40px;align-items:center}
-.slide{position:relative;width:1080px;height:1350px;overflow:hidden;background:var(--bg)}
-.slide::before{content:"";position:absolute;inset:0;background:
+body{background:#111;font-family:'IBM Plex Sans Arabic','Noto Color Emoji',sans-serif;color:var(--txt);display:flex;flex-wrap:wrap;gap:40px;padding:40px;align-items:flex-start}
+.slide,.story{position:relative;width:1080px;height:1350px;overflow:hidden;background:var(--bg);flex-shrink:0}
+.story{height:1920px}
+.slide::before,.story::before{content:"";position:absolute;inset:0;background:
   radial-gradient(720px 520px at 85% 8%,rgba(54,201,242,.16),transparent 70%),
   radial-gradient(800px 700px at 10% 85%,rgba(14,90,104,.32),transparent 70%)}
 .slide::after{content:"";position:absolute;left:0;right:0;bottom:0;height:230px;background:linear-gradient(rgba(5,6,7,0),var(--bg) 62%);z-index:5;pointer-events:none}
 .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(54,201,242,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(54,201,242,.05) 1px,transparent 1px);background-size:72px 72px;
   -webkit-mask-image:radial-gradient(900px 700px at 50% 60%,#000 30%,transparent 80%);mask-image:radial-gradient(900px 700px at 50% 60%,#000 30%,transparent 80%)}
 .abs{position:absolute}
-/* top bar */
 .top{position:absolute;top:56px;right:72px;left:72px;display:flex;justify-content:space-between;align-items:center;z-index:5}
 .tag{font-size:24px;font-weight:500;color:var(--sub);display:flex;align-items:center;gap:12px}
 .tag i{width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 6px rgba(54,201,242,.15)}
-.idx{direction:ltr;font-size:24px;font-weight:600;color:var(--mute);letter-spacing:2px}
-.idx b{color:var(--cyan)}
-/* type */
+.idx{direction:ltr;font-size:24px;font-weight:600;color:var(--mute);letter-spacing:2px}.idx b{color:var(--cyan)}
 .copy{position:absolute;right:72px;left:72px;top:140px;z-index:4}
 .h1{font-size:104px;font-weight:700;line-height:1.18;letter-spacing:-1px}
 .h2{font-size:74px;font-weight:700;line-height:1.25;color:var(--cyan);margin-top:6px}
-.p{font-size:34px;font-weight:400;line-height:1.6;color:var(--sub);margin-top:22px;max-width:820px}
+.p{font-size:34px;line-height:1.6;color:var(--sub);margin-top:22px;max-width:860px}
 .hl{color:var(--cyan)}
-/* footer */
 .foot{position:absolute;bottom:44px;right:72px;left:72px;height:84px;display:flex;align-items:center;justify-content:space-between;z-index:6;direction:ltr}
 .brand{display:flex;align-items:center;gap:18px}
-.brand .lg{width:76px;height:76px;border-radius:50%;background:#0b1114;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden}
-.brand .lg div{width:58px;height:58px;border-radius:28%;background:linear-gradient(160deg,#294376,#1E2F52);display:flex;align-items:center;justify-content:center}
-.brand .lg svg{width:62%;height:62%}
-.brand .nm{font-size:30px;font-weight:600;color:var(--txt);letter-spacing:.5px}
-.dots{display:flex;gap:10px;align-items:center}
-.dots i{width:10px;height:10px;border-radius:5px;background:#24323a}
-.dots i.on{width:34px;background:var(--cyan)}
+.lg{width:76px;height:76px;border-radius:50%;background:#0b1114;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center}
+.lg div{width:58px;height:58px;border-radius:28%;background:linear-gradient(160deg,#294376,#1E2F52);display:flex;align-items:center;justify-content:center}
+.lg svg{width:62%;height:62%}
+.brand .nm{font-size:30px;font-weight:600;letter-spacing:.5px}
+.dots{display:flex;gap:9px;align-items:center}.dots i{width:9px;height:9px;border-radius:5px;background:#24323a}.dots i.on{width:30px;background:var(--cyan)}
 .save{display:flex;align-items:center;gap:14px;direction:rtl;font-size:24px;color:var(--sub);font-weight:500}
 .save svg{width:30px;height:30px;stroke:var(--cyan);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-/* cards */
-.card{background:linear-gradient(180deg,rgba(17,27,31,.92),rgba(8,12,14,.92));border:1.5px solid var(--line);border-radius:28px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
-.chip{display:inline-flex;align-items:center;gap:12px;padding:12px 26px 16px;border-radius:999px;background:rgba(54,201,242,.1);border:1.5px solid var(--line);color:var(--cyan);font-weight:600;font-size:28px;white-space:nowrap}
-/* phone */
-.phone{position:absolute;border-radius:64px;background:linear-gradient(145deg,#2a3236,#0c0f11);padding:12px;box-shadow:0 50px 100px rgba(0,0,0,.7),0 0 0 1.5px rgba(255,255,255,.08) inset,0 0 80px rgba(54,201,242,.12)}
-.phone .scr{width:100%;height:100%;border-radius:53px;overflow:hidden;background:#0a0f12;position:relative}
-.phone .scr img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
-.phone .notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:34%;height:30px;border-radius:20px;background:#000;z-index:3}
-.ring{position:absolute;border-radius:50%;border:1.5px solid rgba(54,201,242,.22)}
-.glow{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(54,201,242,.35),transparent)}
-/* custom app UI */
-.app{position:absolute;inset:0;padding:64px 26px 0;direction:rtl;font-size:20px}
-.app .hi{color:var(--sub);font-size:18px}.app .ttl{font-size:28px;font-weight:700;margin-top:2px}
-.app .hero{margin-top:18px;border-radius:24px;padding:20px;background:linear-gradient(135deg,#36C9F2,#1c7fa6);color:#04222c}
-.app .hero b{font-size:26px;display:block}.app .hero span{font-size:16px;opacity:.85}
-.app .cats{display:flex;gap:10px;margin-top:18px}.app .cats i{flex:1;height:64px;border-radius:18px;background:#121c21;border:1px solid #1d2b31}
-.app .row{display:flex;gap:12px;margin-top:16px}.app .it{flex:1;border-radius:20px;background:#10181c;border:1px solid #1d2b31;padding:12px}
-.app .it u{display:block;height:92px;border-radius:14px;background:linear-gradient(160deg,#173a45,#0e2128)}
-.app .it s{display:block;height:10px;width:70%;margin-top:12px;border-radius:5px;background:#2a3b42;text-decoration:none}
-.app .it em{display:block;height:12px;width:40%;margin-top:8px;border-radius:6px;background:var(--cyan);font-style:normal}
-.app .nav{position:absolute;bottom:0;left:0;right:0;height:78px;background:#0c1418;border-top:1px solid #1a272d;display:flex;justify-content:space-around;align-items:center}
-.app .nav i{width:28px;height:28px;border-radius:9px;background:#22343b}.app .nav i.on{background:var(--cyan)}
-/* devices */
-.laptop{position:absolute}
-.laptop .lid{border-radius:26px 26px 6px 6px;background:#15191c;padding:16px;box-shadow:0 40px 90px rgba(0,0,0,.7),0 0 0 1.5px rgba(255,255,255,.07) inset}
-.laptop .lid .scr{border-radius:10px;overflow:hidden;background:#070b0d;height:100%}
-.laptop .base{height:26px;margin:0 -60px;border-radius:0 0 26px 26px;background:linear-gradient(180deg,#2b3236,#14181a);position:relative}
-.laptop .base::after{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:160px;height:10px;border-radius:0 0 10px 10px;background:#0d1012}
-.web{height:100%;direction:rtl;position:relative;background:radial-gradient(500px 300px at 20% 30%,rgba(54,201,242,.18),transparent 70%),#070b0d}
-.web .nb{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;border-bottom:1px solid #142026}
-.web .nb b{font-size:20px}.web .nb span{display:flex;gap:16px}.web .nb span i{width:54px;height:9px;border-radius:5px;background:#24343b}
-.web .hero{padding:40px 30px;display:flex;gap:30px;align-items:center}
-.web .hero .tx{flex:1.2}.web .hero h4{font-size:40px;line-height:1.25}.web .hero h4 em{color:var(--cyan);font-style:normal}
-.web .hero p{font-size:16px;color:var(--sub);margin-top:12px;line-height:1.6}
-.web .hero .bt{display:inline-block;margin-top:20px;padding:10px 26px 14px;border-radius:999px;background:var(--cyan);color:#04222c;font-weight:700;font-size:17px}
-.web .hero .im{flex:1;height:220px;border-radius:22px;background:linear-gradient(160deg,#1b5466,#0b1d23);border:1px solid var(--line);position:relative;overflow:hidden}
-.web .hero .im i{position:absolute;border-radius:50%;background:rgba(54,201,242,.35)}
-.web .feat{display:flex;gap:16px;padding:0 30px}.web .feat i{flex:1;height:90px;border-radius:16px;background:#0f171b;border:1px solid #1a2930}
-.monitor{position:absolute}
-.monitor .sc{border-radius:24px;background:#121618;padding:16px;box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 0 1.5px rgba(255,255,255,.07) inset}
-.monitor .sc .in{border-radius:12px;overflow:hidden;height:100%;background:#070b0d}
-.monitor .neck{width:120px;height:70px;margin:0 auto;background:linear-gradient(180deg,#1c2124,#101315)}
-.monitor .ft{width:300px;height:16px;margin:0 auto;border-radius:10px;background:#1c2124}
-.dash{display:flex;height:100%;direction:rtl}
-.dash .sb{width:150px;background:#0b1215;border-left:1px solid #15232a;padding:22px 18px;display:flex;flex-direction:column;gap:16px}
-.dash .sb b{font-size:18px;color:var(--cyan);margin-bottom:8px}
-.dash .sb i{height:12px;border-radius:6px;background:#1d2c33}.dash .sb i.on{background:var(--cyan)}
-.dash .mn{flex:1;padding:22px 24px}
-.dash h5{font-size:24px}
-.kpis{display:flex;gap:14px;margin-top:16px}
-.kpi{flex:1;border-radius:16px;background:#0e171b;border:1px solid #1a2a31;padding:14px 16px}
-.kpi span{font-size:14px;color:var(--sub)}.kpi b{display:block;font-size:26px;direction:ltr;text-align:right;margin-top:4px}.kpi em{font-size:13px;color:#4ED6A0;font-style:normal}
-.chart{margin-top:16px;height:190px;border-radius:16px;background:#0e171b;border:1px solid #1a2a31;display:flex;align-items:flex-end;gap:12px;padding:20px}
-.chart i{flex:1;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--cyan),rgba(54,201,242,.15))}
-.tbl{margin-top:14px;display:flex;flex-direction:column;gap:9px}.tbl i{height:22px;border-radius:8px;background:#0e171b;border:1px solid #17252b}
-.float{position:absolute;padding:20px 24px}
-.float small{display:block;font-size:20px;color:var(--sub)}.float b{font-size:34px}
-.icn{width:56px;height:56px;border-radius:16px;background:rgba(54,201,242,.12);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.card{background:linear-gradient(180deg,rgba(17,27,31,.94),rgba(8,12,14,.94));border:1.5px solid var(--line);border-radius:28px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.chip{display:inline-flex;align-items:center;gap:12px;padding:12px 26px 16px;border-radius:999px;background:#0b1a20;border:1.5px solid var(--line);color:var(--cyan);font-weight:600;font-size:28px;white-space:nowrap}
+.float{position:absolute;padding:20px 24px;display:flex;gap:16px;align-items:center;z-index:4}
+.float small{display:block;font-size:20px;color:var(--sub)}.float b{font-size:30px}
+.icn{width:56px;height:56px;border-radius:16px;background:rgba(54,201,242,.12);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:28px}
 .icn svg{width:30px;height:30px;stroke:var(--cyan);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.glow{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(54,201,242,.32),transparent)}
+.ring{position:absolute;border-radius:50%;border:1.5px solid rgba(54,201,242,.2)}
+
+/* ---------- realistic phone ---------- */
+.phone{position:absolute;z-index:3}
+.phone .fr{position:relative;width:100%;height:100%;border-radius:var(--r);padding:var(--p);
+  background:linear-gradient(145deg,#3a4248,#15191c 40%,#0b0d0f);box-shadow:0 60px 120px rgba(0,0,0,.75),0 0 0 2px #1f2529,inset 0 0 0 2px rgba(255,255,255,.08),0 0 90px rgba(54,201,242,.10)}
+.phone .btn{position:absolute;width:5px;border-radius:3px;background:#2a3136}
+.phone .scr{position:relative;width:100%;height:100%;border-radius:calc(var(--r) - var(--p));overflow:hidden;background:#fff}
+.phone .scr::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,rgba(255,255,255,.10),rgba(255,255,255,0) 35%);pointer-events:none;z-index:20}
+.phone .island{position:absolute;top:2.2%;left:50%;transform:translateX(-50%);width:31%;height:3.6%;border-radius:999px;background:#000;z-index:21}
+.phone .ui{position:absolute;top:0;right:0;width:390px;height:844px;transform-origin:top right;direction:rtl;font-size:15px;overflow:hidden}
+.ui .home{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:rgba(0,0,0,.85);z-index:10}
+.ui.dark .home{background:rgba(255,255,255,.8)}
+.sb{height:54px;display:flex;align-items:center;justify-content:space-between;padding:6px 30px 0;direction:ltr;font-weight:600;font-size:16px;color:#0b0f12}
+.dark .sb{color:#fff}
+.sb svg{height:13px}
+/* light UI kit */
+.u{position:absolute;inset:0;background:#f5f7f9;color:#0f1a20}
+.dark.u,.u.dark{background:#0b1014;color:#eef4f6}
+.u .pad{padding:0 20px}
+.row{display:flex;align-items:center}
+.sp{justify-content:space-between}
+.ic{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.srch{margin-top:14px;height:50px;border-radius:16px;background:#fff;border:1px solid #e3e9ee;display:flex;align-items:center;gap:10px;padding:0 14px;color:#8a99a3;font-size:15px}
+.flt{width:50px;height:50px;border-radius:16px;background:#0f2a35;color:#36C9F2;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.bn{position:absolute;bottom:0;left:0;right:0;height:84px;background:#fff;border-top:1px solid #e8edf1;display:flex;justify-content:space-around;padding-top:12px;font-size:11px;color:#8a99a3}
+.bn div{display:flex;flex-direction:column;align-items:center;gap:4px;position:relative}
+.bn .on{color:#0aa3cf;font-weight:600}
+.bn .bdg{position:absolute;top:-6px;left:-8px;min-width:18px;height:18px;border-radius:9px;background:#ff4d5e;color:#fff;font-size:11px;display:flex;align-items:center;justify-content:center;font-weight:700}
+.dark .bn{background:#0e161b;border-color:#18242b}
+.sec{display:flex;justify-content:space-between;align-items:baseline;margin:20px 0 12px}
+.sec b{font-size:19px}.sec span{font-size:13px;color:#0aa3cf;font-weight:600}
+.pg{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.pc{background:#fff;border-radius:20px;padding:10px;box-shadow:0 4px 14px rgba(15,40,55,.06)}
+.pc .im{height:130px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:74px;position:relative}
+.pc .hrt{position:absolute;top:8px;left:8px;width:30px;height:30px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:14px;color:#ff4d5e}
+.pc .nm{font-size:14px;font-weight:600;margin-top:10px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc .rt{font-size:12px;color:#8a99a3;margin-top:2px}.pc .rt i{color:#f5a524;font-style:normal}
+.pc .pr{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.pc .pr b{font-size:15px;color:#0f1a20}.pc .pr b small{font-size:11px;color:#8a99a3;font-weight:500}
+.pc .add{width:30px;height:30px;border-radius:10px;background:#0f2a35;color:#36C9F2;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700}
+/* devices */
+.laptop{position:absolute;z-index:3}
+.laptop .lid{border-radius:26px 26px 6px 6px;background:#15191c;padding:16px;box-shadow:0 40px 90px rgba(0,0,0,.7),0 0 0 2px #22292d,inset 0 0 0 1.5px rgba(255,255,255,.07)}
+.laptop .lid .sc{border-radius:8px;overflow:hidden;position:relative;height:100%;background:#fff}
+.laptop .base{height:26px;margin:0 -60px;border-radius:0 0 26px 26px;background:linear-gradient(180deg,#2f363a,#14181a);position:relative}
+.laptop .base::after{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:160px;height:10px;border-radius:0 0 10px 10px;background:#0d1012}
+.monitor{position:absolute;z-index:3}
+.monitor .scw{border-radius:22px;background:#121618;padding:14px;box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 0 2px #22292d}
+.monitor .scw .sc{border-radius:10px;overflow:hidden;height:100%;position:relative}
+.monitor .neck{width:120px;height:44px;margin:0 auto;background:linear-gradient(180deg,#1c2124,#101315)}
+.monitor .ft{width:300px;height:16px;margin:0 auto;border-radius:10px;background:#1c2124}
+.big{position:absolute;top:0;right:0;transform-origin:top right;direction:rtl}
+.step{display:flex;gap:26px;align-items:center;padding:26px 30px}
+.step .n{font-size:30px;font-weight:700;color:var(--cyan);direction:ltr;width:64px;height:64px;border-radius:20px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;background:rgba(54,201,242,.08);flex-shrink:0}
+.step b{font-size:38px;display:block}.step span{font-size:24px;color:var(--sub)}
 </style>
 </head>
 <body>
@@ -113,100 +112,67 @@ body{background:#111;font-family:'IBM Plex Sans Arabic',sans-serif;color:var(--t
 </defs></svg>
 
 <!-- 01 HOOK -->
-<section class="slide" id="s1"><div class="grid"></div>
-  <div class="copy">
-    <div class="h1">عندك فكرة تطبيق؟</div>
-    <div class="h2">نحوّلها إلى واقع</div>
-    <div class="p">فكرتك تستحق أن تصبح مشروعاً حقيقياً.</div>
-  </div>
+<section class="slide" id="s01"><div class="grid"></div>
+  <div class="copy"><div class="h1">عندك فكرة تطبيق؟</div><div class="h2">نحوّلها إلى واقع</div><div class="p">فكرتك تستحق أن تصبح مشروعاً حقيقياً.</div></div>
   <div class="glow" style="width:760px;height:760px;left:160px;top:600px"></div>
   <div class="ring" style="width:640px;height:640px;left:220px;top:640px"></div>
-  <div class="ring" style="width:880px;height:880px;left:100px;top:520px;border-style:dashed;opacity:.6"></div>
-  <div class="phone" style="width:310px;height:630px;left:385px;top:570px;transform:rotate(-6deg)"><div class="scr"><div class="notch"></div>
-    <div class="app"><div class="hi">مرحباً بك 👋</div><div class="ttl">تطبيقك الجديد</div>
-      <div class="hero"><b>عرض الافتتاح</b><span>كل شيء تحتاجه في مكان واحد</span></div>
-      <div class="cats"><i></i><i></i><i></i><i></i></div>
-      <div class="row"><div class="it"><u></u><s></s><em></em></div><div class="it"><u></u><s></s><em></em></div></div>
-      <div class="row"><div class="it"><u></u><s></s><em></em></div><div class="it"><u></u><s></s><em></em></div></div>
-      <div class="nav"><i class="on"></i><i></i><i></i><i></i></div></div></div></div>
-  <div class="card float" style="right:90px;top:760px;display:flex;gap:16px;align-items:center">
-    <div class="icn"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div><small>حالة المشروع</small><b>تم الإطلاق</b></div></div>
-  <div class="card float" style="left:80px;top:960px;display:flex;gap:16px;align-items:center">
-    <div class="icn"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div><div><small>إشعار جديد</small><b>طلب جديد</b></div></div>
+  <div class="phone" data-ui="food" style="left:375px;top:535px;width:325px;transform:rotate(-6deg)"></div>
+  <div class="card float" style="right:80px;top:740px"><div class="icn">🍔</div><div><small>طلب جديد · الآن</small><b>برغر الأصيل × 2</b></div></div>
+  <div class="card float" style="left:70px;top:960px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div><small>تقييم التطبيق</small><b>★ 4.9</b></div></div>
 </section>
 
 <!-- 02 MOBILE APPS -->
-<section class="slide" id="s2"><div class="grid"></div>
-  <div class="copy">
-    <div class="h1">تطبيقك الخاص</div>
-    <div class="h2" style="direction:ltr;text-align:right">Android &amp; iOS</div>
-    <div class="p">نصمم ونبرمج تطبيقات احترافية تناسب فكرتك وجمهورك.</div>
-  </div>
+<section class="slide" id="s02"><div class="grid"></div>
+  <div class="copy"><div class="h1">تطبيقك الخاص</div><div class="h2" style="direction:ltr;text-align:right">Android &amp; iOS</div><div class="p">نصمم ونبرمج تطبيقات احترافية تناسب فكرتك وجمهورك.</div></div>
   <div class="glow" style="width:900px;height:700px;left:90px;top:640px"></div>
-  <div class="phone" style="width:300px;height:610px;left:200px;top:580px;transform:rotate(-8deg)"><div class="scr"><img src="../fastgrand/assets/shot-store-app.jpg"></div></div>
-  <div class="phone" style="width:300px;height:610px;left:570px;top:550px;transform:rotate(6deg)"><div class="scr"><img src="../fastgrand/assets/shot-fastcrand-site.jpg"></div></div>
-  <div class="chip abs" style="left:60px;top:1010px;direction:ltr;z-index:7;background:#0b1a20"><svg width="26" height="26" viewBox="0 0 24 24" fill="#36C9F2"><path d="M6 9h12v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2zM8 5l-1.5-2M16 5l1.5-2M7 8a5 5 0 0 1 10 0z"/></svg>Android</div>
-  <div class="chip abs" style="right:60px;top:640px;direction:ltr;z-index:7;background:#0b1a20"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#36C9F2" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>iOS</div>
+  <div class="phone" data-ui="store" style="left:190px;top:570px;width:290px;transform:rotate(-8deg)"></div>
+  <div class="phone" data-ui="booking" style="left:580px;top:545px;width:290px;transform:rotate(6deg)"></div>
+  <div class="chip abs" style="left:60px;top:1020px;direction:ltr;z-index:7">🤖 Android</div>
+  <div class="chip abs" style="right:60px;top:600px;direction:ltr;z-index:7">📱 iOS</div>
 </section>
 
 <!-- 03 WEBSITES -->
-<section class="slide" id="s3"><div class="grid"></div>
-  <div class="copy">
-    <div class="h1">موقعك الإلكتروني</div>
-    <div class="h2">واجهة احترافية لمشروعك</div>
-    <div class="p">مواقع عصرية وسريعة تعمل على جميع الأجهزة.</div>
-  </div>
-  <div class="glow" style="width:900px;height:600px;left:90px;top:680px"></div>
-  <div class="laptop" style="left:150px;top:680px;width:780px">
-    <div class="lid" style="height:470px"><div class="scr"><div class="web">
-      <div class="nb"><b>اسم مشروعك</b><span><i></i><i></i><i></i></span></div>
-      <div class="hero"><div class="tx"><h4>واجهة <em>احترافية</em><br>تليق بعلامتك</h4><p>صفحة سريعة وأنيقة تعرض خدماتك وتجذب عملاءك.</p><span class="bt">ابدأ الآن</span></div>
-        <div class="im"><i style="width:120px;height:120px;left:20px;top:20px"></i><i style="width:220px;height:220px;right:-60px;bottom:-90px;background:rgba(78,214,160,.35)"></i></div></div>
-      <div class="feat"><i></i><i></i><i></i></div></div></div></div>
-    <div class="base"></div>
-  </div>
-  <div class="phone" style="width:210px;height:430px;left:90px;top:770px;border-radius:44px;padding:9px"><div class="scr" style="border-radius:36px"><div class="web" style="font-size:12px">
-    <div class="nb" style="height:46px;padding:0 16px;margin-top:26px"><b style="font-size:14px">اسم مشروعك</b><span><i style="width:22px"></i></span></div>
-    <div style="padding:22px 16px"><h4 style="font-size:24px;line-height:1.3">واجهة <em style="color:#36C9F2;font-style:normal">احترافية</em> تليق بعلامتك</h4>
-      <span style="display:inline-block;margin-top:14px;padding:6px 16px 9px;border-radius:999px;background:#36C9F2;color:#04222c;font-weight:700;font-size:12px">ابدأ الآن</span>
-      <div style="margin-top:18px;height:120px;border-radius:16px;background:linear-gradient(160deg,#1b5466,#0b1d23);border:1px solid rgba(54,201,242,.35)"></div>
-      <div style="display:flex;gap:8px;margin-top:12px"><i style="flex:1;height:54px;border-radius:12px;background:#0f171b;border:1px solid #1a2930"></i><i style="flex:1;height:54px;border-radius:12px;background:#0f171b;border:1px solid #1a2930"></i></div></div>
-  </div></div></div>
+<section class="slide" id="s03"><div class="grid"></div>
+  <div class="copy"><div class="h1">موقعك الإلكتروني</div><div class="h2">واجهة احترافية لمشروعك</div><div class="p">مواقع عصرية وسريعة تعمل على جميع الأجهزة.</div></div>
   <div class="chip abs" style="right:72px;top:575px">⚡ سريع · متجاوب · آمن</div>
+  <div class="glow" style="width:900px;height:600px;left:90px;top:680px"></div>
+  <div class="laptop" style="left:150px;top:680px;width:780px"><div class="lid" style="height:470px"><div class="sc" data-big="web" data-w="1280"></div></div><div class="base"></div></div>
+  <div class="phone" data-ui="webm" style="left:80px;top:770px;width:200px"></div>
 </section>
 
 <!-- 04 PLATFORMS -->
-<section class="slide" id="s4"><div class="grid"></div>
-  <div class="copy">
-    <div class="h1" style="font-size:88px">مشروعك أكبر من<br>مجرد تطبيق</div>
-    <div class="h2" style="font-size:64px">أنظمة ولوحات تحكم متكاملة</div>
-    <div class="p" style="font-size:31px">نطور أنظمة إدارة، متاجر إلكترونية، ولوحات تحكم مخصصة لاحتياجاتك.</div>
-  </div>
+<section class="slide" id="s04"><div class="grid"></div>
+  <div class="copy"><div class="h1" style="font-size:88px">مشروعك أكبر من<br>مجرد تطبيق</div><div class="h2" style="font-size:64px">أنظمة ولوحات تحكم متكاملة</div>
+    <div class="p" style="font-size:31px">نطور أنظمة إدارة، متاجر إلكترونية، ولوحات تحكم مخصصة لاحتياجاتك.</div></div>
   <div class="glow" style="width:1000px;height:600px;left:40px;top:720px"></div>
-  <div class="monitor" style="left:110px;top:760px;width:860px">
-    <div class="sc" style="height:400px"><div class="in"><div class="dash">
-      <div class="sb"><b>لوحة التحكم</b><i class="on"></i><i></i><i></i><i></i><i></i></div>
-      <div class="mn"><h5>نظرة عامة</h5>
-        <div class="kpis"><div class="kpi"><span>المبيعات</span><b>24.5K</b><em>▲ 18%</em></div><div class="kpi"><span>الطلبات</span><b>1,280</b><em>▲ 9%</em></div><div class="kpi"><span>العملاء</span><b>842</b><em>▲ 12%</em></div></div>
-        <div class="chart" style="height:150px"><i style="height:35%"></i><i style="height:55%"></i><i style="height:45%"></i><i style="height:70%"></i><i style="height:62%"></i><i style="height:85%"></i><i style="height:78%"></i><i style="height:95%"></i></div>
-      </div></div></div></div>
-    <div class="neck" style="height:44px"></div><div class="ft"></div>
-  </div>
-  <div class="card float" style="right:50px;top:700px;display:flex;gap:16px;align-items:center">
-    <div class="icn"><svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></div><div><small>متجر إلكتروني</small><b>طلب جديد</b></div></div>
-  <div class="card float" style="left:40px;top:1100px;display:flex;gap:16px;align-items:center">
-    <div class="icn"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div><div><small>تقارير لحظية</small><b>نمو مستمر</b></div></div>
+  <div class="monitor" style="left:100px;top:760px;width:880px"><div class="scw" style="height:420px"><div class="sc" data-big="dash" data-w="1280"></div></div><div class="neck"></div><div class="ft"></div></div>
+  <div class="card float" style="right:40px;top:690px"><div class="icn">🛒</div><div><small>طلب جديد</small><b>120,000 د.ع</b></div></div>
+  <div class="card float" style="left:30px;top:1090px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div><div><small>المبيعات هذا الشهر</small><b>▲ 18%</b></div></div>
 </section>
 
-<!-- 05 IDEA TO REALITY -->
-<section class="slide" id="s5"><div class="grid"></div>
-  <div class="copy">
-    <div class="h1">من مجرد فكرة...</div>
-    <div class="h2">إلى تطبيق متكامل</div>
-    <div class="p">نرافق مشروعك من التخطيط والتصميم إلى البرمجة والإطلاق.</div>
-  </div>
-  <!-- sketch (idea) on the right -->
-  <div class="abs" style="right:120px;top:690px;width:270px;height:520px;border-radius:52px;border:3px dashed rgba(220,235,240,.45);padding:40px 26px">
+<!-- 05 E-COMMERCE (new) -->
+<section class="slide" id="s05"><div class="grid"></div>
+  <div class="copy"><div class="h1">متجرك الإلكتروني</div><div class="h2">بيع منتجاتك أونلاين</div><div class="p">سلة مشتريات، دفع إلكتروني، وتتبع للطلبات في مكان واحد.</div></div>
+  <div class="glow" style="width:800px;height:700px;left:140px;top:620px"></div>
+  <div class="phone" data-ui="product" style="left:375px;top:530px;width:330px"></div>
+  <div class="card float" style="right:60px;top:760px"><div class="icn">🛍️</div><div><small>السلة</small><b>تمت الإضافة ✓</b></div></div>
+  <div class="card float" style="left:50px;top:880px"><div class="icn">💳</div><div><small>الدفع الإلكتروني</small><b>تم الدفع بنجاح</b></div></div>
+  <div class="card float" style="right:90px;top:1040px"><div class="icn">📦</div><div><small>رقم الطلب #2048</small><b>قيد التجهيز</b></div></div>
+</section>
+
+<!-- 06 DELIVERY (new) -->
+<section class="slide" id="s06"><div class="grid"></div>
+  <div class="copy"><div class="h1">تطبيقات التوصيل</div><div class="h2">تتبع الطلب لحظة بلحظة</div><div class="p">للمطاعم والمتاجر: طلب سريع، خريطة مباشرة، وإشعارات فورية.</div></div>
+  <div class="glow" style="width:800px;height:700px;left:140px;top:620px"></div>
+  <div class="phone" data-ui="delivery" style="left:375px;top:530px;width:330px;transform:rotate(-4deg)"></div>
+  <div class="card float" style="right:60px;top:820px"><div class="icn">🛵</div><div><small>المندوب</small><b>يصل خلال 12 د</b></div></div>
+  <div class="card float" style="left:50px;top:1000px"><div class="icn">🔔</div><div><small>إشعار</small><b>طلبك في الطريق</b></div></div>
+</section>
+
+<!-- 07 IDEA TO REALITY -->
+<section class="slide" id="s07"><div class="grid"></div>
+  <div class="copy"><div class="h1">من مجرد فكرة...</div><div class="h2">إلى تطبيق متكامل</div><div class="p">نرافق مشروعك من التخطيط والتصميم إلى البرمجة والإطلاق.</div></div>
+  <div class="abs" style="right:120px;top:690px;width:270px;height:540px;border-radius:52px;border:3px dashed rgba(220,235,240,.45);padding:40px 26px">
     <div style="height:24px;width:60%;border:2px dashed rgba(220,235,240,.4);border-radius:8px"></div>
     <div style="height:150px;margin-top:22px;border:2px dashed rgba(220,235,240,.4);border-radius:18px;position:relative"><svg viewBox="0 0 100 60" style="position:absolute;inset:20px;width:calc(100% - 40px);height:calc(100% - 40px)" fill="none" stroke="rgba(220,235,240,.4)" stroke-width="2"><path d="M0 60L30 25l20 20 15-12 35 27"/><circle cx="78" cy="14" r="8"/></svg></div>
     <div style="display:flex;gap:12px;margin-top:20px"><i style="flex:1;height:90px;border:2px dashed rgba(220,235,240,.4);border-radius:14px"></i><i style="flex:1;height:90px;border:2px dashed rgba(220,235,240,.4);border-radius:14px"></i></div>
@@ -214,69 +180,322 @@ body{background:#111;font-family:'IBM Plex Sans Arabic',sans-serif;color:var(--t
     <div style="height:14px;width:55%;margin-top:12px;border-radius:7px;background:rgba(220,235,240,.18)"></div>
     <div style="height:46px;margin-top:26px;border:2px dashed rgba(54,201,242,.6);border-radius:999px"></div>
   </div>
-  <div class="chip abs" style="right:190px;top:600px;background:transparent;color:var(--sub);border-color:rgba(220,235,240,.3)">الفكرة</div>
-  <!-- arrow -->
+  <div class="chip abs" style="right:190px;top:600px;color:var(--sub);border-color:rgba(220,235,240,.3);background:transparent">✏️ الفكرة</div>
   <svg class="abs" style="left:430px;top:870px" width="220" height="140" viewBox="0 0 220 140" fill="none"><path d="M210 70 C150 10 80 130 20 70" stroke="#36C9F2" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 14"/><path d="M40 52L18 70l24 14" stroke="#36C9F2" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-  <!-- product on the left -->
   <div class="glow" style="width:620px;height:620px;left:-40px;top:620px"></div>
-  <div class="phone" style="width:270px;height:550px;left:130px;top:680px"><div class="scr"><img src="../fastgrand/assets/shot-store-app.jpg"></div></div>
-  <div class="chip abs" style="left:150px;top:600px">تطبيق جاهز ✓</div>
+  <div class="phone" data-ui="store" style="left:130px;top:680px;width:262px"></div>
+  <div class="chip abs" style="left:150px;top:600px">✓ تطبيق جاهز</div>
 </section>
 
-<!-- 06 WHY US -->
-<section class="slide" id="s6"><div class="grid"></div>
+<!-- 08 PROCESS (new) -->
+<section class="slide" id="s08"><div class="grid"></div>
+  <div class="copy"><div class="h1">كيف نشتغل؟</div><div class="h2">4 خطوات لتطبيقك</div></div>
+  <div class="abs" style="right:72px;top:470px;width:600px;display:flex;flex-direction:column;gap:22px;z-index:4">
+    <div class="card step"><div class="n">01</div><div><b>نفهم فكرتك</b><span>نجلس معك ونحدد احتياجاتك وأهدافك</span></div></div>
+    <div class="card step"><div class="n">02</div><div><b>نصمم الواجهات</b><span>تصميم عصري وتجربة استخدام سهلة</span></div></div>
+    <div class="card step"><div class="n">03</div><div><b>نبرمج ونختبر</b><span>برمجة احترافية واختبار كل التفاصيل</span></div></div>
+    <div class="card step" style="border-color:var(--cyan)"><div class="n" style="background:var(--cyan);color:#04222c">04</div><div><b>نطلق تطبيقك</b><span>نشر على Google Play و App Store</span></div></div>
+  </div>
+  <div class="glow" style="width:560px;height:560px;left:-60px;top:560px"></div>
+  <div class="phone" data-ui="launch" style="left:70px;top:520px;width:280px;transform:rotate(-5deg)"></div>
+</section>
+
+<!-- 09 WHY US -->
+<section class="slide" id="s09"><div class="grid"></div>
   <div class="copy"><div class="h1" style="font-size:96px">ليش تختار <span class="hl" style="direction:ltr;display:inline-block">fast_crand</span>؟</div></div>
-  <div class="abs" style="right:72px;top:330px;width:560px;display:flex;flex-direction:column;gap:22px">
-    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.6 7.6"/><circle cx="11" cy="11" r="2"/></svg></div><b style="font-size:38px">تصميم احترافي</b></div>
+  <div class="abs" style="right:72px;top:330px;width:560px;display:flex;flex-direction:column;gap:22px;z-index:4">
+    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn">🎨</div><b style="font-size:38px">تصميم احترافي</b></div>
     <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></div><b style="font-size:38px">برمجة حسب طلبك</b></div>
-    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></div><b style="font-size:38px">واجهات عصرية</b></div>
-    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M9 11V6a3 3 0 0 1 6 0v5"/><path d="M5 11h14l-1 10H6z"/></svg></div><b style="font-size:38px">تجربة استخدام سهلة</b></div>
-    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5L12 16.5 5.5 21l2-7.5L2 9h7z"/></svg></div><b style="font-size:38px">حلول تناسب مشروعك</b></div>
+    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn">✨</div><b style="font-size:38px">واجهات عصرية</b></div>
+    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn">👆</div><b style="font-size:38px">تجربة استخدام سهلة</b></div>
+    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn">🎯</div><b style="font-size:38px">حلول تناسب مشروعك</b></div>
   </div>
   <div class="glow" style="width:620px;height:620px;left:-80px;top:440px"></div>
-  <div class="ring" style="width:460px;height:460px;left:0;top:520px"></div>
-  <div class="phone" style="width:300px;height:620px;left:80px;top:420px;transform:rotate(-5deg)"><div class="scr"><img src="../fastgrand/assets/shot-business-app.jpg" style="object-position:50% 6%"></div></div>
-  <div class="card float" style="left:240px;top:1010px;display:flex;gap:14px;align-items:center;padding:16px 20px"><div class="icn" style="width:48px;height:48px"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div><small>جاهز للنشر</small><b style="font-size:28px">Google Play</b></div></div>
+  <div class="phone" data-ui="booking" style="left:80px;top:420px;width:290px;transform:rotate(-5deg)"></div>
 </section>
 
-<!-- 07 CTA -->
-<section class="slide" id="s7"><div class="grid"></div>
-  <div class="copy">
-    <div class="h1">جاهز تطلق مشروعك؟</div>
-    <div class="h2">خلّينا نبرمج فكرتك!</div>
-    <div class="p">تواصل معنا وابدأ رحلتك نحو تطبيقك الخاص.</div>
-  </div>
+<!-- 10 SUPPORT (new) -->
+<section class="slide" id="s10"><div class="grid"></div>
+  <div class="copy"><div class="h1">معك حتى بعد الإطلاق</div><div class="h2">دعم فني ومتابعة مستمرة</div><div class="p">تحديثات، ميزات جديدة، ومتابعة لأداء تطبيقك.</div></div>
+  <div class="glow" style="width:800px;height:700px;left:140px;top:620px"></div>
+  <div class="phone" data-ui="chat" style="left:375px;top:530px;width:330px;transform:rotate(4deg)"></div>
+  <div class="card float" style="right:60px;top:760px"><div class="icn">🚀</div><div><small>تحديث جديد</small><b style="direction:ltr;display:inline-block">v2.1 جاهز</b></div></div>
+  <div class="card float" style="left:50px;top:980px"><div class="icn">🛡️</div><div><small>حماية وأمان</small><b>نسخ احتياطي</b></div></div>
+</section>
+
+<!-- 11 CTA -->
+<section class="slide" id="s11"><div class="grid"></div>
+  <div class="copy"><div class="h1">جاهز تطلق مشروعك؟</div><div class="h2">خلّينا نبرمج فكرتك!</div><div class="p">تواصل معنا وابدأ رحلتك نحو تطبيقك الخاص.</div></div>
   <div class="glow" style="width:700px;height:700px;left:-60px;top:600px"></div>
-  <div class="phone" style="width:300px;height:610px;left:100px;top:580px;transform:rotate(-4deg)"><div class="scr"><div class="notch"></div>
-    <div class="app"><div class="hi">أهلاً بعودتك</div><div class="ttl">تطبيقك جاهز 🚀</div>
-      <div class="hero" style="background:linear-gradient(135deg,#4ED6A0,#36C9F2)"><b>تم الإطلاق بنجاح</b><span>متاح الآن للتحميل</span></div>
-      <div class="cats"><i></i><i></i><i></i><i></i></div>
-      <div class="row"><div class="it"><u></u><s></s><em></em></div><div class="it"><u></u><s></s><em></em></div></div>
-      <div class="row"><div class="it"><u></u><s></s><em></em></div><div class="it"><u></u><s></s><em></em></div></div>
-      <div class="nav"><i class="on"></i><i></i><i></i><i></i></div></div></div></div>
-  <div class="card abs" style="right:72px;top:640px;width:500px;padding:40px 36px;text-align:center">
+  <div class="phone" data-ui="launch" style="left:100px;top:575px;width:285px;transform:rotate(-4deg)"></div>
+  <div class="card abs" style="right:72px;top:640px;width:500px;padding:40px 36px;text-align:center;z-index:4">
     <div style="width:120px;height:120px;margin:0 auto;border-radius:28%;background:linear-gradient(160deg,#294376,#1E2F52);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1.5px rgba(54,201,242,.4),0 20px 50px rgba(0,0,0,.5)"><svg width="74" height="74"><use href="#fc"/></svg></div>
     <div style="font-size:52px;font-weight:700;direction:ltr;margin-top:22px">fast_crand</div>
     <div style="font-size:26px;color:var(--sub);margin-top:6px">تطوير تطبيقات ومواقع وأنظمة</div>
     <div style="margin-top:30px;padding:18px 0 24px;border-radius:999px;background:var(--cyan);color:#04222c;font-size:40px;font-weight:700;box-shadow:0 18px 40px rgba(54,201,242,.3)">تواصل معنا الآن</div>
-    <div style="display:flex;justify-content:center;gap:18px;margin-top:26px;font-size:24px;color:var(--sub)">
-      <span style="display:flex;align-items:center;gap:8px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#36C9F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>راسلنا على الخاص</span>
-    </div>
+    <div style="display:flex;justify-content:center;gap:10px;margin-top:26px;font-size:24px;color:var(--sub);align-items:center"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#36C9F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>راسلنا على الخاص</div>
   </div>
 </section>
 
+<!-- STORY A -->
+<section class="story" id="story1"><div class="grid"></div>
+  <div class="abs" style="top:120px;right:72px;left:72px;display:flex;justify-content:space-between;align-items:center;direction:ltr;z-index:5">
+    <div class="brand"><div class="lg"><div><svg><use href="#fc"/></svg></div></div><div class="nm">fast_crand</div></div>
+    <div class="tag" style="direction:rtl"><i></i>تطوير تطبيقات ومواقع</div></div>
+  <div class="copy" style="top:300px;text-align:center"><div class="h1" style="font-size:120px">عندك فكرة تطبيق؟</div><div class="h2" style="font-size:88px">نحوّلها إلى واقع</div>
+    <div class="p" style="margin:24px auto 0;font-size:38px">فكرتك تستحق أن تصبح مشروعاً حقيقياً.</div></div>
+  <div class="glow" style="width:900px;height:900px;left:90px;top:760px"></div>
+  <div class="ring" style="width:760px;height:760px;left:160px;top:830px"></div>
+  <div class="phone" data-ui="store" style="left:360px;top:760px;width:360px"></div>
+  <div class="card float" style="right:60px;top:930px"><div class="icn">🔔</div><div><small>إشعار جديد</small><b>طلب جديد #2048</b></div></div>
+  <div class="card float" style="left:50px;top:1260px"><div class="icn">⭐</div><div><small>تقييم المستخدمين</small><b>★ 4.9</b></div></div>
+  <div class="abs" style="left:190px;right:190px;top:1610px;padding:24px 0 32px;border-radius:999px;background:var(--cyan);color:#04222c;font-size:46px;font-weight:700;text-align:center;box-shadow:0 20px 50px rgba(54,201,242,.35);z-index:6">راسلنا الآن 💬</div>
+</section>
+
+<!-- STORY B -->
+<section class="story" id="story2"><div class="grid"></div>
+  <div class="abs" style="top:120px;right:72px;left:72px;display:flex;justify-content:space-between;align-items:center;direction:ltr;z-index:5">
+    <div class="brand"><div class="lg"><div><svg><use href="#fc"/></svg></div></div><div class="nm">fast_crand</div></div>
+    <div class="tag" style="direction:rtl"><i></i>خدماتنا</div></div>
+  <div class="copy" style="top:280px"><div class="h1" style="font-size:112px">شنو نكدر<br>نسوي لك؟</div></div>
+  <div class="abs" style="right:72px;left:72px;top:560px;display:grid;grid-template-columns:1fr 1fr;gap:20px;z-index:4">
+    <div class="card" style="padding:26px 30px"><div class="icn" style="width:70px;height:70px;font-size:34px">📱</div><b style="font-size:40px;display:block;margin-top:14px">تطبيقات</b><span style="font-size:26px;color:var(--sub);direction:ltr;display:block;text-align:right">Android &amp; iOS</span></div>
+    <div class="card" style="padding:26px 30px"><div class="icn" style="width:70px;height:70px;font-size:34px">💻</div><b style="font-size:40px;display:block;margin-top:14px">مواقع إلكترونية</b><span style="font-size:26px;color:var(--sub)">تعريفية واحترافية</span></div>
+    <div class="card" style="padding:26px 30px"><div class="icn" style="width:70px;height:70px;font-size:34px">🛒</div><b style="font-size:40px;display:block;margin-top:14px">متاجر إلكترونية</b><span style="font-size:26px;color:var(--sub)">بيع ودفع وتتبع طلبات</span></div>
+    <div class="card" style="padding:26px 30px"><div class="icn" style="width:70px;height:70px;font-size:34px">📊</div><b style="font-size:40px;display:block;margin-top:14px">لوحات تحكم</b><span style="font-size:26px;color:var(--sub)">أنظمة إدارة متكاملة</span></div>
+  </div>
+  <div class="glow" style="width:900px;height:700px;left:90px;top:1120px"></div>
+  <div class="phone" data-ui="delivery" style="left:170px;top:1150px;width:240px;transform:rotate(-7deg)"></div>
+  <div class="phone" data-ui="food" style="left:660px;top:1135px;width:240px;transform:rotate(7deg)"></div>
+  <div class="abs" style="left:250px;right:250px;top:1620px;padding:22px 0 30px;border-radius:999px;background:var(--cyan);color:#04222c;font-size:44px;font-weight:700;text-align:center;box-shadow:0 20px 50px rgba(54,201,242,.35);z-index:6">تواصل معنا الآن</div>
+</section>
+
 <script>
-// shared top bar + footer for every slide
+// ---------- icons ----------
+const I = {
+  home: '<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/>',
+  grid: '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+  cart: '<circle cx="9" cy="20" r="1.5"/><circle cx="18" cy="20" r="1.5"/><path d="M2 3h3l2.6 12.2a2 2 0 0 0 2 1.6h8.3a2 2 0 0 0 2-1.5L22 7H6"/>',
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/>',
+  bell: '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/>',
+  filter: '<path d="M4 6h16M7 12h10M10 18h4"/>',
+  back: '<path d="M9 18l6-6-6-6"/>',
+  pin: '<path d="M12 22s7-6 7-12a7 7 0 0 0-14 0c0 6 7 12 7 12z"/><circle cx="12" cy="10" r="2.5"/>',
+  phone: '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8 9.9a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.5c.9.3 1.9.6 2.8.7a2 2 0 0 1 1.7 2z"/>',
+  chat: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  cal: '<rect x="3" y="4" width="18" height="18" rx="3"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+  heart: '<path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1-1.1a5.5 5.5 0 0 0-7.8 7.8L12 21l8.8-8.6a5.5 5.5 0 0 0 0-7.8z"/>',
+  send: '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>',
+  chart: '<path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/>',
+};
+const ic = (n, s = 22) => `<svg class="ic" style="width:${s}px;height:${s}px" viewBox="0 0 24 24">${I[n]}</svg>`;
+const SB = (dark) => `<div class="sb"><span>9:41</span><span style="display:flex;gap:6px;align-items:center">
+  <svg viewBox="0 0 18 12" fill="currentColor"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="5" width="3" height="7" rx="1"/><rect x="10" y="2" width="3" height="10" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/></svg>
+  <svg viewBox="0 0 16 12" fill="currentColor"><path d="M8 11.5l2.3-2.6a3.3 3.3 0 0 0-4.6 0zM3.5 6.6a6.5 6.5 0 0 1 9 0l1.5-1.6a8.7 8.7 0 0 0-12 0zM0 3.3a11.5 11.5 0 0 1 16 0L14.5 1.7a9.4 9.4 0 0 0-13 0z" transform="scale(1 1)"/></svg>
+  <svg viewBox="0 0 27 13"><rect x=".5" y=".5" width="22" height="12" rx="3.5" fill="none" stroke="currentColor" opacity=".45"/><rect x="2" y="2" width="17" height="9" rx="2" fill="currentColor"/><rect x="24" y="4" width="2" height="5" rx="1" fill="currentColor" opacity=".45"/></svg></span></div>`;
+const NAV = (items, active, dark) => `<div class="bn">${items.map(([n, l, b], i) =>
+  `<div class="${i === active ? 'on' : ''}">${b ? `<span class="bdg">${b}</span>` : ''}${ic(n, 24)}<span>${l}</span></div>`).join('')}</div>`;
+const prod = (emo, bg, nm, rt, pr) => `<div class="pc"><div class="im" style="background:${bg}">${emo}<span class="hrt">♥</span></div>
+  <div class="nm">${nm}</div><div class="rt"><i>★</i> ${rt}</div><div class="pr"><b>${pr} <small>د.ع</small></b><span class="add">+</span></div></div>`;
+
+// ---------- app screens (designed at 390 x 844) ----------
+const UI = {
+  store: () => `<div class="u">${SB()}<div class="pad">
+    <div class="row sp" style="margin-top:6px"><div class="row" style="gap:10px"><div style="width:44px;height:44px;border-radius:50%;background:#dff4fb;display:flex;align-items:center;justify-content:center;font-size:24px">🧑🏻</div>
+      <div><div style="font-size:12px;color:#8a99a3">التوصيل إلى</div><div style="font-weight:700;font-size:15px">بغداد، الكرادة ▾</div></div></div>
+      <div style="width:44px;height:44px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;position:relative">${ic('bell')}<span style="position:absolute;top:10px;left:12px;width:8px;height:8px;border-radius:50%;background:#ff4d5e"></span></div></div>
+    <div class="row" style="gap:10px"><div class="srch" style="flex:1">${ic('search', 20)}ابحث عن منتج أو ماركة…</div><div class="flt" style="margin-top:14px">${ic('filter')}</div></div>
+    <div style="margin-top:16px;height:150px;border-radius:22px;background:linear-gradient(120deg,#0e7fa6,#36C9F2);position:relative;overflow:hidden;color:#fff;padding:20px">
+      <div style="font-size:13px;opacity:.9">عروض نهاية الأسبوع</div><div style="font-size:32px;font-weight:700;line-height:1.2">خصم 30%</div><div style="font-size:14px;opacity:.9">على الإلكترونيات</div>
+      <span style="display:inline-block;margin-top:10px;background:#fff;color:#0e6f92;font-weight:700;font-size:13px;padding:5px 14px 8px;border-radius:999px">تسوّق الآن</span>
+      <div style="position:absolute;left:14px;top:22px;font-size:96px;transform:rotate(-12deg)">🎧</div>
+      <div style="position:absolute;right:-40px;bottom:-60px;width:160px;height:160px;border-radius:50%;background:rgba(255,255,255,.12)"></div></div>
+    <div class="row sp" style="margin-top:18px">${[['📱', 'هواتف'], ['🎧', 'سماعات'], ['⌚', 'ساعات'], ['👟', 'أحذية']].map(([e, l]) =>
+      `<div style="text-align:center"><div style="width:66px;height:66px;border-radius:20px;background:#fff;display:flex;align-items:center;justify-content:center;font-size:32px;box-shadow:0 4px 12px rgba(15,40,55,.06)">${e}</div><div style="font-size:12px;margin-top:6px;font-weight:500">${l}</div></div>`).join('')}</div>
+    <div class="sec"><b>الأكثر مبيعاً</b><span>عرض الكل</span></div>
+    <div class="pg">${prod('🎧', '#e8f6fb', 'سماعة لاسلكية Pro', '4.8 (320)', '45,000')}${prod('⌚', '#f1eefb', 'ساعة ذكية Series 8', '4.9 (210)', '95,000')}${prod('👟', '#fdf0ea', 'حذاء رياضي Run', '4.7 (180)', '65,000')}${prod('📱', '#eaf4ee', 'هاتف Galaxy A55', '4.8 (95)', '410,000')}</div>
+    </div>${NAV([['home', 'الرئيسية'], ['grid', 'الأقسام'], ['cart', 'السلة', '2'], ['user', 'حسابي']], 0)}<div class="home"></div></div>`,
+
+  food: () => `<div class="u" style="background:#fff8f2">${SB()}<div class="pad">
+    <div class="row sp" style="margin-top:6px"><div><div style="font-size:13px;color:#a08a7a">مرحباً أحمد 👋</div><div style="font-size:24px;font-weight:700">شنو تحب تاكل اليوم؟</div></div>
+      <div style="width:46px;height:46px;border-radius:50%;background:#ffe3cc;display:flex;align-items:center;justify-content:center;font-size:24px">🧑🏻</div></div>
+    <div class="srch" style="background:#fff;border-color:#f1e4d8">${ic('search', 20)}ابحث عن مطعم أو وجبة…</div>
+    <div style="margin-top:16px;height:150px;border-radius:24px;background:linear-gradient(120deg,#ff7a2f,#ffb347);color:#fff;padding:20px;position:relative;overflow:hidden">
+      <div style="font-size:13px">عرض اليوم</div><div style="font-size:30px;font-weight:700">وجبة عائلية</div><div style="font-size:14px">توصيل مجاني فوق 25,000 د.ع</div>
+      <div style="position:absolute;left:10px;top:18px;font-size:100px">🍕</div></div>
+    <div class="row" style="gap:10px;margin-top:16px">${[['🍔', 'برغر', 1], ['🍕', 'بيتزا'], ['🌯', 'شاورما'], ['🥤', 'مشروبات']].map(([e, l, a]) =>
+      `<div style="padding:8px 14px 10px;border-radius:999px;background:${a ? '#ff7a2f' : '#fff'};color:${a ? '#fff' : '#3d2b1f'};font-size:13px;font-weight:600;display:flex;gap:6px;align-items:center;box-shadow:0 3px 10px rgba(120,60,20,.07)">${e} ${l}</div>`).join('')}</div>
+    <div class="sec"><b>الأكثر طلباً</b><span style="color:#ff7a2f">عرض الكل</span></div>
+    ${[['🍔', 'برغر الأصيل دبل', 'لحم مشوي، جبن، صوص خاص', '9,000'], ['🌯', 'شاورما عربي', 'دجاج، ثومية، بطاطا', '6,500'], ['🍕', 'بيتزا مارغريتا', 'وسط · جبنة موزاريلا', '12,000']].map(([e, n, d, p]) =>
+      `<div class="row" style="gap:12px;background:#fff;border-radius:20px;padding:10px;margin-bottom:10px;box-shadow:0 4px 12px rgba(120,60,20,.06)"><div style="width:78px;height:78px;border-radius:16px;background:#fff1e4;display:flex;align-items:center;justify-content:center;font-size:46px">${e}</div>
+       <div style="flex:1"><div style="font-weight:700;font-size:15px">${n}</div><div style="font-size:12px;color:#a08a7a;margin-top:2px">${d}</div><div style="font-weight:700;margin-top:6px;color:#ff7a2f">${p} <small style="font-size:11px;color:#a08a7a">د.ع</small></div></div>
+       <div style="width:34px;height:34px;border-radius:12px;background:#ff7a2f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:700">+</div></div>`).join('')}
+    </div>${NAV([['home', 'الرئيسية'], ['search', 'بحث'], ['cart', 'السلة', '3'], ['user', 'حسابي']], 0).replace(/#0aa3cf/g, '#ff7a2f').replace('class="on"', 'class="on" style="color:#ff7a2f"')}<div class="home"></div></div>`,
+
+  booking: () => `<div class="u dark">${SB(1)}<div class="pad">
+    <div class="row sp" style="margin-top:6px"><div style="width:42px;height:42px;border-radius:14px;background:#141e24;display:flex;align-items:center;justify-content:center">${ic('back')}</div><b style="font-size:17px">احجز موعدك</b><div style="width:42px;height:42px;border-radius:14px;background:#141e24;display:flex;align-items:center;justify-content:center;color:#ff5c6c">${ic('heart', 20)}</div></div>
+    <div style="margin-top:18px;border-radius:24px;padding:16px;background:linear-gradient(135deg,#0f2a35,#0b1418);border:1px solid #1d3540" class="row"><div style="width:70px;height:70px;border-radius:20px;background:#173944;display:flex;align-items:center;justify-content:center;font-size:40px">💈</div>
+      <div style="margin-right:14px"><div style="font-weight:700;font-size:18px">صالون الأناقة</div><div style="font-size:13px;color:#8ea7b1">المنصور · بغداد</div><div style="font-size:13px;margin-top:4px"><span style="color:#f5a524">★ 4.9</span> <span style="color:#8ea7b1">(860 تقييم)</span></div></div></div>
+    <div class="sec"><b>الخدمة</b></div>
+    <div class="row" style="gap:10px;flex-wrap:wrap">${[['✂️ قص شعر', 1], ['🧔 تهذيب لحية', 1], ['💆 عناية بالبشرة']].map(([l, a]) =>
+      `<div style="padding:9px 16px 12px;border-radius:14px;font-size:14px;font-weight:600;background:${a ? 'rgba(54,201,242,.14)' : '#121b20'};border:1px solid ${a ? '#36C9F2' : '#1d2a31'};color:${a ? '#36C9F2' : '#cfdde3'}">${l}</div>`).join('')}</div>
+    <div class="sec"><b>اختر اليوم</b><span style="color:#36C9F2">نوفمبر</span></div>
+    <div class="row sp">${[['سبت', 8], ['أحد', 9], ['اثنين', 10, 1], ['ثلاثاء', 11], ['أربعاء', 12]].map(([d, n, a]) =>
+      `<div style="width:62px;padding:10px 0 12px;border-radius:18px;text-align:center;background:${a ? '#36C9F2' : '#121b20'};color:${a ? '#04222c' : '#cfdde3'}"><div style="font-size:12px">${d}</div><div style="font-size:22px;font-weight:700">${n}</div></div>`).join('')}</div>
+    <div class="sec"><b>الوقت المتاح</b></div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;direction:ltr">${['4:00 PM', '4:30 PM', '5:00 PM', '5:30 PM', '6:00 PM', '6:30 PM'].map((t, i) =>
+      `<div style="padding:11px 0 13px;text-align:center;border-radius:14px;font-size:14px;font-weight:600;background:${i === 2 ? 'rgba(54,201,242,.14)' : '#121b20'};border:1px solid ${i === 2 ? '#36C9F2' : '#1d2a31'};color:${i === 2 ? '#36C9F2' : (i === 4 ? '#4b5b62' : '#cfdde3')};${i === 4 ? 'text-decoration:line-through' : ''}">${t}</div>`).join('')}</div>
+    <div class="row sp" style="margin-top:22px;padding:16px;border-radius:20px;background:#121b20"><div><div style="font-size:12px;color:#8ea7b1">المجموع</div><div style="font-size:22px;font-weight:700">20,000 <small style="font-size:12px;color:#8ea7b1">د.ع</small></div></div>
+      <div style="padding:13px 26px 16px;border-radius:16px;background:#36C9F2;color:#04222c;font-weight:700;font-size:16px">تأكيد الحجز</div></div>
+    </div><div class="home"></div></div>`,
+
+  product: () => `<div class="u">${SB()}
+    <div style="position:absolute;top:0;left:0;right:0;height:410px;background:linear-gradient(160deg,#e3f6fc,#fdf0ea)"></div>
+    <div class="pad" style="position:relative"><div class="row sp" style="margin-top:6px"><div style="width:44px;height:44px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center">${ic('back')}</div>
+      <b style="font-size:16px">تفاصيل المنتج</b><div style="width:44px;height:44px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center;color:#ff4d5e">${ic('heart', 20)}</div></div>
+      <div style="height:300px;display:flex;align-items:center;justify-content:center;font-size:200px;transform:rotate(-14deg)">👟</div>
+      <div class="row" style="gap:6px;justify-content:center;margin-top:-6px"><i style="width:22px;height:7px;border-radius:4px;background:#0f2a35"></i><i style="width:7px;height:7px;border-radius:4px;background:#c6d3da"></i><i style="width:7px;height:7px;border-radius:4px;background:#c6d3da"></i></div></div>
+    <div style="position:absolute;top:420px;left:0;right:0;bottom:0;background:#fff;border-radius:30px 30px 0 0;padding:22px 20px">
+      <div class="row sp"><div><div style="font-size:12px;color:#0aa3cf;font-weight:600">أحذية رياضية</div><div style="font-size:22px;font-weight:700;margin-top:2px">حذاء رياضي Run Pro</div></div>
+        <div style="text-align:left"><div style="font-size:22px;font-weight:700">65,000 <small style="font-size:12px;color:#8a99a3">د.ع</small></div><div style="font-size:13px;color:#a5b2ba;text-decoration:line-through">85,000</div></div></div>
+      <div style="font-size:13px;color:#f5a524;margin-top:6px">★★★★★ <span style="color:#8a99a3">4.8 · 180 تقييم</span></div>
+      <div style="font-size:15px;font-weight:700;margin-top:16px">المقاس</div>
+      <div class="row" style="gap:10px;margin-top:10px">${[40, 41, 42, 43, 44].map((n) => `<div style="width:50px;height:46px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-weight:600;${n === 42 ? 'background:#0f2a35;color:#36C9F2' : 'background:#f3f6f8;color:#3b4a52'}">${n}</div>`).join('')}</div>
+      <div style="font-size:15px;font-weight:700;margin-top:16px">اللون</div>
+      <div class="row" style="gap:12px;margin-top:10px">${['#ff7a45', '#0f2a35', '#36C9F2', '#e9e4dc'].map((c, i) => `<span style="width:30px;height:30px;border-radius:50%;background:${c};${i === 0 ? 'box-shadow:0 0 0 3px #fff,0 0 0 5px #ff7a45' : ''}"></span>`).join('')}</div>
+      <div class="row" style="gap:12px;position:absolute;bottom:34px;left:20px;right:20px"><div style="width:56px;height:56px;border-radius:18px;background:#f3f6f8;display:flex;align-items:center;justify-content:center">${ic('cart')}</div>
+        <div style="flex:1;height:56px;border-radius:18px;background:#0f2a35;color:#36C9F2;font-weight:700;font-size:17px;display:flex;align-items:center;justify-content:center">أضف إلى السلة</div></div>
+    </div><div class="home"></div></div>`,
+
+  delivery: () => `<div class="u">
+    <svg style="position:absolute;inset:0" width="390" height="844" viewBox="0 0 390 844">
+      <rect width="390" height="844" fill="#e8eef2"/>
+      <path d="M-20 360 C80 300 140 420 230 360 S380 300 420 340" stroke="#a9d7ec" stroke-width="34" fill="none"/>
+      <g stroke="#fff" stroke-width="16" fill="none" stroke-linecap="round"><path d="M40 0v560M150 0v560M300 0v560M0 120h390M0 240h390M0 470h390"/><path d="M0 40l390 180" stroke-width="10"/></g>
+      <g fill="#dce7d8"><rect x="170" y="140" width="110" height="80" rx="10"/><rect x="60" y="490" width="70" height="60" rx="10"/></g>
+      <g fill="#d9e1e7"><rect x="60" y="140" width="70" height="80" rx="8"/><rect x="320" y="150" width="60" height="70" rx="8"/><rect x="170" y="490" width="110" height="60" rx="8"/><rect x="60" y="20" width="70" height="80" rx="8"/></g>
+      <path d="M300 520 L300 470 L150 470 L150 240 L40 240 L40 180" stroke="#0aa3cf" stroke-width="7" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M300 520 L300 470 L150 470 L150 330" stroke="#36C9F2" stroke-width="7" fill="none" stroke-linecap="round" stroke-dasharray="1 0"/>
+      <circle cx="300" cy="520" r="11" fill="#0f2a35"/><circle cx="300" cy="520" r="5" fill="#fff"/>
+    </svg>
+    <div style="position:absolute;left:18px;top:150px;width:46px;height:46px;border-radius:50%;background:#ff4d5e;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 6px 16px rgba(255,77,94,.4)">🏠</div>
+    <div style="position:absolute;left:126px;top:302px;width:52px;height:52px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-size:28px;box-shadow:0 0 0 8px rgba(54,201,242,.25),0 6px 16px rgba(0,0,0,.15)">🛵</div>
+    ${SB()}
+    <div class="pad row sp" style="position:relative;margin-top:6px"><div style="width:44px;height:44px;border-radius:14px;background:#fff;display:flex;align-items:center;justify-content:center">${ic('back')}</div>
+      <div style="padding:10px 18px 12px;border-radius:999px;background:#fff;font-weight:700;font-size:14px">تتبع الطلب #2048</div><div style="width:44px"></div></div>
+    <div style="position:absolute;left:0;right:0;bottom:0;height:345px;background:#fff;border-radius:30px 30px 0 0;padding:14px 20px;box-shadow:0 -10px 30px rgba(0,0,0,.08)">
+      <div style="width:44px;height:5px;border-radius:3px;background:#dfe6ea;margin:0 auto"></div>
+      <div class="row sp" style="margin-top:14px"><div><div style="font-size:20px;font-weight:700">طلبك في الطريق 🛵</div><div style="font-size:13px;color:#8a99a3;margin-top:2px">يصل خلال <b style="color:#0aa3cf">12 دقيقة</b></div></div>
+        <div style="text-align:center;padding:8px 14px;border-radius:16px;background:#e6f7fc;color:#0a8fb6"><div style="font-size:22px;font-weight:700;direction:ltr">7:42</div><div style="font-size:11px">م</div></div></div>
+      <div class="row" style="margin-top:16px;gap:6px">${['تم الطلب', 'التحضير', 'في الطريق', 'التسليم'].map((l, i) =>
+        `<div style="flex:1;text-align:center"><div style="height:6px;border-radius:3px;background:${i < 3 ? '#36C9F2' : '#e3e9ee'}"></div><div style="font-size:11px;margin-top:6px;color:${i < 3 ? '#0f1a20' : '#a5b2ba'};font-weight:${i === 2 ? 700 : 500}">${l}</div></div>`).join('')}</div>
+      <div class="row sp" style="margin-top:18px;padding:12px;border-radius:20px;background:#f5f8fa"><div class="row" style="gap:12px"><div style="width:52px;height:52px;border-radius:50%;background:#dff4fb;display:flex;align-items:center;justify-content:center;font-size:28px">🧑🏻</div>
+        <div><div style="font-weight:700">علي حسن</div><div style="font-size:12px;color:#8a99a3">مندوب التوصيل · <span style="color:#f5a524">★ 4.9</span></div></div></div>
+        <div class="row" style="gap:8px"><div style="width:44px;height:44px;border-radius:14px;background:#fff;color:#0aa3cf;display:flex;align-items:center;justify-content:center">${ic('chat', 20)}</div><div style="width:44px;height:44px;border-radius:14px;background:#0f2a35;color:#36C9F2;display:flex;align-items:center;justify-content:center">${ic('phone', 20)}</div></div></div>
+      <div class="row sp" style="margin-top:14px;font-size:13px;color:#5b6a73"><span>🍔 برغر الأصيل دبل × 2</span><b style="color:#0f1a20">18,000 د.ع</b></div>
+    </div><div class="home"></div></div>`,
+
+  chat: () => `<div class="u" style="background:#eef3f6">${SB()}
+    <div class="pad row" style="gap:12px;margin-top:4px;padding-bottom:12px;border-bottom:1px solid #dde6eb">${ic('back')}<div style="width:46px;height:46px;border-radius:50%;background:linear-gradient(160deg,#294376,#1E2F52);display:flex;align-items:center;justify-content:center"><svg width="28" height="28"><use href="#fc"/></svg></div>
+      <div><div style="font-weight:700;direction:ltr;text-align:right">fast_crand</div><div style="font-size:12px;color:#14b37d">● متصل الآن · الدعم الفني</div></div></div>
+    <div style="padding:16px 16px 0;display:flex;flex-direction:column;gap:10px;font-size:14.5px;line-height:1.55">
+      <div style="align-self:center;font-size:11px;color:#8a99a3;background:#e2eaef;padding:3px 10px;border-radius:999px">اليوم</div>
+      <div style="align-self:flex-start;max-width:78%;background:#fff;padding:10px 14px;border-radius:18px 18px 18px 6px">مرحباً 👋 أريد أضيف قسم جديد للعروض بالتطبيق</div>
+      <div style="align-self:flex-end;max-width:78%;background:#0f2a35;color:#e9f8fd;padding:10px 14px;border-radius:18px 18px 6px 18px">أهلاً بيك! أكيد، نجهز التصميم ونرسله لك خلال يوم 🎨</div>
+      <div style="align-self:flex-end;max-width:78%;background:#0f2a35;padding:8px;border-radius:18px 18px 6px 18px"><div style="height:120px;border-radius:12px;background:linear-gradient(120deg,#0e7fa6,#36C9F2);color:#fff;padding:12px;position:relative;overflow:hidden"><div style="font-size:12px">قسم العروض</div><div style="font-size:24px;font-weight:700">خصم 30%</div><div style="position:absolute;left:8px;top:14px;font-size:64px">🎁</div></div><div style="color:#9fdcf0;font-size:12px;margin-top:6px">تصميم_العروض.png</div></div>
+      <div style="align-self:flex-start;max-width:78%;background:#fff;padding:10px 14px;border-radius:18px 18px 18px 6px">رهيب! 😍 متى ينزل التحديث؟</div>
+      <div style="align-self:flex-end;max-width:78%;background:#0f2a35;color:#e9f8fd;padding:10px 14px;border-radius:18px 18px 6px 18px">التحديث <b style="color:#36C9F2">v2.1</b> صار متاح على المتجر ✅</div>
+      <div style="align-self:flex-start;background:#fff;padding:12px 16px;border-radius:18px;display:flex;gap:5px"><i style="width:7px;height:7px;border-radius:50%;background:#9fb0b9"></i><i style="width:7px;height:7px;border-radius:50%;background:#bcc9d0"></i><i style="width:7px;height:7px;border-radius:50%;background:#d7e0e5"></i></div>
+    </div>
+    <div class="row" style="position:absolute;bottom:30px;left:14px;right:14px;gap:10px"><div style="flex:1;height:50px;border-radius:25px;background:#fff;display:flex;align-items:center;padding:0 18px;color:#8a99a3">اكتب رسالتك…</div>
+      <div style="width:50px;height:50px;border-radius:50%;background:#0f2a35;color:#36C9F2;display:flex;align-items:center;justify-content:center">${ic('send', 20)}</div></div><div class="home"></div></div>`,
+
+  launch: () => `<div class="u dark">${SB(1)}<div class="pad">
+    <div class="row sp" style="margin-top:6px"><div><div style="font-size:13px;color:#8ea7b1">مساء الخير</div><div style="font-size:24px;font-weight:700">لوحة متجرك 📊</div></div>
+      <div style="width:46px;height:46px;border-radius:50%;background:#132228;display:flex;align-items:center;justify-content:center;font-size:24px">🧑🏻</div></div>
+    <div style="margin-top:16px;border-radius:24px;padding:18px;background:linear-gradient(135deg,#36C9F2,#0e7fa6);color:#03202a">
+      <div style="font-size:13px;font-weight:600">مبيعات اليوم</div><div style="font-size:32px;font-weight:700;direction:ltr;text-align:right">1,840,000 <small style="font-size:14px">د.ع</small></div>
+      <svg width="100%" height="56" viewBox="0 0 300 56" preserveAspectRatio="none" style="margin-top:6px"><path d="M0 48 C30 44 50 30 80 34 S130 16 160 22 S220 6 250 12 S290 4 300 2" fill="none" stroke="#03202a" stroke-width="3" opacity=".75"/></svg>
+      <div style="font-size:12px;font-weight:600">▲ 24% عن أمس</div></div>
+    <div class="row" style="gap:10px;margin-top:12px">${[['📦', '128', 'طلب'], ['👥', '46', 'عميل جديد'], ['⭐', '4.9', 'تقييم']].map(([e, n, l]) =>
+      `<div style="flex:1;border-radius:18px;padding:12px;background:#111b20;border:1px solid #1b2a31"><div style="font-size:20px">${e}</div><div style="font-size:20px;font-weight:700;margin-top:4px">${n}</div><div style="font-size:11px;color:#8ea7b1">${l}</div></div>`).join('')}</div>
+    <div class="sec"><b>آخر الإشعارات</b></div>
+    ${[['✅', 'تم نشر التطبيق على Google Play', 'منذ دقيقة'], ['🍏', 'تمت الموافقة على App Store', 'منذ ساعة'], ['🛒', 'طلب جديد #2049 · 65,000 د.ع', 'منذ 3 دقائق']].map(([e, t, s]) =>
+      `<div class="row" style="gap:12px;padding:12px;border-radius:18px;background:#111b20;border:1px solid #1b2a31;margin-bottom:10px"><div style="width:42px;height:42px;border-radius:14px;background:#132a33;display:flex;align-items:center;justify-content:center;font-size:20px">${e}</div><div><div style="font-size:14px;font-weight:600">${t}</div><div style="font-size:11px;color:#8ea7b1">${s}</div></div></div>`).join('')}
+    </div>${NAV([['home', 'الرئيسية'], ['chart', 'التقارير'], ['cart', 'الطلبات', '5'], ['user', 'حسابي']], 0)}<div class="home"></div></div>`,
+
+  webm: () => `<div class="u" style="background:#fbf7f2;color:#2b1d14">${SB()}<div class="pad">
+    <div class="row sp" style="margin-top:4px"><b style="font-size:22px">☕ سُرى</b><div style="width:40px;height:40px;border-radius:12px;background:#f1e6da;display:flex;align-items:center;justify-content:center">${ic('grid', 20)}</div></div>
+    <div style="font-size:34px;font-weight:700;line-height:1.25;margin-top:26px">قهوتك المفضلة<br><span style="color:#b5651d">بطعم مختلف</span></div>
+    <div style="font-size:14px;color:#7a6556;margin-top:10px;line-height:1.6">حبوب مختصة محمصة يومياً، وتوصيل لباب البيت.</div>
+    <div style="display:inline-block;margin-top:16px;padding:11px 24px 14px;border-radius:999px;background:#2b1d14;color:#fff;font-weight:700">اطلب الآن</div>
+    <div style="margin-top:22px;height:260px;border-radius:28px;background:linear-gradient(160deg,#e8c9a3,#b5651d);display:flex;align-items:center;justify-content:center;font-size:150px;position:relative">☕<span style="position:absolute;left:24px;bottom:18px;font-size:60px">🥐</span></div>
+    <div class="row" style="gap:10px;margin-top:16px">${[['4.9★', 'تقييم'], ['+120', 'منتج'], ['30 د', 'توصيل']].map(([n, l]) => `<div style="flex:1;text-align:center;padding:10px 0;border-radius:16px;background:#fff"><b style="direction:ltr;display:block">${n}</b><span style="font-size:11px;color:#7a6556">${l}</span></div>`).join('')}</div>
+    </div><div class="home"></div></div>`,
+};
+
+// big (desktop) screens
+const BIG = {
+  web: () => `<div style="width:1280px;height:800px;background:#fbf7f2;color:#2b1d14;font-family:inherit">
+    <div style="height:84px;display:flex;align-items:center;justify-content:space-between;padding:0 56px;border-bottom:1px solid #efe3d6">
+      <b style="font-size:30px">☕ سُرى</b><div style="display:flex;gap:40px;font-size:18px;color:#5b4637"><span style="color:#b5651d;font-weight:700">الرئيسية</span><span>القائمة</span><span>الفروع</span><span>من نحن</span><span>تواصل معنا</span></div>
+      <div style="display:flex;gap:14px;align-items:center"><div style="width:48px;height:48px;border-radius:14px;background:#f1e6da;display:flex;align-items:center;justify-content:center">${ic('cart', 24)}</div><div style="padding:12px 26px 15px;border-radius:999px;background:#2b1d14;color:#fff;font-weight:700;font-size:17px">اطلب الآن</div></div></div>
+    <div style="display:flex;gap:50px;padding:60px 56px 0;align-items:center">
+      <div style="flex:1.1"><div style="display:inline-block;padding:8px 18px 11px;border-radius:999px;background:#f3e2cf;color:#b5651d;font-weight:700;font-size:16px">☕ محمصة مختصة منذ 2019</div>
+        <div style="font-size:72px;font-weight:700;line-height:1.2;margin-top:18px">قهوتك المفضلة<br><span style="color:#b5651d">بطعم مختلف</span></div>
+        <div style="font-size:21px;color:#7a6556;margin-top:18px;line-height:1.7;max-width:540px">حبوب مختصة محمصة يومياً، مشروبات باردة وحارة، وتوصيل سريع لباب البيت في بغداد.</div>
+        <div style="display:flex;gap:14px;margin-top:28px"><span style="padding:16px 36px 20px;border-radius:999px;background:#2b1d14;color:#fff;font-weight:700;font-size:20px">اطلب الآن</span><span style="padding:16px 36px 20px;border-radius:999px;border:2px solid #2b1d14;font-weight:700;font-size:20px">تصفح القائمة</span></div>
+        <div style="display:flex;gap:40px;margin-top:40px">${[['4.9★', 'تقييم العملاء'], ['+120', 'منتج'], ['30 دقيقة', 'متوسط التوصيل']].map(([n, l]) => `<div><b style="font-size:30px;direction:ltr;display:block">${n}</b><span style="color:#7a6556;font-size:16px">${l}</span></div>`).join('')}</div></div>
+      <div style="flex:1;height:520px;border-radius:40px;background:linear-gradient(160deg,#e8c9a3,#b5651d);position:relative;display:flex;align-items:center;justify-content:center;font-size:270px;overflow:hidden">☕
+        <span style="position:absolute;left:40px;bottom:30px;font-size:110px">🥐</span><span style="position:absolute;right:40px;top:40px;font-size:90px">🧋</span>
+        <div style="position:absolute;right:30px;bottom:30px;background:#fff;border-radius:22px;padding:14px 20px;font-size:16px;box-shadow:0 10px 30px rgba(0,0,0,.15)"><b style="display:block;font-size:20px">لاتيه بالكراميل</b><span style="color:#b5651d;font-weight:700">5,500 د.ع</span></div></div></div></div>`,
+  dash: () => `<div style="width:1280px;height:620px;background:#f4f7fa;color:#0f1a20;display:flex;font-family:inherit">
+    <div style="width:230px;background:#0b1418;color:#cfe0e6;padding:28px 20px;display:flex;flex-direction:column;gap:8px">
+      <b style="font-size:24px;color:#fff;margin-bottom:20px">🛍️ متجري</b>
+      ${[['home', 'الرئيسية', 1], ['cart', 'الطلبات'], ['grid', 'المنتجات'], ['user', 'العملاء'], ['chart', 'التقارير'], ['bell', 'الإشعارات']].map(([n, l, a]) =>
+        `<div style="display:flex;gap:12px;align-items:center;padding:12px 14px;border-radius:14px;font-size:17px;${a ? 'background:#36C9F2;color:#04222c;font-weight:700' : ''}">${ic(n, 22)}${l}</div>`).join('')}</div>
+    <div style="flex:1;padding:28px 34px">
+      <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:15px;color:#7d8d96">أهلاً بك 👋</div><b style="font-size:30px">نظرة عامة على المتجر</b></div>
+        <div style="display:flex;gap:12px;align-items:center"><div style="width:280px;height:48px;border-radius:14px;background:#fff;display:flex;align-items:center;gap:10px;padding:0 16px;color:#8a99a3;font-size:15px">${ic('search', 20)}بحث…</div><div style="width:48px;height:48px;border-radius:50%;background:#dff4fb;display:flex;align-items:center;justify-content:center;font-size:24px">🧑🏻</div></div></div>
+      <div style="display:flex;gap:18px;margin-top:22px">${[['إجمالي المبيعات', '12,450,000', 'د.ع', '▲ 18%'], ['الطلبات', '1,284', '', '▲ 9%'], ['العملاء الجدد', '342', '', '▲ 12%'], ['متوسط السلة', '38,500', 'د.ع', '▲ 4%']].map(([l, n, u, g]) =>
+        `<div style="flex:1;background:#fff;border-radius:20px;padding:18px 20px"><div style="font-size:15px;color:#7d8d96">${l}</div><div style="font-size:28px;font-weight:700;margin-top:6px">${n} <small style="font-size:14px;color:#7d8d96">${u}</small></div><div style="font-size:14px;color:#14b37d;font-weight:600;margin-top:4px">${g}</div></div>`).join('')}</div>
+      <div style="display:flex;gap:18px;margin-top:18px">
+        <div style="flex:1.6;background:#fff;border-radius:20px;padding:18px 20px"><div style="display:flex;justify-content:space-between"><b style="font-size:19px">المبيعات الأسبوعية</b><span style="font-size:14px;color:#0aa3cf;font-weight:600">آخر 7 أيام</span></div>
+          <svg width="100%" height="200" viewBox="0 0 600 200" preserveAspectRatio="none" style="margin-top:8px"><defs><linearGradient id="ga" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#36C9F2" stop-opacity=".35"/><stop offset="1" stop-color="#36C9F2" stop-opacity="0"/></linearGradient></defs>
+            <g stroke="#eef2f5"><path d="M0 50h600M0 100h600M0 150h600"/></g>
+            <path d="M0 160 C60 150 90 120 150 125 S240 80 300 90 S400 40 450 55 S540 20 600 25 L600 200 L0 200Z" fill="url(#ga)"/>
+            <path d="M0 160 C60 150 90 120 150 125 S240 80 300 90 S400 40 450 55 S540 20 600 25" fill="none" stroke="#0aa3cf" stroke-width="4"/><circle cx="450" cy="55" r="7" fill="#0aa3cf" stroke="#fff" stroke-width="3"/></svg></div>
+        <div style="flex:1;background:#fff;border-radius:20px;padding:18px 20px"><b style="font-size:19px">آخر الطلبات</b>
+          ${[['#2049', 'أحمد علي', '65,000', 'مكتمل', '#14b37d', '#e5f8f0'], ['#2048', 'سارة محمد', '120,000', 'قيد التوصيل', '#0a8fb6', '#e3f6fc'], ['#2047', 'حسين كريم', '45,000', 'قيد التجهيز', '#c07a12', '#fdf3e2'], ['#2046', 'زينب حسن', '30,500', 'مكتمل', '#14b37d', '#e5f8f0']].map(([id, n, p, s, c, b]) =>
+            `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:13px;font-size:15px"><span style="color:#7d8d96;direction:ltr">${id}</span><span style="font-weight:600">${n}</span><span>${p}</span><span style="padding:4px 10px 6px;border-radius:999px;background:${b};color:${c};font-size:12px;font-weight:700">${s}</span></div>`).join('')}</div></div></div></div>`,
+};
+
+// ---------- mount devices ----------
+document.querySelectorAll('.phone').forEach((ph) => {
+  const w = parseFloat(ph.style.width), h = Math.round(w * 2.06);
+  ph.style.height = h + 'px';
+  const p = Math.round(w * 0.04), r = Math.round(w * 0.175);
+  ph.innerHTML = `<div class="btn" style="right:-4px;top:22%;height:11%"></div><div class="btn" style="left:-4px;top:18%;height:5%"></div><div class="btn" style="left:-4px;top:26%;height:9%"></div><div class="btn" style="left:-4px;top:37%;height:9%"></div>
+    <div class="fr" style="--r:${r}px;--p:${p}px"><div class="scr"><div class="island"></div><div class="ui">${UI[ph.dataset.ui]()}</div></div></div>`;
+  const scr = ph.querySelector('.scr'), ui = ph.querySelector('.ui');
+  const k = scr.clientWidth / 390;
+  ui.style.transform = `scale(${k})`;
+  ui.style.height = scr.clientHeight / k + 'px';
+});
+document.querySelectorAll('[data-big]').forEach((sc) => {
+  sc.innerHTML = `<div class="big">${BIG[sc.dataset.big]()}</div>`;
+  const k = sc.clientWidth / Number(sc.dataset.w);
+  sc.querySelector('.big').style.transform = `scale(${k})`;
+});
+// ---------- shared chrome ----------
 const slides = [...document.querySelectorAll('.slide')];
 slides.forEach((s, i) => {
   s.insertAdjacentHTML('afterbegin', `<div class="top"><div class="tag"><i></i>تطوير تطبيقات ومواقع</div><div class="idx"><b>${String(i + 1).padStart(2, '0')}</b> / ${String(slides.length).padStart(2, '0')}</div></div>`);
-  s.insertAdjacentHTML('beforeend', `<div class="foot">
-    <div class="brand"><div class="lg"><div><svg><use href="#fc"/></svg></div></div><div class="nm">fast_crand</div></div>
+  const last = i === slides.length - 1;
+  s.insertAdjacentHTML('beforeend', `<div class="foot"><div class="brand"><div class="lg"><div><svg><use href="#fc"/></svg></div></div><div class="nm">fast_crand</div></div>
     <div class="dots">${slides.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
-    <div class="save">${i === slides.length - 1 ? 'شارك مع صديق' : 'احفظ المنشور'}
-      ${i === slides.length - 1
-        ? '<svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>'
-        : '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'}</div></div>`);
+    <div class="save">${last ? 'شارك مع صديق' : 'احفظ المنشور'}<svg viewBox="0 0 24 24">${last ? '<path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/>' : '<path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/>'}</svg></div></div>`);
 });
 document.fonts.ready.then(() => (window.__ready = true));
 </script>
