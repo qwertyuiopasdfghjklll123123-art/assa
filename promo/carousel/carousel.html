@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>fast_crand carousel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#050607;--cyan:#36C9F2;--cyan2:#1fa6cf;--teal:#0e3a44;--card:#0b1114;--line:rgba(54,201,242,.35);--txt:#f2f7f9;--sub:#9db2bc;--mute:#5d7079}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#111;font-family:'IBM Plex Sans Arabic',sans-serif;color:var(--txt);display:flex;flex-direction:column;gap:40px;padding:40px;align-items:center}
+.slide{position:relative;width:1080px;height:1350px;overflow:hidden;background:var(--bg)}
+.slide::before{content:"";position:absolute;inset:0;background:
+  radial-gradient(720px 520px at 85% 8%,rgba(54,201,242,.16),transparent 70%),
+  radial-gradient(800px 700px at 10% 85%,rgba(14,90,104,.32),transparent 70%)}
+.slide::after{content:"";position:absolute;left:0;right:0;bottom:0;height:230px;background:linear-gradient(rgba(5,6,7,0),var(--bg) 62%);z-index:5;pointer-events:none}
+.grid{position:absolute;inset:0;background-image:linear-gradient(rgba(54,201,242,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(54,201,242,.05) 1px,transparent 1px);background-size:72px 72px;
+  -webkit-mask-image:radial-gradient(900px 700px at 50% 60%,#000 30%,transparent 80%);mask-image:radial-gradient(900px 700px at 50% 60%,#000 30%,transparent 80%)}
+.abs{position:absolute}
+/* top bar */
+.top{position:absolute;top:56px;right:72px;left:72px;display:flex;justify-content:space-between;align-items:center;z-index:5}
+.tag{font-size:24px;font-weight:500;color:var(--sub);display:flex;align-items:center;gap:12px}
+.tag i{width:10px;height:10px;border-radius:50%;background:var(--cyan);box-shadow:0 0 0 6px rgba(54,201,242,.15)}
+.idx{direction:ltr;font-size:24px;font-weight:600;color:var(--mute);letter-spacing:2px}
+.idx b{color:var(--cyan)}
+/* type */
+.copy{position:absolute;right:72px;left:72px;top:140px;z-index:4}
+.h1{font-size:104px;font-weight:700;line-height:1.18;letter-spacing:-1px}
+.h2{font-size:74px;font-weight:700;line-height:1.25;color:var(--cyan);margin-top:6px}
+.p{font-size:34px;font-weight:400;line-height:1.6;color:var(--sub);margin-top:22px;max-width:820px}
+.hl{color:var(--cyan)}
+/* footer */
+.foot{position:absolute;bottom:44px;right:72px;left:72px;height:84px;display:flex;align-items:center;justify-content:space-between;z-index:6;direction:ltr}
+.brand{display:flex;align-items:center;gap:18px}
+.brand .lg{width:76px;height:76px;border-radius:50%;background:#0b1114;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;overflow:hidden}
+.brand .lg div{width:58px;height:58px;border-radius:28%;background:linear-gradient(160deg,#294376,#1E2F52);display:flex;align-items:center;justify-content:center}
+.brand .lg svg{width:62%;height:62%}
+.brand .nm{font-size:30px;font-weight:600;color:var(--txt);letter-spacing:.5px}
+.dots{display:flex;gap:10px;align-items:center}
+.dots i{width:10px;height:10px;border-radius:5px;background:#24323a}
+.dots i.on{width:34px;background:var(--cyan)}
+.save{display:flex;align-items:center;gap:14px;direction:rtl;font-size:24px;color:var(--sub);font-weight:500}
+.save svg{width:30px;height:30px;stroke:var(--cyan);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* cards */
+.card{background:linear-gradient(180deg,rgba(17,27,31,.92),rgba(8,12,14,.92));border:1.5px solid var(--line);border-radius:28px;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.chip{display:inline-flex;align-items:center;gap:12px;padding:12px 26px 16px;border-radius:999px;background:rgba(54,201,242,.1);border:1.5px solid var(--line);color:var(--cyan);font-weight:600;font-size:28px;white-space:nowrap}
+/* phone */
+.phone{position:absolute;border-radius:64px;background:linear-gradient(145deg,#2a3236,#0c0f11);padding:12px;box-shadow:0 50px 100px rgba(0,0,0,.7),0 0 0 1.5px rgba(255,255,255,.08) inset,0 0 80px rgba(54,201,242,.12)}
+.phone .scr{width:100%;height:100%;border-radius:53px;overflow:hidden;background:#0a0f12;position:relative}
+.phone .scr img{width:100%;height:100%;object-fit:cover;object-position:top;display:block}
+.phone .notch{position:absolute;top:14px;left:50%;transform:translateX(-50%);width:34%;height:30px;border-radius:20px;background:#000;z-index:3}
+.ring{position:absolute;border-radius:50%;border:1.5px solid rgba(54,201,242,.22)}
+.glow{position:absolute;border-radius:50%;background:radial-gradient(closest-side,rgba(54,201,242,.35),transparent)}
+/* custom app UI */
+.app{position:absolute;inset:0;padding:64px 26px 0;direction:rtl;font-size:20px}
+.app .hi{color:var(--sub);font-size:18px}.app .ttl{font-size:28px;font-weight:700;margin-top:2px}
+.app .hero{margin-top:18px;border-radius:24px;padding:20px;background:linear-gradient(135deg,#36C9F2,#1c7fa6);color:#04222c}
+.app .hero b{font-size:26px;display:block}.app .hero span{font-size:16px;opacity:.85}
+.app .cats{display:flex;gap:10px;margin-top:18px}.app .cats i{flex:1;height:64px;border-radius:18px;background:#121c21;border:1px solid #1d2b31}
+.app .row{display:flex;gap:12px;margin-top:16px}.app .it{flex:1;border-radius:20px;background:#10181c;border:1px solid #1d2b31;padding:12px}
+.app .it u{display:block;height:92px;border-radius:14px;background:linear-gradient(160deg,#173a45,#0e2128)}
+.app .it s{display:block;height:10px;width:70%;margin-top:12px;border-radius:5px;background:#2a3b42;text-decoration:none}
+.app .it em{display:block;height:12px;width:40%;margin-top:8px;border-radius:6px;background:var(--cyan);font-style:normal}
+.app .nav{position:absolute;bottom:0;left:0;right:0;height:78px;background:#0c1418;border-top:1px solid #1a272d;display:flex;justify-content:space-around;align-items:center}
+.app .nav i{width:28px;height:28px;border-radius:9px;background:#22343b}.app .nav i.on{background:var(--cyan)}
+/* devices */
+.laptop{position:absolute}
+.laptop .lid{border-radius:26px 26px 6px 6px;background:#15191c;padding:16px;box-shadow:0 40px 90px rgba(0,0,0,.7),0 0 0 1.5px rgba(255,255,255,.07) inset}
+.laptop .lid .scr{border-radius:10px;overflow:hidden;background:#070b0d;height:100%}
+.laptop .base{height:26px;margin:0 -60px;border-radius:0 0 26px 26px;background:linear-gradient(180deg,#2b3236,#14181a);position:relative}
+.laptop .base::after{content:"";position:absolute;top:0;left:50%;transform:translateX(-50%);width:160px;height:10px;border-radius:0 0 10px 10px;background:#0d1012}
+.web{height:100%;direction:rtl;position:relative;background:radial-gradient(500px 300px at 20% 30%,rgba(54,201,242,.18),transparent 70%),#070b0d}
+.web .nb{height:54px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;border-bottom:1px solid #142026}
+.web .nb b{font-size:20px}.web .nb span{display:flex;gap:16px}.web .nb span i{width:54px;height:9px;border-radius:5px;background:#24343b}
+.web .hero{padding:40px 30px;display:flex;gap:30px;align-items:center}
+.web .hero .tx{flex:1.2}.web .hero h4{font-size:40px;line-height:1.25}.web .hero h4 em{color:var(--cyan);font-style:normal}
+.web .hero p{font-size:16px;color:var(--sub);margin-top:12px;line-height:1.6}
+.web .hero .bt{display:inline-block;margin-top:20px;padding:10px 26px 14px;border-radius:999px;background:var(--cyan);color:#04222c;font-weight:700;font-size:17px}
+.web .hero .im{flex:1;height:220px;border-radius:22px;background:linear-gradient(160deg,#1b5466,#0b1d23);border:1px solid var(--line);position:relative;overflow:hidden}
+.web .hero .im i{position:absolute;border-radius:50%;background:rgba(54,201,242,.35)}
+.web .feat{display:flex;gap:16px;padding:0 30px}.web .feat i{flex:1;height:90px;border-radius:16px;background:#0f171b;border:1px solid #1a2930}
+.monitor{position:absolute}
+.monitor .sc{border-radius:24px;background:#121618;padding:16px;box-shadow:0 40px 100px rgba(0,0,0,.7),0 0 0 1.5px rgba(255,255,255,.07) inset}
+.monitor .sc .in{border-radius:12px;overflow:hidden;height:100%;background:#070b0d}
+.monitor .neck{width:120px;height:70px;margin:0 auto;background:linear-gradient(180deg,#1c2124,#101315)}
+.monitor .ft{width:300px;height:16px;margin:0 auto;border-radius:10px;background:#1c2124}
+.dash{display:flex;height:100%;direction:rtl}
+.dash .sb{width:150px;background:#0b1215;border-left:1px solid #15232a;padding:22px 18px;display:flex;flex-direction:column;gap:16px}
+.dash .sb b{font-size:18px;color:var(--cyan);margin-bottom:8px}
+.dash .sb i{height:12px;border-radius:6px;background:#1d2c33}.dash .sb i.on{background:var(--cyan)}
+.dash .mn{flex:1;padding:22px 24px}
+.dash h5{font-size:24px}
+.kpis{display:flex;gap:14px;margin-top:16px}
+.kpi{flex:1;border-radius:16px;background:#0e171b;border:1px solid #1a2a31;padding:14px 16px}
+.kpi span{font-size:14px;color:var(--sub)}.kpi b{display:block;font-size:26px;direction:ltr;text-align:right;margin-top:4px}.kpi em{font-size:13px;color:#4ED6A0;font-style:normal}
+.chart{margin-top:16px;height:190px;border-radius:16px;background:#0e171b;border:1px solid #1a2a31;display:flex;align-items:flex-end;gap:12px;padding:20px}
+.chart i{flex:1;border-radius:8px 8px 3px 3px;background:linear-gradient(180deg,var(--cyan),rgba(54,201,242,.15))}
+.tbl{margin-top:14px;display:flex;flex-direction:column;gap:9px}.tbl i{height:22px;border-radius:8px;background:#0e171b;border:1px solid #17252b}
+.float{position:absolute;padding:20px 24px}
+.float small{display:block;font-size:20px;color:var(--sub)}.float b{font-size:34px}
+.icn{width:56px;height:56px;border-radius:16px;background:rgba(54,201,242,.12);border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.icn svg{width:30px;height:30px;stroke:var(--cyan);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="fc" viewBox="0 0 100 100">
+    <path d="M20 22h34M20 22v56M20 48h26" stroke="#fff" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path d="M84 33A24 24 0 1 0 84 67" stroke="#3CC8F0" stroke-width="11" stroke-linecap="round" fill="none"/>
+    <path d="M4 66h8M4 80h14" stroke="#3CC8F0" stroke-width="6" stroke-linecap="round"/>
+  </symbol>
+</defs></svg>
+
+<!-- 01 HOOK -->
+<section class="slide" id="s1"><div class="grid"></div>
+  <div class="copy">
+    <div class="h1">عندك فكرة تطبيق؟</div>
+    <div class="h2">نحوّلها إلى واقع</div>
+    <div class="p">فكرتك تستحق أن تصبح مشروعاً حقيقياً.</div>
+  </div>
+  <div class="glow" style="width:760px;height:760px;left:160px;top:600px"></div>
+  <div class="ring" style="width:640px;height:640px;left:220px;top:640px"></div>
+  <div class="ring" style="width:880px;height:880px;left:100px;top:520px;border-style:dashed;opacity:.6"></div>
+  <div class="phone" style="width:310px;height:630px;left:385px;top:570px;transform:rotate(-6deg)"><div class="scr"><div class="notch"></div>
+    <div class="app"><div class="hi">مرحباً بك 👋</div><div class="ttl">تطبيقك الجديد</div>
+      <div class="hero"><b>عرض الافتتاح</b><span>كل شيء تحتاجه في مكان واحد</span></div>
+      <div class="cats"><i></i><i></i><i></i><i></i></div>
+      <div class="row"><div class="it"><u></u><s></s><em></em></div><div class="it"><u></u><s></s><em></em></div></div>
+      <div class="row"><div class="it"><u></u><s></s><em></em></div><div class="it"><u></u><s></s><em></em></div></div>
+      <div class="nav"><i class="on"></i><i></i><i></i><i></i></div></div></div></div>
+  <div class="card float" style="right:90px;top:760px;display:flex;gap:16px;align-items:center">
+    <div class="icn"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div><small>حالة المشروع</small><b>تم الإطلاق</b></div></div>
+  <div class="card float" style="left:80px;top:960px;display:flex;gap:16px;align-items:center">
+    <div class="icn"><svg viewBox="0 0 24 24"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg></div><div><small>إشعار جديد</small><b>طلب جديد</b></div></div>
+</section>
+
+<!-- 02 MOBILE APPS -->
+<section class="slide" id="s2"><div class="grid"></div>
+  <div class="copy">
+    <div class="h1">تطبيقك الخاص</div>
+    <div class="h2" style="direction:ltr;text-align:right">Android &amp; iOS</div>
+    <div class="p">نصمم ونبرمج تطبيقات احترافية تناسب فكرتك وجمهورك.</div>
+  </div>
+  <div class="glow" style="width:900px;height:700px;left:90px;top:640px"></div>
+  <div class="phone" style="width:300px;height:610px;left:200px;top:580px;transform:rotate(-8deg)"><div class="scr"><img src="../fastgrand/assets/shot-store-app.jpg"></div></div>
+  <div class="phone" style="width:300px;height:610px;left:570px;top:550px;transform:rotate(6deg)"><div class="scr"><img src="../fastgrand/assets/shot-fastcrand-site.jpg"></div></div>
+  <div class="chip abs" style="left:60px;top:1010px;direction:ltr;z-index:7;background:#0b1a20"><svg width="26" height="26" viewBox="0 0 24 24" fill="#36C9F2"><path d="M6 9h12v8a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2zM8 5l-1.5-2M16 5l1.5-2M7 8a5 5 0 0 1 10 0z"/></svg>Android</div>
+  <div class="chip abs" style="right:60px;top:640px;direction:ltr;z-index:7;background:#0b1a20"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#36C9F2" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg>iOS</div>
+</section>
+
+<!-- 03 WEBSITES -->
+<section class="slide" id="s3"><div class="grid"></div>
+  <div class="copy">
+    <div class="h1">موقعك الإلكتروني</div>
+    <div class="h2">واجهة احترافية لمشروعك</div>
+    <div class="p">مواقع عصرية وسريعة تعمل على جميع الأجهزة.</div>
+  </div>
+  <div class="glow" style="width:900px;height:600px;left:90px;top:680px"></div>
+  <div class="laptop" style="left:150px;top:680px;width:780px">
+    <div class="lid" style="height:470px"><div class="scr"><div class="web">
+      <div class="nb"><b>اسم مشروعك</b><span><i></i><i></i><i></i></span></div>
+      <div class="hero"><div class="tx"><h4>واجهة <em>احترافية</em><br>تليق بعلامتك</h4><p>صفحة سريعة وأنيقة تعرض خدماتك وتجذب عملاءك.</p><span class="bt">ابدأ الآن</span></div>
+        <div class="im"><i style="width:120px;height:120px;left:20px;top:20px"></i><i style="width:220px;height:220px;right:-60px;bottom:-90px;background:rgba(78,214,160,.35)"></i></div></div>
+      <div class="feat"><i></i><i></i><i></i></div></div></div></div>
+    <div class="base"></div>
+  </div>
+  <div class="phone" style="width:210px;height:430px;left:90px;top:770px;border-radius:44px;padding:9px"><div class="scr" style="border-radius:36px"><div class="web" style="font-size:12px">
+    <div class="nb" style="height:46px;padding:0 16px;margin-top:26px"><b style="font-size:14px">اسم مشروعك</b><span><i style="width:22px"></i></span></div>
+    <div style="padding:22px 16px"><h4 style="font-size:24px;line-height:1.3">واجهة <em style="color:#36C9F2;font-style:normal">احترافية</em> تليق بعلامتك</h4>
+      <span style="display:inline-block;margin-top:14px;padding:6px 16px 9px;border-radius:999px;background:#36C9F2;color:#04222c;font-weight:700;font-size:12px">ابدأ الآن</span>
+      <div style="margin-top:18px;height:120px;border-radius:16px;background:linear-gradient(160deg,#1b5466,#0b1d23);border:1px solid rgba(54,201,242,.35)"></div>
+      <div style="display:flex;gap:8px;margin-top:12px"><i style="flex:1;height:54px;border-radius:12px;background:#0f171b;border:1px solid #1a2930"></i><i style="flex:1;height:54px;border-radius:12px;background:#0f171b;border:1px solid #1a2930"></i></div></div>
+  </div></div></div>
+  <div class="chip abs" style="right:72px;top:575px">⚡ سريع · متجاوب · آمن</div>
+</section>
+
+<!-- 04 PLATFORMS -->
+<section class="slide" id="s4"><div class="grid"></div>
+  <div class="copy">
+    <div class="h1" style="font-size:88px">مشروعك أكبر من<br>مجرد تطبيق</div>
+    <div class="h2" style="font-size:64px">أنظمة ولوحات تحكم متكاملة</div>
+    <div class="p" style="font-size:31px">نطور أنظمة إدارة، متاجر إلكترونية، ولوحات تحكم مخصصة لاحتياجاتك.</div>
+  </div>
+  <div class="glow" style="width:1000px;height:600px;left:40px;top:720px"></div>
+  <div class="monitor" style="left:110px;top:760px;width:860px">
+    <div class="sc" style="height:400px"><div class="in"><div class="dash">
+      <div class="sb"><b>لوحة التحكم</b><i class="on"></i><i></i><i></i><i></i><i></i></div>
+      <div class="mn"><h5>نظرة عامة</h5>
+        <div class="kpis"><div class="kpi"><span>المبيعات</span><b>24.5K</b><em>▲ 18%</em></div><div class="kpi"><span>الطلبات</span><b>1,280</b><em>▲ 9%</em></div><div class="kpi"><span>العملاء</span><b>842</b><em>▲ 12%</em></div></div>
+        <div class="chart" style="height:150px"><i style="height:35%"></i><i style="height:55%"></i><i style="height:45%"></i><i style="height:70%"></i><i style="height:62%"></i><i style="height:85%"></i><i style="height:78%"></i><i style="height:95%"></i></div>
+      </div></div></div></div>
+    <div class="neck" style="height:44px"></div><div class="ft"></div>
+  </div>
+  <div class="card float" style="right:50px;top:700px;display:flex;gap:16px;align-items:center">
+    <div class="icn"><svg viewBox="0 0 24 24"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg></div><div><small>متجر إلكتروني</small><b>طلب جديد</b></div></div>
+  <div class="card float" style="left:40px;top:1100px;display:flex;gap:16px;align-items:center">
+    <div class="icn"><svg viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 5-6"/></svg></div><div><small>تقارير لحظية</small><b>نمو مستمر</b></div></div>
+</section>
+
+<!-- 05 IDEA TO REALITY -->
+<section class="slide" id="s5"><div class="grid"></div>
+  <div class="copy">
+    <div class="h1">من مجرد فكرة...</div>
+    <div class="h2">إلى تطبيق متكامل</div>
+    <div class="p">نرافق مشروعك من التخطيط والتصميم إلى البرمجة والإطلاق.</div>
+  </div>
+  <!-- sketch (idea) on the right -->
+  <div class="abs" style="right:120px;top:690px;width:270px;height:520px;border-radius:52px;border:3px dashed rgba(220,235,240,.45);padding:40px 26px">
+    <div style="height:24px;width:60%;border:2px dashed rgba(220,235,240,.4);border-radius:8px"></div>
+    <div style="height:150px;margin-top:22px;border:2px dashed rgba(220,235,240,.4);border-radius:18px;position:relative"><svg viewBox="0 0 100 60" style="position:absolute;inset:20px;width:calc(100% - 40px);height:calc(100% - 40px)" fill="none" stroke="rgba(220,235,240,.4)" stroke-width="2"><path d="M0 60L30 25l20 20 15-12 35 27"/><circle cx="78" cy="14" r="8"/></svg></div>
+    <div style="display:flex;gap:12px;margin-top:20px"><i style="flex:1;height:90px;border:2px dashed rgba(220,235,240,.4);border-radius:14px"></i><i style="flex:1;height:90px;border:2px dashed rgba(220,235,240,.4);border-radius:14px"></i></div>
+    <div style="height:14px;width:80%;margin-top:20px;border-radius:7px;background:rgba(220,235,240,.18)"></div>
+    <div style="height:14px;width:55%;margin-top:12px;border-radius:7px;background:rgba(220,235,240,.18)"></div>
+    <div style="height:46px;margin-top:26px;border:2px dashed rgba(54,201,242,.6);border-radius:999px"></div>
+  </div>
+  <div class="chip abs" style="right:190px;top:600px;background:transparent;color:var(--sub);border-color:rgba(220,235,240,.3)">الفكرة</div>
+  <!-- arrow -->
+  <svg class="abs" style="left:430px;top:870px" width="220" height="140" viewBox="0 0 220 140" fill="none"><path d="M210 70 C150 10 80 130 20 70" stroke="#36C9F2" stroke-width="5" stroke-linecap="round" stroke-dasharray="2 14"/><path d="M40 52L18 70l24 14" stroke="#36C9F2" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+  <!-- product on the left -->
+  <div class="glow" style="width:620px;height:620px;left:-40px;top:620px"></div>
+  <div class="phone" style="width:270px;height:550px;left:130px;top:680px"><div class="scr"><img src="../fastgrand/assets/shot-store-app.jpg"></div></div>
+  <div class="chip abs" style="left:150px;top:600px">تطبيق جاهز ✓</div>
+</section>
+
+<!-- 06 WHY US -->
+<section class="slide" id="s6"><div class="grid"></div>
+  <div class="copy"><div class="h1" style="font-size:96px">ليش تختار <span class="hl" style="direction:ltr;display:inline-block">fast_crand</span>؟</div></div>
+  <div class="abs" style="right:72px;top:330px;width:560px;display:flex;flex-direction:column;gap:22px">
+    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z"/><path d="M2 2l7.6 7.6"/><circle cx="11" cy="11" r="2"/></svg></div><b style="font-size:38px">تصميم احترافي</b></div>
+    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M16 18l6-6-6-6M8 6l-6 6 6 6"/></svg></div><b style="font-size:38px">برمجة حسب طلبك</b></div>
+    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg></div><b style="font-size:38px">واجهات عصرية</b></div>
+    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M9 11V6a3 3 0 0 1 6 0v5"/><path d="M5 11h14l-1 10H6z"/></svg></div><b style="font-size:38px">تجربة استخدام سهلة</b></div>
+    <div class="card" style="display:flex;align-items:center;gap:22px;padding:22px 26px"><div class="icn"><svg viewBox="0 0 24 24"><path d="M12 2l3 7h7l-5.5 4.5 2 7.5L12 16.5 5.5 21l2-7.5L2 9h7z"/></svg></div><b style="font-size:38px">حلول تناسب مشروعك</b></div>
+  </div>
+  <div class="glow" style="width:620px;height:620px;left:-80px;top:440px"></div>
+  <div class="ring" style="width:460px;height:460px;left:0;top:520px"></div>
+  <div class="phone" style="width:300px;height:620px;left:80px;top:420px;transform:rotate(-5deg)"><div class="scr"><img src="../fastgrand/assets/shot-business-app.jpg" style="object-position:50% 6%"></div></div>
+  <div class="card float" style="left:240px;top:1010px;display:flex;gap:14px;align-items:center;padding:16px 20px"><div class="icn" style="width:48px;height:48px"><svg viewBox="0 0 24 24"><path d="M4 12l5 5L20 6"/></svg></div><div><small>جاهز للنشر</small><b style="font-size:28px">Google Play</b></div></div>
+</section>
+
+<!-- 07 CTA -->
+<section class="slide" id="s7"><div class="grid"></div>
+  <div class="copy">
+    <div class="h1">جاهز تطلق مشروعك؟</div>
+    <div class="h2">خلّينا نبرمج فكرتك!</div>
+    <div class="p">تواصل معنا وابدأ رحلتك نحو تطبيقك الخاص.</div>
+  </div>
+  <div class="glow" style="width:700px;height:700px;left:-60px;top:600px"></div>
+  <div class="phone" style="width:300px;height:610px;left:100px;top:580px;transform:rotate(-4deg)"><div class="scr"><div class="notch"></div>
+    <div class="app"><div class="hi">أهلاً بعودتك</div><div class="ttl">تطبيقك جاهز 🚀</div>
+      <div class="hero" style="background:linear-gradient(135deg,#4ED6A0,#36C9F2)"><b>تم الإطلاق بنجاح</b><span>متاح الآن للتحميل</span></div>
+      <div class="cats"><i></i><i></i><i></i><i></i></div>
+      <div class="row"><div class="it"><u></u><s></s><em></em></div><div class="it"><u></u><s></s><em></em></div></div>
+      <div class="row"><div class="it"><u></u><s></s><em></em></div><div class="it"><u></u><s></s><em></em></div></div>
+      <div class="nav"><i class="on"></i><i></i><i></i><i></i></div></div></div></div>
+  <div class="card abs" style="right:72px;top:640px;width:500px;padding:40px 36px;text-align:center">
+    <div style="width:120px;height:120px;margin:0 auto;border-radius:28%;background:linear-gradient(160deg,#294376,#1E2F52);display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 1.5px rgba(54,201,242,.4),0 20px 50px rgba(0,0,0,.5)"><svg width="74" height="74"><use href="#fc"/></svg></div>
+    <div style="font-size:52px;font-weight:700;direction:ltr;margin-top:22px">fast_crand</div>
+    <div style="font-size:26px;color:var(--sub);margin-top:6px">تطوير تطبيقات ومواقع وأنظمة</div>
+    <div style="margin-top:30px;padding:18px 0 24px;border-radius:999px;background:var(--cyan);color:#04222c;font-size:40px;font-weight:700;box-shadow:0 18px 40px rgba(54,201,242,.3)">تواصل معنا الآن</div>
+    <div style="display:flex;justify-content:center;gap:18px;margin-top:26px;font-size:24px;color:var(--sub)">
+      <span style="display:flex;align-items:center;gap:8px"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#36C9F2" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>راسلنا على الخاص</span>
+    </div>
+  </div>
+</section>
+
+<script>
+// shared top bar + footer for every slide
+const slides = [...document.querySelectorAll('.slide')];
+slides.forEach((s, i) => {
+  s.insertAdjacentHTML('afterbegin', `<div class="top"><div class="tag"><i></i>تطوير تطبيقات ومواقع</div><div class="idx"><b>${String(i + 1).padStart(2, '0')}</b> / ${String(slides.length).padStart(2, '0')}</div></div>`);
+  s.insertAdjacentHTML('beforeend', `<div class="foot">
+    <div class="brand"><div class="lg"><div><svg><use href="#fc"/></svg></div></div><div class="nm">fast_crand</div></div>
+    <div class="dots">${slides.map((_, j) => `<i class="${j === i ? 'on' : ''}"></i>`).join('')}</div>
+    <div class="save">${i === slides.length - 1 ? 'شارك مع صديق' : 'احفظ المنشور'}
+      ${i === slides.length - 1
+        ? '<svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2l-7 20-4-9-9-4z"/></svg>'
+        : '<svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>'}</div></div>`);
+});
+document.fonts.ready.then(() => (window.__ready = true));
+</script>
+</body>
+</html>
