@@ -124,6 +124,8 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:var(--page);font
       <path d="M150 400 Q154 426 180 430 Q154 434 150 460 Q146 434 120 430 Q146 426 150 400Z" fill="rgba(255,255,255,.85)" stroke="none"/>
     </svg>
     <div id="iconGhost" class="abs c" style="width:200px;height:200px"><svg style="width:62%;height:62%;position:absolute;left:19%;top:19%"><use href="#fg"/></svg></div>
+    <div id="boTitle" class="abs c" style="font-weight:700;font-size:140px;color:#fff;direction:rtl;white-space:nowrap">عرض أسبوعي</div>
+    <div id="boRow" class="abs c" style="display:flex;align-items:center;gap:30px;direction:rtl;white-space:nowrap"><span id="boLbl" style="font-weight:700;font-size:110px;color:#fff">خصم</span><span id="boPct" style="display:inline-block;font-weight:700;font-size:330px;line-height:1;color:#3CC8F0;direction:ltr">50%</span></div>
     <div id="offer" class="abs c">عروض الأسبوع <b>·</b> خصم 50%</div>
     <div id="track">
       <div class="card" id="card0">
@@ -151,8 +153,11 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:var(--page);font
         <div class="sheen"></div>
       </div>
     </div>
-    <div id="ctaHead" class="abs c" style="font-weight:700;font-size:130px;line-height:1.25;text-align:center;color:#fff;direction:rtl;white-space:nowrap">مشروعك يبدأ<br>برسالة</div>
+    <div id="ctaHead" class="abs c" style="font-weight:700;font-size:130px;line-height:1.25;text-align:center;color:#fff;direction:rtl;white-space:nowrap">هاي فرصتك!</div>
     <div id="ctaPill" class="abs c" style="background:#fff;color:#1E2F52;font-weight:700;font-size:66px;padding:22px 84px 32px;border-radius:999px;white-space:nowrap;direction:rtl;box-shadow:0 30px 60px rgba(10,22,52,.35)">تواصل معنا الآن</div>
+    <div id="ctaSub" class="abs c" style="display:flex;gap:24px;direction:rtl;white-space:nowrap">
+      <span id="subA" style="display:inline-block;background:rgba(255,255,255,.16);border:1.5px solid rgba(255,255,255,.5);color:#fff;font-weight:600;font-size:48px;padding:8px 38px 16px;border-radius:999px">أسعار أرخص</span>
+      <span id="subB" style="display:inline-block;background:#4ED6A0;color:#1E2F52;font-weight:700;font-size:48px;padding:8px 38px 16px;border-radius:999px">جودة أعلى</span></div>
     <div id="ring" class="abs c" style="border-radius:999px;border:3px solid rgba(214,243,255,.9)"></div>
     <div id="ctaBrand" class="abs c" style="display:flex;flex-wrap:wrap;justify-content:center;align-items:center;gap:22px;width:900px;direction:ltr;white-space:nowrap">
       <div class="icon" style="width:84px;height:84px;box-shadow:none;border:1.5px solid rgba(255,255,255,.35)"><svg><use href="#fg"/></svg></div>
@@ -204,13 +209,15 @@ const vblur = (v, k = 1 / 90, max = 16) => Math.min(max, v * k);
 
 // ---------- timeline (seconds) — matched to the voice-over ----------
 const T = {
-  dur: 16.0,
-  s2: 3.1,     // why-us (beat)
-  reveal: 5.6, // drop: icon expands into the blue world
-  c1: 6.1, p1: 7.6,
-  c2: 8.95, p2: 10.1,
-  c3: 11.42, p3: 12.6,
-  over: 13.22, cta: 13.8,
+  dur: 30.0,
+  s2: 4.75,       // "جودة لا تقارن" (5.0)
+  reveal: 9.0,    // drop -> "الحق!" (9.2)
+  bo1: 9.45, bo2: 10.4, bo3: 10.9, merge: 11.55, // "عرض أسبوعي، خصم خمسين بالمئة"
+  c1: 11.95, p1: 14.9,   // "تطبيق كامل ... بتسعة وتسعين"
+  c2: 16.95, p2: 18.7,   // "وموقع إدارة ومبيعات بخمسة وخمسين"
+  c3: 19.97, p3: 21.05,  // "وموقع تعريفي بخمسة وثلاثين"
+  over: 22.45, cta: 23.2, // "تواصل معنا الآن" (23.5)
+  click: 24.45, brand: 24.8, head: 25.15, subA: 26.3, subB: 27.4, // "هاي فرصتك، هم أرخص وهم جودة عالية"
 };
 
 // ---------- S1: lockup ----------
@@ -239,7 +246,7 @@ function tilePos(i, t) {
   const st = T.s2 + 0.15 + i * 0.05;
   const inK = E.xo(clamp((t - st) / 0.85));
   const outK = E.i(clamp((t - (T.reveal - 0.35 + (5 - i) * 0.015)) / 0.32));
-  const a = ANG[i] + (1 - inK) * 3.4 - outK * 2.2;
+  const a = ANG[i] + (1 - inK) * 3.4 - outK * 2.2 + Math.max(0, t - T.s2 - 1) * 0.06; // slow orbit while held
   const r = (1 + (1 - inK) * 0.9) * (1 - outK * 0.97);
   return [RING.cx + Math.cos(a) * RING.rx * r, RING.cy + Math.sin(a) * RING.ry * r, inK, outK];
 }
@@ -270,9 +277,9 @@ function seek(t) {
   w.style.opacity = wordIn * (1 - ramp(t, T.s2 + 0.05, T.s2 + 0.25));
   w.style.clipPath = `inset(-20% 0 ${(1 - wordIn) * 100}% 0)`;
   w.style.filter = `blur(${(vblur(vy) * 0.6 + (1 - wordIn) * 10).toFixed(2)}px)`;
-  const tagIn = ramp(t, 0.75, 1.3, 'xo'), tagOut = ramp(t, T.s2 - 0.4, T.s2 - 0.1, 'i');
+  const tagIn = ramp(t, 1.25, 1.8, 'xo'), tagOut = ramp(t, T.s2 - 0.4, T.s2 - 0.1, 'i');
   place($('tag'), 540, lockY(Math.min(t, T.s2 - 0.4)) + 250 + (1 - tagIn) * 40 + tagOut * 70, { o: tagIn * (1 - tagOut), blur: (1 - tagIn) * 12 + tagOut * 14 });
-  const pillIn = ramp(t, 1.35, 1.9, 'xo'), pillOut = ramp(t, T.s2 - 0.36, T.s2 - 0.08, 'i');
+  const pillIn = ramp(t, 2.85, 3.4, 'xo'), pillOut = ramp(t, T.s2 - 0.36, T.s2 - 0.08, 'i');
   place($('pill'), 540 + (1 - pillIn) * 30, lockY(Math.min(t, T.s2 - 0.36)) + 450 + pillOut * 90, { o: pillIn * (1 - pillOut), blur: (1 - pillIn) * 16 + pillOut * 14 });
 
   // icon (shared element S1 → S2 → blue world)
@@ -314,8 +321,19 @@ function seek(t) {
   $('lines').style.opacity = ramp(t, T.reveal + 0.35, T.reveal + 1.1, 'o');
   $('lines').style.transform = `translateX(${(t - T.reveal) * -12}px)`;
 
-  const oIn = ramp(t, T.c1 + 0.25, T.c1 + 0.8, 'xo'), oOut = ramp(t, T.cta - 0.1, T.cta + 0.25, 'i');
+  const oIn = ramp(t, T.merge + 0.3, T.merge + 0.6, 'xo'), oOut = ramp(t, T.cta - 0.1, T.cta + 0.25, 'i');
   place($('offer'), 540, 330 + (1 - oIn) * -30 - oOut * 140, { o: oIn * (1 - oOut), blur: (1 - oIn) * 10 + oOut * 10 });
+  // weekly-offer hero ("الحق! عرض أسبوعي، خصم 50%") -> flies up into the offer pill
+  const mk = E.i(clamp((t - T.merge) / 0.42));
+  const btIn = ramp(t, T.bo1, T.bo1 + 0.55, 'xo');
+  place($('boTitle'), 540, 700 + (1 - btIn) * 60 + (330 - 700) * mk, { s: 1 - mk * 0.75, o: btIn * (1 - mk), blur: (1 - btIn) * 14 + mk * 10 });
+  const blIn = ramp(t, T.bo2, T.bo2 + 0.4, 'xo');
+  const pk2 = clamp((t - T.bo3) / 0.4), pctS = t < T.bo3 ? 2.4 : 2.4 - 1.4 * E.xo(pk2);
+  const shk = t > T.bo3 + 0.08 && t < T.bo3 + 0.5 ? Math.sin((t - T.bo3) * 70) * 14 * Math.exp(-(t - T.bo3) * 8) : 0;
+  place($('boRow'), 540 + shk, 1000 + (330 - 1000) * mk, { s: 1 - mk * 0.85, o: (t >= T.bo2 ? 1 : 0) * (1 - mk), blur: mk * 12 });
+  $('boLbl').style.opacity = blIn; $('boLbl').style.filter = blIn < 0.99 ? `blur(${(1 - blIn) * 12}px)` : 'none';
+  const bp = $('boPct'); bp.style.opacity = t < T.bo3 ? 0 : clamp(pk2 * 3); bp.style.transform = `scale(${pctS})`;
+  bp.style.filter = t >= T.bo3 && pk2 < 0.99 ? `blur(${(1 - E.xo(pk2)) * 16}px)` : 'none';
 
   // cards on the track
   const [off, ty, ts] = trackState(t);
@@ -360,23 +378,27 @@ function seek(t) {
 
   // ----- CTA -----
   const pIn = E.xo(clamp((t - (T.cta + 0.3)) / 0.6));
-  const pPress = t > 15.0 && t < 15.2 ? Math.sin(((t - 15.0) / 0.2) * Math.PI) : 0;
+  const pPress = t > T.click && t < T.click + 0.2 ? Math.sin(((t - T.click) / 0.2) * Math.PI) : 0;
   place($('ctaPill'), 540, 1040, { s: (0.55 + 0.45 * pIn) * (1 - 0.05 * pPress), o: t > T.cta + 0.3 ? 1 : 0, blur: (1 - pIn) * 8 });
-  const hk = ramp(t, T.cta + 0.4, T.cta + 1.0, 'xo');
-  place($('ctaHead'), 540, 760 + (1 - hk) * 50, { o: hk, blur: (1 - hk) * 14 });
-  const bk2 = ramp(t, T.cta + 0.75, T.cta + 1.35, 'xo');
+  const hk = ramp(t, T.head, T.head + 0.6, 'xo');
+  place($('ctaHead'), 540, 640 + (1 - hk) * 50, { o: hk, blur: (1 - hk) * 14 });
+  const bk2 = ramp(t, T.brand, T.brand + 0.6, 'xo');
+  const sa = ramp(t, T.subA, T.subA + 0.45, 'xo'), sb = ramp(t, T.subB, T.subB + 0.45, 'back');
+  place($('ctaSub'), 540, 800, { o: t >= T.subA ? 1 : 0 });
+  $('subA').style.opacity = sa; $('subA').style.transform = `translateY(${(1 - sa) * 30}px)`; $('subA').style.filter = sa < 0.99 ? `blur(${(1 - sa) * 10}px)` : 'none';
+  $('subB').style.opacity = clamp(sb * 1.4); $('subB').style.transform = `scale(${0.6 + 0.4 * sb})`;
   place($('ctaBrand'), 540, 1330 + (1 - bk2) * 30, { o: bk2, blur: (1 - bk2) * 12 });
   // cursor glides in, decelerating, and clicks the pill
   const cur = $('cursor');
-  if (t > 14.6) {
-    const cx = kf(t, [[14.6, 1000], [15.0, 690, 'xo']]), cy = kf(t, [[14.6, 1500], [15.0, 1085, 'xo']]);
-    const cs = 1.3 + 0.35 * ramp(t, 14.85, 15.0, 'o') - 0.2 * pPress;
-    cur.style.transform = `translate(${cx}px,${cy}px) scale(${cs})`; cur.style.opacity = ramp(t, 14.6, 14.72); cur.style.visibility = 'visible';
+  if (t > T.click - 0.55) {
+    const cx = kf(t, [[T.click - 0.55, 1000], [T.click - 0.12, 690, 'xo']]), cy = kf(t, [[T.click - 0.55, 1500], [T.click - 0.12, 1085, 'xo']]);
+    const cs = 1.3 + 0.35 * ramp(t, T.click - 0.3, T.click - 0.12, 'o') - 0.2 * pPress;
+    cur.style.transform = `translate(${cx}px,${cy}px) scale(${cs})`; cur.style.opacity = ramp(t, T.click - 0.55, T.click - 0.43); cur.style.visibility = 'visible';
   } else cur.style.visibility = 'hidden';
-  const rg = ramp(t, 15.1, 15.7, 'o');
+  const rg = ramp(t, T.click + 0.1, T.click + 0.7, 'o');
   const ring = $('ring');
   ring.style.width = 620 + rg * 140 + 'px'; ring.style.height = 150 + rg * 80 + 'px';
-  place(ring, 540, 1040, { o: t > 15.1 ? (1 - rg) * 0.9 : 0 });
+  place(ring, 540, 1040, { o: t > T.click + 0.1 ? (1 - rg) * 0.9 : 0 });
 }
 
 // build tiles

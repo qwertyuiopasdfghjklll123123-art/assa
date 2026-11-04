@@ -1,6 +1,6 @@
 # FastCrand — weekly offer film (16:9 + Reels 9:16)
 
-- `fastcrand-offer-16x9.mp4` and `fastcrand-offer-reel-9x16.mp4`: 60fps, 16.0s, music scored to the picture + SFX (no voice yet — see voice-script.md), ≈ −14 LUFS. `assets/`: client screenshots shown in the offer cards
+- `fastcrand-offer-16x9.mp4` and `fastcrand-offer-reel-9x16.mp4`: 60fps, 30.0s, recorded female voice-over (`assets/voiceover.mp3`) + music scored to the picture + SFX, ≈ −14 LUFS. `assets/`: client screenshots shown in the offer cards
 - `film.html`: every frame is a pure function of time `seek(t)` (no timers, no CSS transitions, no randomness)
 - `voice.sh`: Arabic voice-over (offline espeak-ng); `audio.py`: synthesized music bed + SFX + ducked VO
 - `render.cjs`: Playwright frame renderer; `contact-sheet.jpg`, `poster.jpg`
@@ -22,3 +22,11 @@ sh voice.sh /tmp/vo && python3 audio.py /tmp/vo /tmp/a.wav
 node render.cjs /tmp/frames 60
 ffmpeg -framerate 60 -i /tmp/frames/f_%05d.png -i /tmp/a.wav -af loudnorm=I=-14:TP=-1 -c:v libx264 -pix_fmt yuv420p -crf 17 -c:a aac -shortest fast-grand-offer-16x9.mp4
 ```
+
+## With the recorded voice-over (30 s cut)
+```bash
+ffmpeg -i assets/voiceover.mp3 -ar 48000 -ac 1 /tmp/vo.wav
+VO_FILE=/tmp/vo.wav python3 audio.py - /tmp/a.wav
+PAGE=reel.html node render.cjs /tmp/fr 60   # and PAGE=film.html for 16:9
+```
+Scene timings (`const T` in reel.html / film.html) are locked to the words in the recording.
