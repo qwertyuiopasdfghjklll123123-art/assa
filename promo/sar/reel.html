@@ -1,0 +1,282 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<title>Sar app explainer reel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--o1:#FF9A3C;--o2:#F26A0F;--bg:#0A0A0A;--cream:#F6F2EC;--card:#141414;--grey:#9a9a9a}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);font-family:'IBM Plex Sans Arabic','Noto Color Emoji',sans-serif;color:#fff}
+#stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
+.abs{position:absolute;left:0;top:0;will-change:transform,opacity,filter}
+.c{transform-origin:50% 50%}
+#glowA{position:absolute;width:1200px;height:1200px;border-radius:50%;left:-500px;top:-400px;background:radial-gradient(closest-side,rgba(242,106,15,.28),transparent)}
+#glowB{position:absolute;width:1100px;height:1100px;border-radius:50%;right:-500px;bottom:-300px;background:radial-gradient(closest-side,rgba(255,154,60,.18),transparent)}
+#dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.07) 1.5px,transparent 1.5px);background-size:44px 44px}
+#orange{position:absolute;inset:0;background:radial-gradient(900px 900px at 50% 40%,var(--o1),var(--o2));z-index:30}
+.logo{width:220px;height:220px;border-radius:30%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 60px rgba(120,40,0,.35)}
+.logo svg{width:60%;height:60%}
+.t-huge{font-weight:700;font-size:210px;line-height:1}
+.badge{display:inline-flex;align-items:center;gap:10px;padding:12px 26px 16px;border-radius:999px;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.4);font-weight:600;font-size:32px;white-space:nowrap}
+.title{font-weight:700;font-size:86px;white-space:nowrap}
+.title b{color:var(--o1)}
+.card{width:960px;height:500px;border-radius:44px;background:linear-gradient(160deg,#1a1a1a,#0f0f0f);border:2px solid rgba(255,154,60,.35);box-shadow:0 30px 70px rgba(0,0,0,.6);overflow:hidden}
+.card .lbl{position:absolute;right:56px;top:40px;font-weight:700;font-size:112px;line-height:1;color:var(--o1);direction:ltr}
+.card .hd{position:absolute;right:56px;top:170px;font-weight:700;font-size:48px}
+.card .ds{position:absolute;right:56px;top:240px;font-size:30px;color:var(--grey)}
+.chips{position:absolute;right:56px;top:300px;width:560px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.chip{display:flex;align-items:center;gap:10px;padding:14px 20px 18px;border-radius:20px;background:#1f1f1f;border:1.5px solid #2c2c2c;font-weight:600;font-size:30px;white-space:nowrap}
+.srv{position:absolute;left:50px;top:110px;width:260px}
+.srv i{display:block;height:70px;border-radius:16px;background:linear-gradient(180deg,#2a2a33,#1b1b22);margin-bottom:14px;position:relative;box-shadow:0 8px 20px rgba(0,0,0,.5)}
+.srv i::before{content:"";position:absolute;left:24px;top:31px;width:90px;height:7px;border-radius:4px;background:#3a3a46}
+.srv i::after{content:"";position:absolute;right:24px;top:27px;width:16px;height:16px;border-radius:50%;background:var(--led,#ff8a1f);box-shadow:0 0 14px var(--led,#ff8a1f)}
+.panel{position:absolute;left:60px;top:110px;width:250px;display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.panel i{display:block;height:110px;border-radius:24px;background:#1f1f24;border:2px solid #2c2c33}
+.panel i:nth-child(1){background:linear-gradient(140deg,var(--o1),var(--o2));border:0}
+/* phone */
+#phone{width:500px;height:1010px;border-radius:84px;padding:14px;background:linear-gradient(145deg,#3b3b3f,#141416 40%,#0b0b0c);
+  box-shadow:0 60px 120px rgba(0,0,0,.8),0 0 0 2px #26262a,inset 0 0 0 2px rgba(255,255,255,.08),0 0 120px rgba(242,106,15,.18);z-index:10}
+#phone .scr{position:relative;width:100%;height:100%;border-radius:70px;overflow:hidden;background:#000}
+#phone .island{position:absolute;top:18px;left:50%;transform:translateX(-50%);width:150px;height:40px;border-radius:999px;background:#000;z-index:20}
+.shot{position:absolute;top:0;left:0;width:100%}
+.shot img{display:block;width:100%}
+.ov{position:absolute}
+.btn{position:absolute;width:6px;border-radius:3px;background:#2a2a2e}
+.tap{position:absolute;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;background:rgba(255,255,255,.55);border:3px solid #fff;box-shadow:0 6px 20px rgba(0,0,0,.35);z-index:15}
+.ripple{position:absolute;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:4px solid #fff;z-index:15}
+.cap{text-align:center;white-space:nowrap}
+.cap .st{display:inline-flex;align-items:center;gap:20px;font-weight:700;font-size:78px}
+.cap .st i{width:86px;height:86px;border-radius:50%;background:linear-gradient(140deg,var(--o1),var(--o2));display:flex;align-items:center;justify-content:center;font-style:normal;font-size:50px;color:#fff}
+.cap .sub{font-size:38px;color:#cfcfcf;margin-top:14px}
+.cap .sub b{color:var(--o1);font-weight:600}
+.pay{width:190px;height:190px;border-radius:46px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.6);border:3px solid rgba(255,255,255,.12)}
+.pay img{width:112%;height:112%;margin:-6%;display:block}
+.visa{width:250px;height:150px;border-radius:30px;background:linear-gradient(135deg,#1a1f71,#2a3cb0);display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:700;font-style:italic;letter-spacing:2px;direction:ltr;box-shadow:0 20px 50px rgba(0,0,0,.6);font-family:Arial,sans-serif}
+.bub{position:absolute;max-width:76%;padding:18px 24px 22px;font-size:27px;line-height:1.55;border-radius:30px}
+.toast{position:absolute;left:50%;top:9%;transform:translateX(-50%);white-space:nowrap;padding:14px 26px 18px;border-radius:999px;background:#12b76a;color:#fff;font-weight:700;font-size:28px;box-shadow:0 14px 30px rgba(0,0,0,.4)}
+.pricetag{padding:22px 30px 26px;border-radius:30px;background:#141414;border:2px solid var(--o1);box-shadow:0 20px 50px rgba(0,0,0,.6);text-align:center;white-space:nowrap}
+.pricetag small{display:block;font-size:24px;color:var(--o1);font-weight:600}
+.pricetag b{font-size:46px;direction:ltr;display:inline-block}
+.pricetag span{font-size:24px;color:var(--grey)}
+.robot{width:300px;height:240px;border-radius:44px;overflow:hidden;border:4px solid var(--o1);box-shadow:0 24px 60px rgba(0,0,0,.6);background:#fff}
+.robot img{width:100%;height:100%;object-fit:cover}
+.cta{padding:26px 90px 34px;border-radius:999px;background:#0A0A0A;color:#fff;font-weight:700;font-size:62px;white-space:nowrap;box-shadow:0 26px 60px rgba(90,30,0,.4)}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute"><defs>
+  <symbol id="srvIcon" viewBox="0 0 100 100"><rect x="14" y="16" width="72" height="30" rx="10" fill="#F26A0F"/><rect x="14" y="54" width="72" height="30" rx="10" fill="#F26A0F"/>
+    <circle cx="66" cy="31" r="4" fill="#fff"/><circle cx="76" cy="31" r="4" fill="#fff"/><circle cx="66" cy="69" r="4" fill="#fff"/><circle cx="76" cy="69" r="4" fill="#fff"/></symbol>
+  <filter id="mbx" x="-20%" y="-5%" width="140%" height="110%"><feGaussianBlur id="mbxB" stdDeviation="0 0"/></filter>
+</defs></svg>
+<div id="stage">
+  <div id="glowA"></div><div id="glowB"></div><div id="dots"></div>
+
+  <!-- S2: what you get -->
+  <div id="t2" class="abs c title">شنو تستفاد من <b>صار</b>؟</div>
+  <div id="cardV" class="abs c card">
+    <div class="srv"><i></i><i style="--led:#4ade80"></i><i></i></div>
+    <div class="lbl">VPS</div><div class="hd">سيرفر خاص بيك</div><div class="ds">شغّل عليه:</div>
+    <div class="chips"><div class="chip">📱 تطبيقات</div><div class="chip">🤖 بوتات</div><div class="chip">🌐 مواقع</div><div class="chip">🎮 سيرفرات ألعاب</div></div>
+  </div>
+  <div id="cardC" class="abs c card">
+    <div class="panel"><i></i><i></i><i></i><i></i></div>
+    <div class="lbl">cPanel</div><div class="hd">إدارة موقعك بسهولة</div><div class="ds">من لوحة وحدة:</div>
+    <div class="chips"><div class="chip">🌐 مواقع ومتاجر</div><div class="chip">✉️ إيميلات رسمية</div><div class="chip">📁 ملفات</div><div class="chip">🗄️ قواعد بيانات</div></div>
+  </div>
+
+  <!-- step captions -->
+  <div id="cap1" class="abs c cap"><div class="st"><i>1</i>ابدأ وسجّل دخولك</div><div class="sub">بحساب <b>Google</b> أو بريدك الإلكتروني</div></div>
+  <div id="cap2" class="abs c cap"><div class="st"><i>2</i>اختار باقتك</div><div class="sub"><b>VPS</b> أو <b>cPanel</b> · شهري أو سنوي</div></div>
+  <div id="cap3" class="abs c cap"><div class="st"><i>3</i>ادفع بسهولة</div><div class="sub">والتفعيل <b>فوري</b></div></div>
+  <div id="cap4" class="abs c cap"><div class="st"><i>🤖</i>مساعد ذكي</div><div class="sub">اسأله، يشرح لك ويشخّص <b>مشكلة سيرفرك</b></div></div>
+
+  <!-- side elements -->
+  <div id="pBin" class="abs c pay"><img src="assets/binance.png"></div>
+  <div id="pAsia" class="abs c pay"><img src="assets/asiacell.png"></div>
+  <div id="pQi" class="abs c pay"><img src="assets/qi.png"></div>
+  <div id="pVisa" class="abs c visa">VISA</div>
+  <div id="price" class="abs c pricetag" style="z-index:12"><small>الأكثر طلباً</small><b>14,250</b> <span>د.ع / شهر</span></div>
+  <div id="robot" class="abs c robot" style="z-index:12"><img src="assets/robot.jpg"></div>
+
+  <!-- phone -->
+  <div id="phone" class="abs c">
+    <div class="btn" style="right:-5px;top:24%;height:11%"></div><div class="btn" style="left:-5px;top:19%;height:5%"></div><div class="btn" style="left:-5px;top:27%;height:9%"></div>
+    <div class="scr" id="scr"><div class="island"></div>
+      <div class="shot" id="sh0" style="background:#F6F2EC"><img src="assets/s-welcome.jpg"></div>
+      <div class="shot" id="sh1" style="background:#F6F2EC"><img src="assets/s-login.jpg"></div>
+      <div class="shot" id="sh2"><img src="assets/s-plans.jpg">
+        <div class="ov" id="planHL" style="left:3.4%;top:29%;width:93.2%;height:12.8%;border-radius:34px;border:5px solid #FF9A3C;box-shadow:0 0 40px rgba(255,154,60,.6)"></div>
+        <div class="ov" id="planRadio" style="left:86.5%;top:33.6%;width:6.2%;aspect-ratio:1;border-radius:50%;background:#FF9A3C;border:6px solid #2a1606"></div></div>
+      <div class="shot" id="sh3"><img src="assets/s-pay.jpg">
+        <div class="ov" id="payHL" style="left:6.3%;top:43.4%;width:87.4%;height:7.6%;border-radius:30px;border:5px solid #F3BA2F;box-shadow:0 0 40px rgba(243,186,47,.55)"></div>
+        <div class="toast" id="toast">✓ تم الدفع · تفعيل فوري</div></div>
+      <div class="shot" id="sh4"><img src="assets/s-chat.jpg">
+        <div class="bub" id="bU" style="left:5%;top:24%;max-width:86%;white-space:nowrap;background:linear-gradient(135deg,#FF9A3C,#F26A0F);border-radius:30px 30px 30px 8px">سيرفري بطيء، شنو السبب؟ 🤔</div>
+        <div class="bub" id="bT" style="right:5%;top:34%;background:#3b3054;border-radius:30px 30px 8px 30px;display:flex;gap:8px;padding:24px 28px"><i style="width:12px;height:12px;border-radius:50%;background:#cbbde6"></i><i style="width:12px;height:12px;border-radius:50%;background:#a898c7"></i><i style="width:12px;height:12px;border-radius:50%;background:#8a7aa8"></i></div>
+        <div class="bub" id="bA" style="right:5%;top:34%;background:#3b3054;border-radius:30px 30px 8px 30px">استهلاك الرام عالي 📈<br>أعد تشغيل الخدمة، أو رقّي باقتك بضغطة وحدة ✨</div></div>
+      <div class="tap" id="tap"></div><div class="ripple" id="rip"></div>
+    </div>
+  </div>
+
+  <!-- orange intro / outro layer -->
+  <div id="orange"></div>
+  <div id="logo" class="abs c logo" style="z-index:31"><svg><use href="#srvIcon"/></svg></div>
+  <div id="name" class="abs c t-huge" style="z-index:31">صار</div>
+  <div id="tagl" class="abs c" style="z-index:31;font-weight:600;font-size:54px;white-space:nowrap">استضافة سريعة وآمنة</div>
+  <div id="badges" class="abs c" style="z-index:31;display:flex;flex-direction:column;align-items:center;gap:18px">
+    <span class="badge" id="bd0">⚡ تفعيل فوري</span><span class="badge" id="bd1">🛡️ ضمان استرداد 30 يوم</span><span class="badge" id="bd2">✓ بدون رسوم خفية</span></div>
+  <div id="ctaPrice" class="abs c" style="z-index:31;font-weight:600;font-size:46px;white-space:nowrap">الباقات تبدأ من <b style="direction:ltr;display:inline-block">7,485</b> د.ع شهرياً</div>
+  <div id="cta" class="abs c cta" style="z-index:31">ابدأ الآن ←</div>
+  <div id="dom" class="abs c" style="z-index:31;font-weight:700;font-size:50px;direction:ltr;color:#2a1102">sarvps.store</div>
+</div>
+
+<script>
+const E = { io: (x) => (x < .5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2), i: (x) => x * x * x, o: (x) => 1 - Math.pow(1 - x, 3),
+  xo: (x) => (x >= 1 ? 1 : 1 - Math.pow(2, -10 * x)), back: (x) => { const c = 1.6; return 1 + (c + 1) * Math.pow(x - 1, 3) + c * Math.pow(x - 1, 2); } };
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const ramp = (t, a, b, e = 'io') => E[e](clamp((t - a) / (b - a)));
+const $ = (id) => document.getElementById(id);
+function place(el, x, y, { s = 1, r = 0, o = 1, blur = 0 } = {}) {
+  el.style.transform = `translate(${x}px,${y}px) translate(-50%,-50%) rotate(${r}deg) scale(${s})`;
+  el.style.opacity = o; el.style.visibility = o <= .001 ? 'hidden' : 'visible';
+  el.style.filter = blur > .05 ? `blur(${blur.toFixed(2)}px)` : 'none';
+}
+// in/out helper: element visible between a..b with rise + blur
+function inout(el, x, y, t, a, b, { dy = 60, s0 = 1, dur = .45, outDur = .3, outDy = -50 } = {}) {
+  const k = ramp(t, a, a + dur, 'xo'), q = ramp(t, b, b + outDur, 'i');
+  place(el, x, y + (1 - k) * dy + q * outDy, { s: s0 + (1 - s0) * k, o: k * (1 - q), blur: (1 - k) * 14 + q * 12 });
+}
+
+const T = { dur: 18.0, s2: 2.45, ph: 5.35, out: 15.6 };
+const SHOTS = [5.35, 6.75, 8.0, 10.6, 13.0]; // when each phone screen becomes active
+const TAPS = [[6.3, 50, 65.6, 0], [7.5, 50, 41, 1], [9.0, 50, 35.4, 2], [12.15, 50, 47.2, 3]]; // [time, x%, y% of image, shot]
+
+function seek(t) {
+  // ---------- orange intro/outro ----------
+  const or = $('orange');
+  let rad; // circle radius in px
+  if (t < 2.6) rad = 1300 * ramp(t, 0, .45, 'o') * (1 - ramp(t, 2.15, 2.55, 'i'));
+  else rad = 1300 * ramp(t, T.out, T.out + .5, 'i');
+  const cy = t < 3 ? 900 : 1190;
+  or.style.clipPath = `circle(${Math.max(0, rad)}px at 540px ${cy}px)`;
+  or.style.visibility = rad > 1 ? 'visible' : 'hidden';
+  const introOut = ramp(t, 2.05, 2.35, 'i');
+  const outro = t > T.out;
+  const lk = outro ? ramp(t, T.out + .35, T.out + .8, 'back') : ramp(t, .3, .75, 'back');
+  place($('logo'), 540, outro ? 560 : 640, { s: lk * (1 - introOut * .4), o: (outro ? 1 : (1 - introOut)) * clamp(lk * 2), r: (1 - lk) * -20 });
+  const nk = outro ? T.out + .5 : .5;
+  inout($('name'), 540, outro ? 800 : 880, t, nk, outro ? 99 : 2.05, { dy: 80 });
+  inout($('tagl'), 540, outro ? 935 : 1030, t, nk + .25, outro ? 99 : 2.1, { dy: 50 });
+  for (let i = 0; i < 3; i++) { const el = $('bd' + i), k = ramp(t, 1.15 + i * .15, 1.6 + i * .15, 'back'), q = ramp(t, 2.0 + i * .03, 2.3, 'i');
+    el.style.transform = `translateY(${(1 - k) * 40 - q * 50}px) scale(${.7 + .3 * k})`; el.style.opacity = clamp(k * 1.4) * (1 - q); el.style.filter = q > .02 ? `blur(${q * 12}px)` : 'none'; }
+  place($('badges'), 540, 1300, { o: t < 2.6 ? 1 : 0 });
+  if (outro) for (let i = 0; i < 3; i++) $('bd' + i).style.visibility = 'hidden';
+  inout($('ctaPrice'), 540, 1070, t, T.out + .85, 99, { dy: 40 });
+  inout($('cta'), 540, 1260, t, T.out + 1.1, 99, { dy: 60, s0: .7 });
+  inout($('dom'), 540, 1430, t, T.out + 1.35, 99, { dy: 30 });
+  const pulse = t > T.out + 1.6 ? 1 + .035 * Math.sin((t - T.out - 1.6) * 6) : 1;
+  if (t > T.out + 1.6) $('cta').style.transform += ` scale(${pulse})`;
+
+  // ---------- S2: VPS / cPanel ----------
+  const s2out = ramp(t, 5.05, 5.4, 'i');
+  inout($('t2'), 540, 270, t, T.s2 + .05, 5.05, { dy: 60 });
+  [['cardV', 680, T.s2 + .2], ['cardC', 1240, T.s2 + 1.2]].forEach(([id, y, a]) => {
+    const k = ramp(t, a, a + .55, 'xo');
+    place($(id), 540 + (1 - k) * 700 + s2out * 0, y - s2out * 260 * (id === 'cardV' ? 1.4 : 1), { o: k * (1 - s2out), blur: (1 - k) * 10 + s2out * 14, s: 1 - s2out * .08 });
+    $(id).querySelectorAll('.chip').forEach((c, i) => {
+      const ck = ramp(t, a + .45 + i * .12, a + .8 + i * .12, 'back');
+      c.style.transform = `scale(${.5 + .5 * ck})`; c.style.opacity = clamp(ck * 1.5);
+    });
+  });
+  // server LEDs blink
+  document.querySelectorAll('.srv i').forEach((el, i) => { el.style.setProperty('--led', Math.sin(t * 9 + i * 2) > 0 ? (i === 1 ? '#4ade80' : '#ff8a1f') : '#5a3a1f'); });
+
+  // ---------- phone ----------
+  const pin = ramp(t, T.ph, T.ph + .6, 'xo');
+  const pout = ramp(t, T.out - .1, T.out + .35, 'i');
+  const py = 1200 + (1 - pin) * 1100 + pout * 0;
+  const pv = Math.abs((1 - ramp(t - 1 / 60, T.ph, T.ph + .6, 'xo')) - (1 - pin)) * 1100 * 60;
+  place($('phone'), 540, py, { s: 1 - pout * .25, o: t < T.ph ? 0 : 1, blur: Math.min(12, pv / 400) });
+
+  // screens slide inside the phone (RTL push: new screen comes from the left)
+  let cur = 0; for (let i = 0; i < SHOTS.length; i++) if (t >= SHOTS[i]) cur = i;
+  let anyBlur = 0;
+  for (let i = 0; i < SHOTS.length; i++) {
+    const el = $('sh' + i);
+    if (i === cur) {
+      const k = i === 0 ? 1 : ramp(t, SHOTS[i], SHOTS[i] + .38, 'o');
+      el.style.transform = `translateX(${(1 - k) * -100}%)`; el.style.visibility = 'visible'; el.style.zIndex = 2; el.style.filter = 'none';
+      if (k < 1) anyBlur = Math.max(anyBlur, (1 - k));
+    } else if (i === cur - 1 && t < SHOTS[cur] + .38) {
+      const k = ramp(t, SHOTS[cur], SHOTS[cur] + .38, 'o');
+      el.style.transform = `translateX(${k * 35}%)`; el.style.visibility = 'visible'; el.style.zIndex = 1; el.style.filter = `brightness(${1 - .5 * k})`;
+    } else el.style.visibility = 'hidden';
+  }
+  $('scr').style.filter = anyBlur > .05 ? `url(#mbx)` : 'none';
+  $('mbxB').setAttribute('stdDeviation', `${(anyBlur * 14).toFixed(2)} 0`);
+
+  // taps
+  const tap = $('tap'), rip = $('rip');
+  tap.style.visibility = rip.style.visibility = 'hidden';
+  for (const [tt, x, y, si] of TAPS) {
+    if (t > tt - .4 && t < tt + .45) {
+      const img = $('sh' + si).querySelector('img');
+      const W = img.clientWidth, H = img.clientHeight;
+      const px = W * x / 100, pyy = H * y / 100;
+      const a = ramp(t, tt - .4, tt - .15, 'o'), press = t > tt - .05 && t < tt + .12 ? .82 : 1, fade = 1 - ramp(t, tt + .15, tt + .4);
+      tap.style.left = px + 'px'; tap.style.top = pyy + 'px'; tap.style.visibility = 'visible';
+      tap.style.transform = `scale(${(.6 + .4 * a) * press})`; tap.style.opacity = a * fade;
+      const r = ramp(t, tt, tt + .4, 'o');
+      rip.style.left = px + 'px'; rip.style.top = pyy + 'px'; rip.style.visibility = t > tt ? 'visible' : 'hidden';
+      rip.style.transform = `scale(${1 + r * 2.2})`; rip.style.opacity = 1 - r;
+    }
+  }
+
+  // step captions
+  inout($('cap1'), 540, 380, t, T.ph + .2, 7.85);
+  inout($('cap2'), 540, 380, t, 8.05, 10.45);
+  inout($('cap3'), 540, 380, t, 10.65, 12.85);
+  inout($('cap4'), 540, 380, t, 13.05, T.out - .2);
+
+  // plans: highlight + price tag
+  const hk = ramp(t, 9.05, 9.3, 'back');
+  $('planHL').style.opacity = clamp(hk * 1.5); $('planHL').style.transform = `scale(${.94 + .06 * hk})`;
+  $('planRadio').style.opacity = clamp(hk * 1.5); $('planRadio').style.transform = `scale(${hk})`;
+  inout($('price'), 880, 1000, t, 9.3, 10.45, { dy: 40, s0: .6 });
+
+  // payment logos orbit around the phone
+  [['pBin', 920, 800, 10.85, 8], ['pAsia', 160, 960, 11.0, -8], ['pQi', 920, 1200, 11.15, 6], ['pVisa', 150, 1360, 11.3, -6]].forEach(([id, x, y, a, r]) => {
+    const k = ramp(t, a, a + .5, 'back'), q = ramp(t, 12.8, 13.1, 'i');
+    const bob = Math.sin(t * 2.2 + a * 3) * 10;
+    place($(id), x + (540 - x) * (1 - clamp(k)) * .6, y + bob - q * 80, { s: .3 + .7 * k, r: r * k, o: clamp(k * 1.4) * (1 - q), blur: q * 10 });
+  });
+  const pk = ramp(t, 12.15, 12.35, 'back');
+  $('payHL').style.opacity = clamp(pk * 1.5); $('payHL').style.transform = `scale(${.95 + .05 * pk})`;
+  const tk = ramp(t, 12.35, 12.65, 'back');
+  $('toast').style.opacity = clamp(tk * 1.4); $('toast').style.transform = `translateX(-50%) translateY(${(1 - tk) * -40}px) scale(${.7 + .3 * tk})`;
+
+  // AI chat
+  const bu = ramp(t, 13.55, 13.85, 'back');
+  $('bU').style.opacity = clamp(bu * 1.4); $('bU').style.transform = `translateY(${(1 - bu) * 30}px) scale(${.8 + .2 * bu})`; $('bU').style.transformOrigin = 'left bottom';
+  const bt = ramp(t, 14.0, 14.2, 'o') * (1 - ramp(t, 14.55, 14.6));
+  $('bT').style.opacity = bt;
+  $('bT').querySelectorAll('i').forEach((d, i) => { d.style.transform = `translateY(${Math.sin(t * 14 - i) * 5}px)`; });
+  const ba = ramp(t, 14.6, 14.9, 'back');
+  $('bA').style.opacity = clamp(ba * 1.4); $('bA').style.transform = `translateY(${(1 - ba) * 30}px) scale(${.8 + .2 * ba})`; $('bA').style.transformOrigin = 'right bottom';
+  const rk = ramp(t, 13.2, 13.7, 'back'), rq = ramp(t, T.out - .3, T.out, 'i');
+  place($('robot'), 175, 1500 + Math.sin(t * 3) * 12, { s: .4 + .6 * rk - rq * .3, r: -6 + Math.sin(t * 2.5) * 3, o: clamp(rk * 1.5) * (1 - rq) });
+
+  // ambient
+  $('glowA').style.transform = `translate(${Math.sin(t * .4) * 80}px,${t * 18}px)`;
+  $('glowB').style.transform = `translate(${Math.cos(t * .3) * 60}px,${-t * 14}px)`;
+}
+window.seek = seek; window.DURATION = T.dur;
+document.fonts.ready.then(() => Promise.all([...document.images].map((i) => i.complete ? 0 : new Promise((r) => (i.onload = r)))))
+  .then(() => { seek(0); window.__ready = true; });
+</script>
+</body>
+</html>
