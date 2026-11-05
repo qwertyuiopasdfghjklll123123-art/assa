@@ -12,7 +12,7 @@ const path = require('path'), fs = require('fs');
   await p.waitForFunction(() => window.__ready, null, { timeout: 60000 });
   const dur = await p.evaluate(() => window.DURATION);
   const times = only || Array.from({ length: Math.round(dur * fps) }, (_, i) => i / fps);
-  for (let i = 0; i < times.length; i++) {
+  for (let i = Number(process.env.START || 0); i < times.length; i++) {  // START lets an interrupted render resume
     await p.evaluate((t) => window.seek(t), times[i]);
     await p.screenshot({ path: path.join(out, only ? `t_${times[i]}.png` : `f_${String(i).padStart(5, '0')}.png`) });
     if (!only && i % 120 === 0) console.log('frame', i, '/', times.length);

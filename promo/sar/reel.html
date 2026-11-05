@@ -327,7 +327,6 @@ const SHARDS = [['sh_a', 120, 520, 1], ['sh_b', 930, 340, -1], ['sh_c', 980, 150
 function seek(t) {
   const u = toU(t);
   seekU(u);
-  drawFire(t);
   SHARDS.forEach(([id, x, y, d], i) => place($(id), x + Math.sin(t * .5 + i) * 30, y + Math.cos(t * .4 + i * 2) * 40, { r: d * (12 + t * 6) }));
   document.querySelectorAll('.sheen').forEach((sh, i) => {
     const ph = ((t * .45 + i * .37) % 1.6) / 1.6; sh.style.transform = `translateX(${-130 + ph * 260}%)`;

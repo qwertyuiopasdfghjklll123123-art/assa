@@ -69,8 +69,6 @@ def crackle(L, dens=38):
     for _ in range(int(L * dens)):
         i = int(rng.random() * (n - 800)); m = int(.004 * SR); out[i:i + m] += rng.standard_normal(m) * env(m, .0002, .0015) * (.6 + rng.random())
     return out
-c1 = crackle(3.5); c1 *= np.minimum(np.arange(len(c1)) / (.5 * SR), 1) * np.clip((3.5 * SR - np.arange(len(c1))) / (.5 * SR), 0, 1); add(sfx, c1, 0, .35)
-c2 = crackle(3.4); c2 *= np.minimum(np.arange(len(c2)) / (.7 * SR), 1); add(sfx, c2, 16.6, .35)
 # SFX
 add(sfx, impact(), .05, .5); add(sfx, pop(), R(.35), .8)
 for i in range(3): add(sfx, pop(), R(1.15 + i * .15), .5)
