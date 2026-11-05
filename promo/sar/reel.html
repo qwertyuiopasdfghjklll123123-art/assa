@@ -7,14 +7,14 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-:root{--o1:#FF9A3C;--o2:#F26A0F;--bg:#0A0A0A;--cream:#F6F2EC;--card:#141414;--grey:#9a9a9a}
+:root{--sky:#38BDF8;--o1:#FF9A3C;--o2:#F26A0F;--bg:#0A0A0A;--cream:#F6F2EC;--card:#141414;--grey:#9a9a9a}
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);font-family:'IBM Plex Sans Arabic','Noto Color Emoji',sans-serif;color:#fff}
 #stage{position:relative;width:1080px;height:1920px;overflow:hidden;background:var(--bg)}
 .abs{position:absolute;left:0;top:0;will-change:transform,opacity,filter}
 .c{transform-origin:50% 50%}
 #glowA{position:absolute;width:1200px;height:1200px;border-radius:50%;left:-500px;top:-400px;background:radial-gradient(closest-side,rgba(242,106,15,.28),transparent)}
-#glowB{position:absolute;width:1100px;height:1100px;border-radius:50%;right:-500px;bottom:-300px;background:radial-gradient(closest-side,rgba(255,154,60,.18),transparent)}
+#glowB{position:absolute;width:1100px;height:1100px;border-radius:50%;right:-500px;bottom:-300px;background:radial-gradient(closest-side,rgba(56,189,248,.20),transparent)}
 #dots{position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.07) 1.5px,transparent 1.5px);background-size:44px 44px}
 #orange{position:absolute;inset:0;background:radial-gradient(900px 900px at 50% 40%,var(--o1),var(--o2));z-index:30}
 .logo{width:220px;height:220px;border-radius:30%;background:#fff;display:flex;align-items:center;justify-content:center;box-shadow:0 30px 60px rgba(120,40,0,.35)}
@@ -23,7 +23,10 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);font-f
 .badge{display:inline-flex;align-items:center;gap:10px;padding:12px 26px 16px;border-radius:999px;background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.4);font-weight:600;font-size:32px;white-space:nowrap}
 .title{font-weight:700;font-size:86px;white-space:nowrap}
 .title b{color:var(--o1)}
-.card{width:960px;height:500px;border-radius:44px;background:linear-gradient(160deg,#1a1a1a,#0f0f0f);border:2px solid rgba(255,154,60,.35);box-shadow:0 30px 70px rgba(0,0,0,.6);overflow:hidden}
+.card{width:960px;height:500px;border-radius:44px;background:linear-gradient(150deg,rgba(255,255,255,.11),rgba(255,255,255,.03));backdrop-filter:blur(22px) saturate(1.5);border:1.5px solid rgba(255,255,255,.18);box-shadow:0 30px 70px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.3);overflow:hidden}
+#cardV{border-color:rgba(255,154,60,.45)}#cardC{border-color:rgba(56,189,248,.5)}
+#cardC .lbl{color:var(--sky)}#cardC .chip{border-color:rgba(56,189,248,.35)}#cardC .panel i:nth-child(1){background:linear-gradient(140deg,#7dd3fc,#0ea5e9)}
+.chip{background:rgba(255,255,255,.06)!important}
 .card .lbl{position:absolute;right:56px;top:40px;font-weight:700;font-size:112px;line-height:1;color:var(--o1);direction:ltr}
 .card .hd{position:absolute;right:56px;top:170px;font-weight:700;font-size:48px}
 .card .ds{position:absolute;right:56px;top:240px;font-size:30px;color:var(--grey)}
@@ -49,21 +52,34 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);font-f
 .ripple{position:absolute;width:76px;height:76px;margin:-38px 0 0 -38px;border-radius:50%;border:4px solid #fff;z-index:15}
 .cap{text-align:center;white-space:nowrap}
 .cap .st{display:inline-flex;align-items:center;gap:20px;font-weight:700;font-size:78px}
-.cap .st i{width:86px;height:86px;border-radius:50%;background:linear-gradient(140deg,var(--o1),var(--o2));display:flex;align-items:center;justify-content:center;font-style:normal;font-size:50px;color:#fff}
+.cap .st i{width:86px;height:86px;border-radius:50%;box-shadow:0 0 0 5px rgba(56,189,248,.35);background:linear-gradient(140deg,var(--o1),var(--o2));display:flex;align-items:center;justify-content:center;font-style:normal;font-size:50px;color:#fff}
 .cap .sub{font-size:38px;color:#cfcfcf;margin-top:14px}
-.cap .sub b{color:var(--o1);font-weight:600}
+.cap .sub b{color:var(--sky);font-weight:600}
+.cap{padding:26px 50px 32px;border-radius:46px;background:linear-gradient(150deg,rgba(255,255,255,.11),rgba(255,255,255,.03));backdrop-filter:blur(20px);border:1.5px solid rgba(255,255,255,.16);box-shadow:inset 0 1px 0 rgba(255,255,255,.28),0 24px 60px rgba(0,0,0,.45);overflow:hidden}
 .pay{width:190px;height:190px;border-radius:46px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.6);border:3px solid rgba(255,255,255,.12)}
 .pay img{width:112%;height:112%;margin:-6%;display:block}
 .visa{width:250px;height:150px;border-radius:30px;background:linear-gradient(135deg,#1a1f71,#2a3cb0);display:flex;align-items:center;justify-content:center;font-size:72px;font-weight:700;font-style:italic;letter-spacing:2px;direction:ltr;box-shadow:0 20px 50px rgba(0,0,0,.6);font-family:Arial,sans-serif}
 .bub{position:absolute;max-width:76%;padding:18px 24px 22px;font-size:27px;line-height:1.55;border-radius:30px}
 .toast{position:absolute;left:50%;top:9%;transform:translateX(-50%);white-space:nowrap;padding:14px 26px 18px;border-radius:999px;background:#12b76a;color:#fff;font-weight:700;font-size:28px;box-shadow:0 14px 30px rgba(0,0,0,.4)}
-.pricetag{padding:22px 30px 26px;border-radius:30px;background:#141414;border:2px solid var(--o1);box-shadow:0 20px 50px rgba(0,0,0,.6);text-align:center;white-space:nowrap}
+.pricetag{padding:22px 30px 26px;border-radius:30px;background:linear-gradient(150deg,rgba(255,255,255,.14),rgba(255,255,255,.04));backdrop-filter:blur(20px);overflow:hidden;border:2px solid var(--o1);box-shadow:0 20px 50px rgba(0,0,0,.6);text-align:center;white-space:nowrap}
 .pricetag small{display:block;font-size:24px;color:var(--o1);font-weight:600}
 .pricetag b{font-size:46px;direction:ltr;display:inline-block}
 .pricetag span{font-size:24px;color:var(--grey)}
 .robot{width:300px;height:240px;border-radius:44px;overflow:hidden;border:4px solid var(--o1);box-shadow:0 24px 60px rgba(0,0,0,.6);background:#fff}
 .robot img{width:100%;height:100%;object-fit:cover}
 .cta{padding:26px 90px 34px;border-radius:999px;background:#0A0A0A;color:#fff;font-weight:700;font-size:62px;white-space:nowrap;box-shadow:0 26px 60px rgba(90,30,0,.4)}
+.ripple{border-color:var(--sky)!important}
+.badge{background:rgba(255,255,255,.08)!important;border-color:rgba(56,189,248,.5)!important;backdrop-filter:blur(14px)}
+.logoG{width:430px;height:430px;border-radius:32%;padding:14px;background:linear-gradient(145deg,rgba(255,255,255,.30),rgba(255,255,255,.06));border:2px solid rgba(255,255,255,.5);backdrop-filter:blur(18px);
+  box-shadow:0 40px 90px rgba(0,0,0,.6),0 0 90px rgba(242,106,15,.5),0 0 0 10px rgba(56,189,248,.12),inset 0 2px 0 rgba(255,255,255,.6);overflow:hidden}
+.logoG img{width:100%;height:100%;border-radius:28%;display:block}
+.sheen{position:absolute;inset:0;background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.5) 50%,transparent 62%);transform:translateX(-130%);pointer-events:none;mix-blend-mode:screen;z-index:5}
+.browser{display:flex;align-items:center;gap:20px;padding:18px 40px 22px 22px;border-radius:999px;direction:ltr;white-space:nowrap;font-weight:700;font-size:54px;overflow:hidden;
+  background:linear-gradient(150deg,rgba(255,255,255,.16),rgba(255,255,255,.04));backdrop-filter:blur(20px);border:1.5px solid rgba(56,189,248,.6);box-shadow:0 0 50px rgba(56,189,248,.25),inset 0 1px 0 rgba(255,255,255,.35)}
+.browser img{width:72px;height:72px;border-radius:20px}
+.browser .lk{font-size:34px;color:var(--sky)}
+.cta{background:linear-gradient(135deg,var(--o1),var(--o2))!important;box-shadow:0 26px 60px rgba(242,106,15,.45)!important;overflow:hidden}
+.shard{position:absolute;border-radius:46px;backdrop-filter:blur(16px);border:1.5px solid rgba(255,255,255,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.25)}
 </style>
 </head>
 <body>
@@ -74,6 +90,11 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);font-f
 </defs></svg>
 <div id="stage">
   <div id="glowA"></div><div id="glowB"></div><div id="dots"></div>
+  <div class="shard" id="sh_a" style="width:300px;height:420px;background:linear-gradient(150deg,rgba(56,189,248,.16),rgba(56,189,248,.02))"></div>
+  <div class="shard" id="sh_b" style="width:240px;height:240px;background:linear-gradient(150deg,rgba(255,154,60,.18),rgba(255,154,60,.02))"></div>
+  <div class="shard" id="sh_c" style="width:200px;height:320px;background:linear-gradient(150deg,rgba(255,255,255,.12),rgba(255,255,255,.02))"></div>
+  <div class="shard" id="sh_d" style="width:340px;height:200px;background:linear-gradient(150deg,rgba(56,189,248,.12),rgba(255,154,60,.06))"></div>
+  <canvas id="fire" width="1080" height="1920" style="position:absolute;inset:0"></canvas>
 
   <!-- S2: what you get -->
   <div id="t2" class="abs c title">شنو تستفاد من <b>صار</b>؟</div>
@@ -122,16 +143,15 @@ html,body{width:1080px;height:1920px;overflow:hidden;background:var(--bg);font-f
     </div>
   </div>
 
-  <!-- orange intro / outro layer -->
-  <div id="orange"></div>
-  <div id="logo" class="abs c logo" style="z-index:31"><svg><use href="#srvIcon"/></svg></div>
-  <div id="name" class="abs c t-huge" style="z-index:31">صار</div>
-  <div id="tagl" class="abs c" style="z-index:31;font-weight:600;font-size:54px;white-space:nowrap">استضافة سريعة وآمنة</div>
+  <!-- intro / outro: glass logo over fire -->
+  <div id="logo" class="abs c logoG" style="z-index:31"><img src="assets/logo.png"></div>
+  <div id="tagl" class="abs c" style="z-index:31;font-weight:700;font-size:62px;white-space:nowrap">استضافة <span style="color:var(--o1)">سريعة</span> و<span style="color:var(--sky)">آمنة</span></div>
   <div id="badges" class="abs c" style="z-index:31;display:flex;flex-direction:column;align-items:center;gap:18px">
     <span class="badge" id="bd0">⚡ تفعيل فوري</span><span class="badge" id="bd1">🛡️ ضمان استرداد 30 يوم</span><span class="badge" id="bd2">✓ بدون رسوم خفية</span></div>
-  <div id="ctaPrice" class="abs c" style="z-index:31;font-weight:600;font-size:46px;white-space:nowrap">الباقات تبدأ من <b style="direction:ltr;display:inline-block">7,485</b> د.ع شهرياً</div>
+  <div id="ctaPrice" class="abs c" style="z-index:31;font-weight:600;font-size:48px;white-space:nowrap">الباقات تبدأ من <b style="direction:ltr;display:inline-block;color:var(--o1)">7,485</b> د.ع شهرياً</div>
   <div id="cta" class="abs c cta" style="z-index:31">ابدأ الآن ←</div>
-  <div id="dom" class="abs c" style="z-index:31;font-weight:700;font-size:50px;direction:ltr;color:#2a1102">sarvps.store</div>
+  <div id="dom" class="abs c browser" style="z-index:31"><span class="lk">🔒</span><img src="assets/logo.png"><span>sarvps<span style="color:var(--o1)">.</span><span style="color:var(--sky)">store</span></span></div>
+  <div id="domL" class="abs c" style="z-index:31;font-size:34px;color:#cfd8dc;white-space:nowrap">🌐 زور موقعنا وابدأ</div>
 </div>
 
 <script>
@@ -155,29 +175,20 @@ const T = { dur: 18.0, s2: 2.45, ph: 5.35, out: 15.6 };
 const SHOTS = [5.35, 6.75, 8.0, 10.6, 13.0]; // when each phone screen becomes active
 const TAPS = [[6.3, 50, 65.6, 0], [7.5, 50, 41, 1], [9.0, 50, 35.4, 2], [12.15, 50, 47.2, 3]]; // [time, x%, y% of image, shot]
 
-function seek(t) {
-  // ---------- orange intro/outro ----------
-  const or = $('orange');
-  let rad; // circle radius in px
-  if (t < 2.6) rad = 1300 * ramp(t, 0, .45, 'o') * (1 - ramp(t, 2.15, 2.55, 'i'));
-  else rad = 1300 * ramp(t, T.out, T.out + .5, 'i');
-  const cy = t < 3 ? 900 : 1190;
-  or.style.clipPath = `circle(${Math.max(0, rad)}px at 540px ${cy}px)`;
-  or.style.visibility = rad > 1 ? 'visible' : 'hidden';
-  const introOut = ramp(t, 2.05, 2.35, 'i');
+function seekU(t) {
+  // ---------- glass logo intro / outro ----------
   const outro = t > T.out;
-  const lk = outro ? ramp(t, T.out + .35, T.out + .8, 'back') : ramp(t, .3, .75, 'back');
-  place($('logo'), 540, outro ? 560 : 640, { s: lk * (1 - introOut * .4), o: (outro ? 1 : (1 - introOut)) * clamp(lk * 2), r: (1 - lk) * -20 });
-  const nk = outro ? T.out + .5 : .5;
-  inout($('name'), 540, outro ? 800 : 880, t, nk, outro ? 99 : 2.05, { dy: 80 });
-  inout($('tagl'), 540, outro ? 935 : 1030, t, nk + .25, outro ? 99 : 2.1, { dy: 50 });
+  const introOut = outro ? 0 : ramp(t, 2.05, 2.4, 'i');
+  const lk = outro ? ramp(t, T.out + .35, T.out + .85, 'back') : ramp(t, .3, .85, 'back');
+  place($('logo'), 540, (outro ? 500 : 720) + Math.sin(t * 2) * 8, { s: (outro ? .82 : 1) * (.3 + .7 * lk) * (1 + introOut * .3), o: (outro ? 1 : 1 - introOut) * clamp(lk * 2), r: (1 - lk) * -16 + Math.sin(t * 1.4) * 1.5, blur: introOut * 18 });
+  inout($('tagl'), 540, outro ? 800 : 1070, t, outro ? T.out + .55 : .75, outro ? 99 : 2.05, { dy: 50 });
   for (let i = 0; i < 3; i++) { const el = $('bd' + i), k = ramp(t, 1.15 + i * .15, 1.6 + i * .15, 'back'), q = ramp(t, 2.0 + i * .03, 2.3, 'i');
     el.style.transform = `translateY(${(1 - k) * 40 - q * 50}px) scale(${.7 + .3 * k})`; el.style.opacity = clamp(k * 1.4) * (1 - q); el.style.filter = q > .02 ? `blur(${q * 12}px)` : 'none'; }
-  place($('badges'), 540, 1300, { o: t < 2.6 ? 1 : 0 });
-  if (outro) for (let i = 0; i < 3; i++) $('bd' + i).style.visibility = 'hidden';
-  inout($('ctaPrice'), 540, 1070, t, T.out + .85, 99, { dy: 40 });
-  inout($('cta'), 540, 1260, t, T.out + 1.1, 99, { dy: 60, s0: .7 });
-  inout($('dom'), 540, 1430, t, T.out + 1.35, 99, { dy: 30 });
+  place($('badges'), 540, 1330, { o: t < 2.6 ? 1 : 0 });
+  inout($('ctaPrice'), 540, 940, t, T.out + .8, 99, { dy: 40 });
+  inout($('cta'), 540, 1100, t, T.out + 1.05, 99, { dy: 60, s0: .7 });
+  inout($('dom'), 540, 1290, t, T.out + 1.3, 99, { dy: 40, s0: .8 });
+  inout($('domL'), 540, 1410, t, T.out + 1.5, 99, { dy: 20 });
   const pulse = t > T.out + 1.6 ? 1 + .035 * Math.sin((t - T.out - 1.6) * 6) : 1;
   if (t > T.out + 1.6) $('cta').style.transform += ` scale(${pulse})`;
 
@@ -200,7 +211,7 @@ function seek(t) {
   const pout = ramp(t, T.out - .1, T.out + .35, 'i');
   const py = 1200 + (1 - pin) * 1100 + pout * 0;
   const pv = Math.abs((1 - ramp(t - 1 / 60, T.ph, T.ph + .6, 'xo')) - (1 - pin)) * 1100 * 60;
-  place($('phone'), 540, py, { s: 1 - pout * .25, o: t < T.ph ? 0 : 1, blur: Math.min(12, pv / 400) });
+  place($('phone'), 540, py + pout * 120, { s: 1 - pout * .25, o: (t < T.ph ? 0 : 1) * (1 - pout), blur: Math.min(12, pv / 400) + pout * 14 });
 
   // screens slide inside the phone (RTL push: new screen comes from the left)
   let cur = 0; for (let i = 0; i < SHOTS.length; i++) if (t >= SHOTS[i]) cur = i;
@@ -274,7 +285,56 @@ function seek(t) {
   $('glowA').style.transform = `translate(${Math.sin(t * .4) * 80}px,${t * 18}px)`;
   $('glowB').style.transform = `translate(${Math.cos(t * .3) * 60}px,${-t * 14}px)`;
 }
-window.seek = seek; window.DURATION = T.dur;
+// ---------- 20 s cut: slower glass/fire intro, then the story shifted by +1 s ----------
+const DUR = 20.0;
+const toU = (t) => (t < 3.45 ? t * 2.45 / 3.45 : t - 1.0);
+const hash = (n) => { const x = Math.sin(n * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); };
+const fctx = $('fire').getContext('2d');
+function drawFire(t) {
+  const flame = ramp(t, 0, .7) * (1 - ramp(t, 3.0, 3.45)) + ramp(t, 16.5, 17.3);
+  const ember = .35 + .65 * Math.max(flame, 0);
+  fctx.clearRect(0, 0, 1080, 1920);
+  fctx.globalCompositeOperation = 'lighter';
+  if (flame > .01) {
+    const base = 1990;
+    for (let i = 0; i < 22; i++) {
+      const x = i * 52 - 20 + Math.sin(i * 12.9) * 24;
+      const h = (300 + 170 * Math.sin(t * 5.3 + i * 1.7) + 110 * Math.sin(t * 9.1 + i * 3.3) + 60 * Math.sin(t * 15 + i)) * flame;
+      if (h < 20) continue;
+      const w = 95 + 30 * Math.sin(i * 4.1);
+      fctx.save(); fctx.translate(x + Math.sin(t * 3 + i) * 14, base); fctx.scale(w / h, 1);
+      const g = fctx.createRadialGradient(0, -h * .32, 0, 0, -h * .32, h * .78);
+      g.addColorStop(0, 'rgba(255,236,170,.55)'); g.addColorStop(.35, 'rgba(255,150,40,.42)'); g.addColorStop(.7, 'rgba(242,80,10,.18)'); g.addColorStop(1, 'rgba(242,80,10,0)');
+      fctx.fillStyle = g; fctx.beginPath(); fctx.arc(0, -h * .32, h * .78, 0, Math.PI * 2); fctx.fill(); fctx.restore();
+    }
+    const glow = fctx.createLinearGradient(0, 1920, 0, 1250);
+    glow.addColorStop(0, `rgba(255,120,20,${.45 * flame})`); glow.addColorStop(1, 'rgba(255,120,20,0)');
+    fctx.fillStyle = glow; fctx.fillRect(0, 1250, 1080, 670);
+  }
+  for (let j = 0; j < 90; j++) {
+    const sp = 140 + 260 * hash(j), life = ((t * sp) / 1500 + hash(j + 99)) % 1;
+    const sky = hash(j + 7) > .8;
+    const y = 1940 - life * 1500, x = hash(j + 3) * 1080 + Math.sin(t * 2 + j) * 40 * life;
+    const r = (2 + 5 * hash(j + 5)) * (1 - life * .7), a = (1 - life) * ember * (sky ? .8 : .9);
+    const g = fctx.createRadialGradient(x, y, 0, x, y, r * 4);
+    const c = sky ? '120,210,255' : (hash(j + 11) > .5 ? '255,200,90' : '255,130,40');
+    g.addColorStop(0, `rgba(${c},${a})`); g.addColorStop(1, `rgba(${c},0)`);
+    fctx.fillStyle = g; fctx.fillRect(x - r * 4, y - r * 4, r * 8, r * 8);
+  }
+  fctx.globalCompositeOperation = 'source-over';
+}
+const SHARDS = [['sh_a', 120, 520, 1], ['sh_b', 930, 340, -1], ['sh_c', 980, 1500, 1], ['sh_d', 160, 1650, -1]];
+function seek(t) {
+  const u = toU(t);
+  seekU(u);
+  drawFire(t);
+  SHARDS.forEach(([id, x, y, d], i) => place($(id), x + Math.sin(t * .5 + i) * 30, y + Math.cos(t * .4 + i * 2) * 40, { r: d * (12 + t * 6) }));
+  document.querySelectorAll('.sheen').forEach((sh, i) => {
+    const ph = ((t * .45 + i * .37) % 1.6) / 1.6; sh.style.transform = `translateX(${-130 + ph * 260}%)`;
+  });
+}
+document.querySelectorAll('.card,.pricetag,.cap,.browser,.cta,.logoG').forEach((el) => el.insertAdjacentHTML('beforeend', '<div class="sheen"></div>'));
+window.seek = seek; window.DURATION = DUR;
 document.fonts.ready.then(() => Promise.all([...document.images].map((i) => i.complete ? 0 : new Promise((r) => (i.onload = r)))))
   .then(() => { seek(0); window.__ready = true; });
 </script>

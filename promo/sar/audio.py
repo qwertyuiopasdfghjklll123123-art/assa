@@ -1,7 +1,7 @@
 """Sar reel soundtrack: upbeat 124 BPM synth bed + UI SFX synced to reel.html. Usage: python3 audio.py out.wav"""
 import sys, wave
 import numpy as np
-SR, DUR = 48000, 18.0
+SR, DUR = 48000, 20.0
 N = int(SR * DUR); rng = np.random.default_rng(5)
 mus = np.zeros(N + SR); sfx = np.zeros(N + SR)
 def add(b, s, t, g=1.0):
@@ -48,29 +48,38 @@ beat = 60 / 124
 chords = [[261.6, 329.6, 392], [220, 261.6, 329.6], [174.6, 220, 261.6], [196, 246.9, 293.7]]  # C Am F G
 roots = [65.4, 55, 43.65, 49]
 k = 0
-while k * beat < 17.2:
+while k * beat < 19.2:
     t = k * beat; bar = k // 4; ch = chords[bar % 4]
     for h in range(2): add(mus, tone(ch[(k * 2 + h) % 3] * 2, .28, .1) * .05, t + h * beat / 2)
     if k % 4 == 0:
         n = int(2.2 * SR); tt = np.arange(n) / SR
         add(mus, sum(np.sin(2 * np.pi * f * tt) + .5 * np.sin(2 * np.pi * f * 1.004 * tt) for f in ch) * np.minimum(tt / .4, 1) * np.exp(-tt / 1.6) * .024, t)
-    if t >= 2.45:
+    if t >= 3.45:
         add(mus, kick(), t); add(mus, hat(), t + beat / 2)
         if k % 2 == 1: add(mus, clap(), t)
         add(mus, bass(roots[bar % 4] * 2, beat * .85), t)
     k += 1
-add(mus, riser(.9), 1.55, .7); add(mus, impact(), 2.45, .9)                 # drop into the explainer
-add(mus, impact(), 15.95, .9)                                               # outro hit
-for f in (523.3, 659.3, 784, 1046.5): add(mus, tone(f, 2.0, .6) * .12, 16.2)  # resolved chord
+R = lambda u: u * 3.45 / 2.45 if u < 2.45 else u + 1.0   # story time -> 20 s cut
+add(mus, riser(.9), 2.55, .7); add(mus, impact(), 3.45, .9)                 # drop into the explainer
+add(mus, impact(), R(15.95), .9)                                            # outro hit
+for f in (523.3, 659.3, 784, 1046.5): add(mus, tone(f, 2.4, .7) * .12, R(16.2))
+# fire crackle under the intro and outro
+def crackle(L, dens=38):
+    n = int(L * SR); out = lp(rng.standard_normal(n), .05) * .25
+    for _ in range(int(L * dens)):
+        i = int(rng.random() * (n - 800)); m = int(.004 * SR); out[i:i + m] += rng.standard_normal(m) * env(m, .0002, .0015) * (.6 + rng.random())
+    return out
+c1 = crackle(3.5); c1 *= np.minimum(np.arange(len(c1)) / (.5 * SR), 1) * np.clip((3.5 * SR - np.arange(len(c1))) / (.5 * SR), 0, 1); add(sfx, c1, 0, .35)
+c2 = crackle(3.4); c2 *= np.minimum(np.arange(len(c2)) / (.7 * SR), 1); add(sfx, c2, 16.6, .35)
 # SFX
-add(sfx, impact(), .05, .5); add(sfx, pop(), .35, .8)
-for i in range(3): add(sfx, pop(), 1.15 + i * .15, .5)
-for t in [2.15, 5.05, 5.35, 6.75, 8.0, 10.6, 13.0, 15.6]: add(sfx, whoosh(), t - .15, .45)
-for c in range(4): add(sfx, pop(), 3.1 + c * .12, .35); add(sfx, pop(), 4.1 + c * .12, .35)
-for t in [6.3, 7.5, 9.0, 12.15, 16.7]: add(sfx, tap(), t, 1.0)
-for t in [10.85, 11.0, 11.15, 11.3]: add(sfx, pop(), t, .45)
-add(sfx, chime(), 12.4, .9)                                                 # payment success
-add(sfx, pop(), 13.55, .6); add(sfx, pop(), 14.6, .6)                       # chat messages
+add(sfx, impact(), .05, .5); add(sfx, pop(), R(.35), .8)
+for i in range(3): add(sfx, pop(), R(1.15 + i * .15), .5)
+for t in [2.15, 5.05, 5.35, 6.75, 8.0, 10.6, 13.0, 15.6]: add(sfx, whoosh(), R(t) - .15, .45)
+for c in range(4): add(sfx, pop(), R(3.1 + c * .12), .35); add(sfx, pop(), R(4.1 + c * .12), .35)
+for t in [6.3, 7.5, 9.0, 12.15, 16.7]: add(sfx, tap(), R(t), 1.0)
+for t in [10.85, 11.0, 11.15, 11.3]: add(sfx, pop(), R(t), .45)
+add(sfx, chime(), R(12.4), .9)
+add(sfx, pop(), R(13.55), .6); add(sfx, pop(), R(14.6), .6)
 mix = (mus * .8 + sfx * .75)[:N]
 f = int(.25 * SR); mix[-f:] *= np.linspace(1, 0, f)
 mix /= np.max(np.abs(mix)) * 1.1
