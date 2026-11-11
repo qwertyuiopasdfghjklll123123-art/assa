@@ -219,9 +219,7 @@ if (!file_exists($configFile)) {
     $defaultConfig = [
         'name' => 'FastCrand',
         'role' => 'مجموعة مطورين مواقع وتطبيقات بجميع لغات البرمجة',
-        'role_en' => 'A team of developers building websites and applications in all programming languages',
         'about' => 'نحن مجموعة من المطورين المحترفين المتخصصين في بناء المواقع والتطبيقات بكافة لغات البرمجة. نقدم حلولاً برمجية متكاملة لعملائنا بجودة عالية وأسعار تنافسية.',
-        'about_en' => 'We are a group of professional developers specialized in building websites and applications across all programming languages. We offer complete software solutions with top quality and competitive pricing.',
         'photo' => '',
         'base_visitors' => 12540,
         'counter_active' => true,
@@ -229,7 +227,6 @@ if (!file_exists($configFile)) {
         'instagram_user' => 'fastcrand_official',
         'instagram_status' => 'disabled',
         'instagram_message' => "نأسف للإزعاج، حسابنا على إنستغرام معطل حالياً بسبب مشكلة تقنية.\nنعمل على حل المشكلة في أقرب وقت ممكن.\nيمكنك متابعة آخر مستجداتنا عبر قنوات التواصل الأخرى.",
-        'instagram_message_en' => "We apologize for the inconvenience, our Instagram account is currently disabled due to technical maintenance.\nWe are working to resolve this as soon as possible.",
         'telegram_bot_token' => '',
         'telegram_chat_id' => '',
         'admin_user' => 'admin',
@@ -245,10 +242,10 @@ if (!file_exists($visitorsFile)) {
 
 // دمج الإعدادات مع القيم الافتراضية لتفادي أخطاء المفاتيح الناقصة
 $siteConfig = array_merge([
-    'name' => 'FastCrand', 'role' => '', 'role_en' => '', 'about' => '', 'about_en' => '',
+    'name' => 'FastCrand', 'role' => '', 'about' => '',
     'photo' => '', 'base_visitors' => 10000, 'counter_active' => true,
     'whatsapp_url' => '', 'instagram_user' => '', 'instagram_status' => 'disabled',
-    'instagram_message' => '', 'instagram_message_en' => '',
+    'instagram_message' => '',
     'telegram_bot_token' => '', 'telegram_chat_id' => '',
     'admin_user' => 'admin', 'admin_pass' => '',
 ], loadJson($configFile));
@@ -269,11 +266,8 @@ if (!file_exists($appsFile)) {
         [
             'id' => 'app_1',
             'title' => 'صار',
-            'title_en' => 'Sar VPS',
             'category' => 'استضافة وسيرفرات',
-            'category_en' => 'Cloud & Hosting',
             'description' => 'منصة بيع VPS واستضافة سحابية عالية الأداء مع لوحة تحكم ذكية وإدارة فورية للموارد.',
-            'description_en' => 'High-performance cloud VPS hosting platform with an intuitive control panel and instant resource management.',
             'version' => '2.4.0',
             'icon' => '',
             'icon_class' => 'fas fa-server',
@@ -282,16 +276,12 @@ if (!file_exists($appsFile)) {
             'apk_file' => '',
             'screenshots' => [],
             'features' => ['سيرفرات سحابية فائقة السرعة', 'حماية DDoS متقدمة', 'دعم فني 24/7'],
-            'features_en' => ['Ultra-fast Cloud Servers', 'Advanced DDoS Protection', '24/7 Technical Support']
         ],
         [
             'id' => 'app_2',
             'title' => 'بوتي تي في',
-            'title_en' => 'Boti TV',
             'category' => 'أدوات تسويق',
-            'category_en' => 'Marketing Tools',
             'description' => 'نظام إدارة حملات واتساب تلقائية متقدم مع روبوت رد آلي وإحصائيات تفاعلية مباشرة.',
-            'description_en' => 'Automated WhatsApp marketing management system with intelligent chatbot and real-time live analytics.',
             'version' => '1.8.5',
             'icon' => '',
             'icon_class' => 'fab fa-whatsapp',
@@ -300,16 +290,12 @@ if (!file_exists($appsFile)) {
             'apk_file' => '',
             'screenshots' => [],
             'features' => ['إرسال رسائل جماعية ذكية', 'جدولة الحملات بدقة', 'فلترة الأرقام التلقائية'],
-            'features_en' => ['Smart Bulk Messaging', 'Precise Campaign Scheduling', 'Automated Number Filtering']
         ],
         [
             'id' => 'app_3',
             'title' => 'SMM DSM',
-            'title_en' => 'SMM DSM',
             'category' => 'خدمات رقمية',
-            'category_en' => 'Digital Services',
             'description' => 'موقع متخصص في تزويد وبيع خدمات السوشيل ميديا بسرعة فائقة وأسعار منافسة.',
-            'description_en' => 'Specialized platform providing social media growth and digital marketing services at competitive prices.',
             'version' => '3.0.1',
             'icon' => '',
             'icon_class' => 'fas fa-share-nodes',
@@ -318,16 +304,12 @@ if (!file_exists($appsFile)) {
             'apk_file' => '',
             'screenshots' => [],
             'features' => ['تنفيذ فوري للطلبات', 'دعم جميع المنصات الاجتماعية', 'واجهة API للموزعين'],
-            'features_en' => ['Instant Order Processing', 'Supports All Social Networks', 'Reseller API Integration']
         ],
         [
             'id' => 'app_4',
             'title' => 'FastCrand Hub',
-            'title_en' => 'FastCrand Hub',
             'category' => 'خدمات واشتراكات',
-            'category_en' => 'Subscriptions & Hub',
             'description' => 'بيع خدمات سوشيل ميديا واشتراكات متنوعة وإدارة الحسابات الرقمية.',
-            'description_en' => 'Premium subscriptions hub and digital service management for businesses and creators.',
             'version' => '1.0.0',
             'icon' => '',
             'icon_class' => 'fas fa-rocket',
@@ -336,16 +318,12 @@ if (!file_exists($appsFile)) {
             'apk_file' => '',
             'screenshots' => [],
             'features' => ['اشتراكات بريميوم مضمونة', 'دفع إلكتروني آمن', 'تسليم آلي وفوري'],
-            'features_en' => ['Verified Premium Subscriptions', 'Secure Payment Gateway', 'Instant Automated Delivery']
         ],
         [
             'id' => 'app_5',
             'title' => 'الملا',
-            'title_en' => 'Al-Mulla Store',
             'category' => 'متاجر ومبيعات',
-            'category_en' => 'POS & Inventory',
             'description' => 'نظام بيع سيراميك وإدارة الطلبات والمخازن مع فواتير وإشعارات ذكية.',
-            'description_en' => 'Ceramics retail POS and warehouse management system with smart invoices and notifications.',
             'version' => '2.1.0',
             'icon' => '',
             'icon_class' => 'fas fa-store',
@@ -354,16 +332,12 @@ if (!file_exists($appsFile)) {
             'apk_file' => '',
             'screenshots' => [],
             'features' => ['إدارة المخزون بدقة', 'طباعة فواتير حرارية وPDF', 'تتبع المندوبين'],
-            'features_en' => ['Accurate Inventory Tracking', 'Thermal & PDF Invoicing', 'Delivery Agent Tracking']
         ],
         [
             'id' => 'app_6',
             'title' => 'Tok Mart',
-            'title_en' => 'Tok Mart',
             'category' => 'تجارة إلكترونية',
-            'category_en' => 'E-Commerce',
             'description' => 'متجر متكامل لبيع المنتجات المنزلية وتوصيلها السريع مع تتبع فوري للشحنات.',
-            'description_en' => 'Full-featured home products online shopping application with fast shipping and live tracking.',
             'version' => '1.5.0',
             'icon' => '',
             'icon_class' => 'fas fa-basket-shopping',
@@ -372,16 +346,12 @@ if (!file_exists($appsFile)) {
             'apk_file' => '',
             'screenshots' => [],
             'features' => ['سلة تسوق خفيفة وسلسة', 'إشعارات بوصول الطلب', 'عروض وخصومات يومية'],
-            'features_en' => ['Seamless Shopping Cart', 'Order Arrival Alerts', 'Daily Discounts & Offers']
         ],
         [
             'id' => 'app_7',
             'title' => 'مندوب صيدلية',
-            'title_en' => 'Pharmacy Delivery',
             'category' => 'إدارة وتوصيل',
-            'category_en' => 'Delivery & Medical',
             'description' => 'نظام متكامل لإدارة فواتير توصيل الأدوية والحسابات اليومية والربح وإرسال تقارير واتساب.',
-            'description_en' => 'Complete pharmacy delivery invoice and profit management system with instant WhatsApp reports.',
             'version' => '2.0.0',
             'icon' => '',
             'icon_class' => 'fas fa-pills',
@@ -390,16 +360,12 @@ if (!file_exists($appsFile)) {
             'apk_file' => '',
             'screenshots' => [],
             'features' => ['حساب أرباح تلقائي', 'إرسال فواتير واتساب', 'إحصائيات يومية'],
-            'features_en' => ['Automated Profit Calculation', 'WhatsApp Invoices', 'Daily Summary Statistics']
         ],
         [
             'id' => 'app_8',
             'title' => 'كلاود شات',
-            'title_en' => 'Cloud Chat',
             'category' => 'محادثات وتواصل',
-            'category_en' => 'Chat & Messenger',
             'description' => 'تطبيق دردشة مشفر وسريع يدعم المكالمات ومشاركة الملفات الضخمة.',
-            'description_en' => 'Encrypted real-time messaging application supporting crystal clear voice calls and large file sharing.',
             'version' => '1.2.0',
             'icon' => '',
             'icon_class' => 'fas fa-comments',
@@ -408,7 +374,6 @@ if (!file_exists($appsFile)) {
             'apk_file' => '',
             'screenshots' => [],
             'features' => ['تشفير تام للرسائل', 'غرف محادثة جماعية', 'خفيف وسريع'],
-            'features_en' => ['End-to-End Encryption', 'Group Chat Channels', 'Ultra Lightweight & Fast']
         ]
     ];
     saveJson($appsFile, $defaultApps);
@@ -420,50 +385,35 @@ if (!file_exists($articlesFile)) {
         [
             'id' => 'art_1',
             'title' => 'أفضل ممارسات تطوير الويب 2026',
-            'title_en' => 'Best Web Development Practices 2026',
             'description' => 'نصائح وإرشادات لتطوير مواقع ويب بجودة عالية وأحدث التقنيات.',
-            'description_en' => 'Key tips and industry standards for developing scalable, high-performance web applications.',
             'badge' => 'تطوير',
-            'badge_en' => 'Dev',
             'badge_color' => 'blue',
             'date' => '2026-01-15',
             'read_time' => 5,
             'full' => 'تطوير الويب هو مجال ديناميكي يتطور باستمرار، ويحتاج المطورون إلى مواكبة أحدث الممارسات لضمان جودة وكفاءة المواقع. تشمل الممارسات الأساسية استخدام إطار عمل مناسب، كتابة كود نظيف وقابل للصيانة، تحسين أداء الموقع، واعتماد معايير الأمان الحديثة مثل HTTPS وCORS.',
-            'full_en' => 'Web development is an ever-evolving field. Developers must stay aligned with cutting-edge practices to ensure speed, code maintainability, and modern security standards like HTTPS and secure CORS configurations.',
             'author' => 'أحمد محمد',
-            'author_en' => 'Ahmed Mohammed'
         ],
         [
             'id' => 'art_2',
             'title' => 'دليل اختيار لغة البرمجة المناسبة',
-            'title_en' => 'Guide to Choosing the Right Programming Language',
             'description' => 'كيف تختار اللغة المناسبة لمشروعك البرمجي وفق متطلباتك.',
-            'description_en' => 'How to select the perfect programming language based on project scope, scalability, and stack.',
             'badge' => 'برمجة',
-            'badge_en' => 'Coding',
             'badge_color' => 'cyan',
             'date' => '2026-01-10',
             'read_time' => 4,
             'full' => 'اختيار لغة البرمجة المناسبة يعتمد على عدة عوامل منها نوع المشروع، حجم الفريق، وقت التطوير، والميزانية. للويب: JavaScript وPython هي خيارات شائعة، لتطبيقات الجوال: Swift وKotlin أو أطر مثل Flutter وReact Native.',
-            'full_en' => 'Choosing the ideal programming language hinges on project goals, team capability, and deadlines. For web, Python and JS remain supreme; for mobile, Flutter, Kotlin, and Swift deliver peak UX.',
             'author' => 'سارة علي',
-            'author_en' => 'Sara Ali'
         ],
         [
             'id' => 'art_3',
             'title' => 'تصميم تطبيقات الجوال UX',
-            'title_en' => 'Mobile UX Design Essentials',
             'description' => 'أساسيات تجربة المستخدم في تطبيقات الجوال لتحقيق أعلى تفاعل.',
-            'description_en' => 'Core principles of mobile user experience design to maximize user engagement and retention.',
             'badge' => 'تصميم',
-            'badge_en' => 'UI/UX',
             'badge_color' => 'pink',
             'date' => '2026-01-05',
             'read_time' => 3,
             'full' => 'تصميم تجربة المستخدم (UX) هو عامل حاسم في نجاح أي تطبيق جوال. يجب أن يكون التصميم بديهياً وسهل الاستخدام مع التركيز على احتياجات المستخدم وسرعة التنقل وجمالية الواجهات.',
-            'full_en' => 'User Experience (UX) is crucial for application success. Prioritizing intuitive navigation, responsive touch controls, and clean typography fosters organic engagement.',
             'author' => 'نور إبراهيم',
-            'author_en' => 'Noor Ibrahim'
         ]
     ];
     saveJson($articlesFile, $defaultArticles);
@@ -588,7 +538,7 @@ if (isset($_GET['download_app']) || isset($_GET['increment_download'])) {
     $filePath = UPLOADS_DIR . $apkName;
 
     if ($apkName !== '' && preg_match('/\.apk$/i', $apkName) && is_file($filePath)) {
-        $dlTitle = trim((string)($app['title_en'] ?? '')) ?: (string)($app['title'] ?? 'app');
+        $dlTitle = (string)($app['title'] ?? 'app');
         $asciiName = preg_replace('/[^A-Za-z0-9._-]+/', '_', $dlTitle) ?: 'app';
         while (ob_get_level() > 0) ob_end_clean();
         header('Content-Description: File Transfer');
@@ -732,9 +682,7 @@ function buildPublicData(array $siteApps, array $siteArticles, array $siteConfig
         'profile' => [
             'name' => $siteConfig['name'],
             'role' => $siteConfig['role'],
-            'role_en' => $siteConfig['role_en'] ?: $siteConfig['role'],
             'about' => $siteConfig['about'],
-            'about_en' => $siteConfig['about_en'] ?: $siteConfig['about'],
             'available' => true,
             'photo' => safeUploadName($siteConfig['photo']),
         ],
@@ -751,14 +699,13 @@ function buildPublicData(array $siteApps, array $siteArticles, array $siteConfig
             ['name' => 'Flask / Django', 'icon' => 'fas fa-flask', 'color' => 'linear-gradient(135deg,#f26a00,#d05a00)', 'percentage' => 90],
         ],
         'social' => [
-            ['icon' => 'fab fa-whatsapp', 'url' => '#', 'platform' => 'واتساب', 'platform_en' => 'WhatsApp', 'type' => 'whatsapp', 'action' => 'openWhatsAppContact'],
-            ['icon' => 'fab fa-instagram', 'url' => '#', 'platform' => 'إنستغرام', 'platform_en' => 'Instagram', 'type' => 'instagram', 'action' => 'showInstagramStatus'],
+            ['icon' => 'fab fa-whatsapp', 'url' => '#', 'platform' => 'واتساب', 'type' => 'whatsapp', 'action' => 'openWhatsAppContact'],
+            ['icon' => 'fab fa-instagram', 'url' => '#', 'platform' => 'إنستغرام', 'type' => 'instagram', 'action' => 'showInstagramStatus'],
         ],
         'instagram_meta' => [
             'status' => $siteConfig['instagram_status'],
             'user' => $siteConfig['instagram_user'],
             'message' => $siteConfig['instagram_message'],
-            'message_en' => $siteConfig['instagram_message_en'] ?: $siteConfig['instagram_message'],
         ],
         'whatsapp_target' => whatsappLink($siteConfig['whatsapp_url']),
     ];
@@ -828,8 +775,8 @@ if ($adminActionRequested && !$adminActionAllowed) {
 // حفظ إعدادات الموقع (نموذج الإعدادات ونموذج التيليجرام يستخدمان نفس الإجراء)
 if ($adminActionAllowed && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'save_site_settings') {
     $textFields = [
-        'name' => 100, 'role' => 300, 'role_en' => 300, 'about' => 3000, 'about_en' => 3000,
-        'whatsapp_url' => 300, 'instagram_user' => 100, 'instagram_message' => 2000, 'instagram_message_en' => 2000,
+        'name' => 100, 'role' => 300, 'about' => 3000,
+        'whatsapp_url' => 300, 'instagram_user' => 100, 'instagram_message' => 2000,
         'telegram_bot_token' => 200, 'telegram_chat_id' => 50,
     ];
     foreach ($textFields as $field => $max) {
@@ -881,11 +828,8 @@ if ($adminActionAllowed && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act
     $appId = preg_match('/^[A-Za-z0-9_.-]{1,64}$/', $postedId) ? $postedId : ('app_' . bin2hex(random_bytes(6)));
 
     $title = clip($_POST['title'] ?? '', 120);
-    $title_en = clip($_POST['title_en'] ?? '', 120) ?: $title;
     $category = clip($_POST['category'] ?? '', 80) ?: 'تطبيقات عامة';
-    $category_en = clip($_POST['category_en'] ?? '', 80) ?: $category;
     $desc = clip($_POST['description'] ?? '', 5000);
-    $desc_en = clip($_POST['description_en'] ?? '', 5000) ?: $desc;
     $version = clip($_POST['version'] ?? '', 20) ?: '1.0.0';
     $web_url = safeUrl($_POST['web_url'] ?? '');
     $android_url = safeUrl($_POST['android_url'] ?? '');
@@ -895,7 +839,6 @@ if ($adminActionAllowed && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act
     $status = (($_POST['status'] ?? 'live') === 'wip') ? 'wip' : 'live';
     $progress = max(0, min(100, (int)($_POST['progress'] ?? 0)));
     $feats = array_values(array_filter(array_map(fn($f) => clip($f, 200), explode("\n", (string)($_POST['features'] ?? '')))));
-    $feats_en = array_values(array_filter(array_map(fn($f) => clip($f, 200), explode("\n", (string)($_POST['features_en'] ?? '')))));
 
     if ($title === '') {
         $adminErr = 'اسم التطبيق مطلوب.';
@@ -907,13 +850,13 @@ if ($adminActionAllowed && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act
         ];
 
         $currentApp = array_merge($currentApp, [
-            'title' => $title, 'title_en' => $title_en,
-            'category' => $category, 'category_en' => $category_en,
-            'description' => $desc, 'description_en' => $desc_en,
+            'title' => $title,
+            'category' => $category,
+            'description' => $desc,
             'version' => $version, 'web_url' => $web_url,
             'downloads' => $downloads, 'rating' => $rating, 'color' => $color,
             'status' => $status, 'progress' => $progress,
-            'features' => $feats, 'features_en' => $feats_en ?: $feats,
+            'features' => $feats,
         ]);
 
         if (isset($_FILES['app_icon'])) {
@@ -997,17 +940,12 @@ if ($adminActionAllowed && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act
     $postedId = trim((string)($_POST['article_id'] ?? ''));
     $artId = preg_match('/^[A-Za-z0-9_.-]{1,64}$/', $postedId) ? $postedId : ('art_' . bin2hex(random_bytes(6)));
     $title = clip($_POST['title'] ?? '', 200);
-    $title_en = clip($_POST['title_en'] ?? '', 200) ?: $title;
     $desc = clip($_POST['description'] ?? '', 500);
-    $desc_en = clip($_POST['description_en'] ?? '', 500) ?: $desc;
     $badge = clip($_POST['badge'] ?? '', 40) ?: 'تطوير';
-    $badge_en = clip($_POST['badge_en'] ?? '', 40) ?: $badge;
     $badgeColor = in_array($_POST['badge_color'] ?? '', APP_COLORS, true) ? $_POST['badge_color'] : 'blue';
     $readTime = max(1, min(120, (int)($_POST['read_time'] ?? 3)));
     $author = clip($_POST['author'] ?? '', 80) ?: 'سارة علي';
-    $author_en = clip($_POST['author_en'] ?? '', 80) ?: $author;
     $full = clip($_POST['full'] ?? '', 50000);
-    $full_en = clip($_POST['full_en'] ?? '', 50000) ?: $full;
     $pubDate = (string)($_POST['date'] ?? '');
     if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $pubDate)) $pubDate = date('Y-m-d');
 
@@ -1030,12 +968,12 @@ if ($adminActionAllowed && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act
 
         $artData = [
             'id' => $artId,
-            'title' => $title, 'title_en' => $title_en,
-            'description' => $desc, 'description_en' => $desc_en,
-            'badge' => $badge, 'badge_en' => $badge_en, 'badge_color' => $badgeColor,
+            'title' => $title,
+            'description' => $desc,
+            'badge' => $badge, 'badge_color' => $badgeColor,
             'date' => $pubDate, 'read_time' => $readTime,
-            'full' => $full, 'full_en' => $full_en,
-            'author' => $author, 'author_en' => $author_en,
+            'full' => $full,
+            'author' => $author,
             'author_photo' => $authorPhoto,
         ];
 
@@ -1504,7 +1442,7 @@ input::selection, textarea::selection{background:var(--blue);color:#fff}
 .b-art-time{font-size:0.62rem;color:var(--muted)}
 
 /* SKILLS */
-.sk-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.sk-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px}
 .sk-card{
   background:var(--card);border-radius:16px;padding:12px;box-shadow:var(--shadow);
   border:1px solid var(--border);display:flex;align-items:center;gap:10px;
@@ -2724,13 +2662,6 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
     <span><?= e($siteConfig['name']) ?></span>
   </a>
   <div class="hdr-right">
-    <div class="lang-wrap">
-      <button class="lang-btn" onclick="toggleDD()"><i class="fas fa-language" style="font-size:1.05rem;color:var(--blue)"></i><span id="curL">العربية</span><i class="fas fa-chevron-down" style="font-size:0.55rem;color:var(--muted)"></i></button>
-      <div class="lang-dropdown" id="ld">
-        <button class="lang-opt active" data-lang="ar" onclick="setL('ar')">🇮🇶 العربية</button>
-        <button class="lang-opt" data-lang="en" onclick="setL('en')">🇬🇧 English</button>
-      </div>
-    </div>
     <button class="theme-toggle-btn" onclick="toggleTheme()" title="Theme"><i class="fas fa-moon moon"></i><i class="fas fa-sun sun"></i></button>
   </div>
 </header>
@@ -3000,29 +2931,21 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
             <input type="hidden" name="admin_tab" value="apps">
             <input type="hidden" name="app_id" id="form_app_id" value="">
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">اسم التطبيق (بالعربية) *</label>
                 <input type="text" name="title" id="form_app_title" class="admin-input" required placeholder="مثال: متجر FastCrand">
               </div>
-              <div>
-                <label class="admin-label">اسم التطبيق (بالإنجليزية - English) *</label>
-                <input type="text" name="title_en" id="form_app_title_en" class="admin-input" placeholder="e.g. FastCrand Store">
-              </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">التصنيف (بالعربية)</label>
                 <input type="text" name="category" id="form_app_category" class="admin-input" placeholder="أدوات / أعمال">
               </div>
-              <div>
-                <label class="admin-label">التصنيف (بالإنجليزية - English)</label>
-                <input type="text" name="category_en" id="form_app_category_en" class="admin-input" placeholder="Tools / Business">
-              </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">رابط الموقع (لتحويله لتطبيق / تصفح ويب) 🌐</label>
                 <input type="url" name="web_url" id="form_app_web_url" class="admin-input" placeholder="https://example.com">
@@ -3033,7 +2956,7 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
               </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">تقييم التطبيق الثابت من الإدارة (1 إلى 5) ⭐</label>
                 <input type="number" step="0.1" min="1" max="5" name="rating" id="form_app_rating" class="admin-input" value="4.9">
@@ -3058,7 +2981,7 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
               </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">حالة المشروع 🚧</label>
                 <select name="status" id="form_app_status" class="admin-input">
@@ -3123,17 +3046,10 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
             <label class="admin-label">وصف التطبيق (بالعربية) *</label>
             <textarea name="description" id="form_app_desc" class="admin-textarea" rows="3" required placeholder="اكتب تفاصيل وميزات التطبيق..."></textarea>
 
-            <label class="admin-label">وصف التطبيق (بالإنجليزية - English)</label>
-            <textarea name="description_en" id="form_app_desc_en" class="admin-textarea" rows="3" placeholder="App description in English..."></textarea>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">المميزات (بالعربية - ميزة لكل سطر)</label>
                 <textarea name="features" id="form_app_features" class="admin-textarea" rows="3" placeholder="ميزة 1&#10;ميزة 2"></textarea>
-              </div>
-              <div>
-                <label class="admin-label">المميزات (بالإنجليزية - English)</label>
-                <textarea name="features_en" id="form_app_features_en" class="admin-textarea" rows="3" placeholder="Feature 1&#10;Feature 2"></textarea>
               </div>
             </div>
 
@@ -3164,7 +3080,6 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
                   <div>
                     <strong style="color:var(--text);font-size:0.88rem;"><?= e($ap['title'] ?? '') ?></strong><?php if (($ap['status'] ?? 'live') === 'wip'): ?> <span class="wip-badge">🚧 قيد التطوير <?= (int)($ap['progress'] ?? 0) ?>%</span><?php endif; ?>
                     <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">
-                      <span><?= e($ap['title_en'] ?? '') ?></span> · 
                       <span><i class="fas fa-download"></i> <?= intval($ap['downloads'] ?? 0) ?></span> · 
                       <span>⭐ <?= e($ap['rating'] ?? '4.9') ?></span>
                     </div>
@@ -3214,27 +3129,20 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
             <label class="admin-label">لوجو وشعار الموقع الرسمي</label>
             <input type="file" name="site_photo" accept="image/*" class="admin-input">
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">الوصف النصي القصير (بالعربية)</label>
                 <input type="text" name="role" class="admin-input" value="<?= e($siteConfig['role']) ?>" required>
-              </div>
-              <div>
-                <label class="admin-label">الوصف النصي القصير (بالإنجليزية)</label>
-                <input type="text" name="role_en" class="admin-input" value="<?= e($siteConfig['role_en'] ?? '') ?>" required>
               </div>
             </div>
 
             <label class="admin-label">نبذة عن الشركة (بالعربية)</label>
             <textarea name="about" class="admin-textarea" rows="3"><?= e($siteConfig['about']) ?></textarea>
 
-            <label class="admin-label">نبذة عن الشركة (بالإنجليزية - English)</label>
-            <textarea name="about_en" class="admin-textarea" rows="3"><?= e($siteConfig['about_en'] ?? '') ?></textarea>
-
             <label class="admin-label">رقم أو رابط واتساب للتواصل المباشر</label>
             <input type="text" name="whatsapp_url" class="admin-input" value="<?= e($siteConfig['whatsapp_url']) ?>" required>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">يوزر إنستغرام</label>
                 <input type="text" name="instagram_user" class="admin-input" value="<?= e($siteConfig['instagram_user']) ?>" required>
@@ -3250,9 +3158,6 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
 
             <label class="admin-label">رسالة إنستغرام التوضيحية (بالعربية)</label>
             <textarea name="instagram_message" class="admin-textarea" rows="2"><?= e($siteConfig['instagram_message']) ?></textarea>
-
-            <label class="admin-label">رسالة إنستغرام التوضيحية (بالإنجليزية - English)</label>
-            <textarea name="instagram_message_en" class="admin-textarea" rows="2"><?= e($siteConfig['instagram_message_en'] ?? '') ?></textarea>
 
             <label class="admin-label">كلمة مرور جديدة للمدير (اختياري)</label>
             <input type="password" name="new_password" class="admin-input" minlength="8" autocomplete="new-password" placeholder="اتركها فارغة إن لم ترغب بالتغيير (8 أحرف على الأقل)">
@@ -3282,7 +3187,7 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
             <input type="hidden" name="admin_tab" value="telegram">
 
             <div style="background:rgba(0,136,204,0.08);border:1.5px solid rgba(0,136,204,0.3);border-radius:14px;padding:14px;margin-bottom:14px;">
-              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
                 <div>
                   <label class="admin-label">توكن بوت التيليجرام (Bot Token)</label>
                   <input type="text" name="telegram_bot_token" id="admin_tg_token" class="admin-input" value="<?= e($siteConfig['telegram_bot_token'] ?? '') ?>" placeholder="123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ">
@@ -3366,25 +3271,17 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
             <input type="hidden" name="admin_tab" value="articles">
             <input type="hidden" name="article_id" id="form_art_id" value="">
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">عنوان المقال (بالعربية) *</label>
                 <input type="text" name="title" id="form_art_title" class="admin-input" required placeholder="عنوان المقال...">
               </div>
-              <div>
-                <label class="admin-label">عنوان المقال (بالإنجليزية - English) *</label>
-                <input type="text" name="title_en" id="form_art_title_en" class="admin-input" placeholder="Article title...">
-              </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(90px,1fr));gap:10px;">
               <div>
                 <label class="admin-label">التصنيف (بالعربية)</label>
                 <input type="text" name="badge" id="form_art_badge" class="admin-input" value="تطوير">
-              </div>
-              <div>
-                <label class="admin-label">التصنيف (بالإنجليزية)</label>
-                <input type="text" name="badge_en" id="form_art_badge_en" class="admin-input" value="Dev">
               </div>
               <div>
                 <label class="admin-label">وقت القراءة (دقائق)</label>
@@ -3392,18 +3289,14 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
               </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">اسم الكاتب (مثال: سارة علي) *</label>
                 <input type="text" name="author" id="form_art_author" class="admin-input" value="سارة علي" required>
               </div>
-              <div>
-                <label class="admin-label">اسم الكاتب (بالإنجليزية - English)</label>
-                <input type="text" name="author_en" id="form_art_author_en" class="admin-input" value="Sara Ali">
-              </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(0,1fr));gap:10px;">
               <div>
                 <label class="admin-label">صورة الكاتب (مستخدم المقال)</label>
                 <input type="file" name="author_photo" accept="image/*" class="admin-input">
@@ -3421,14 +3314,8 @@ html.theme-switching *, html.theme-switching *::before, html.theme-switching *::
             <label class="admin-label">موجز المقال (بالعربية) *</label>
             <input type="text" name="description" id="form_art_desc" class="admin-input" required placeholder="موجز المقال...">
 
-            <label class="admin-label">موجز المقال (بالإنجليزية - English)</label>
-            <input type="text" name="description_en" id="form_art_desc_en" class="admin-input" placeholder="Article summary...">
-
             <label class="admin-label">محتوى المقال الكامل (بالعربية) *</label>
             <textarea name="full" id="form_art_full" class="admin-textarea" rows="4" required placeholder="اكتب تفاصيل المقال..."></textarea>
-
-            <label class="admin-label">محتوى المقال الكامل (بالإنجليزية - English)</label>
-            <textarea name="full_en" id="form_art_full_en" class="admin-textarea" rows="4" placeholder="Full article content in English..."></textarea>
 
             <button type="submit" class="ct-btn" style="width:100%"><i class="fas fa-file-circle-plus"></i> <span id="artSubmitBtnText">حفظ ونشر المقال</span></button>
           </form>
@@ -3499,7 +3386,7 @@ function openExternal(u){
   if(w) w.opener = null;
   return true;
 }
-let CL = 'ar';
+const CL = 'ar';
 
 const COLORS = {
   blue: 'var(--gradient-primary)',
@@ -3565,61 +3452,6 @@ const LANGS = {
     wip_desc: 'نعمل عليه الآن وسيتوفر للتحميل قريباً.', progress_lbl: 'نسبة الإنجاز',
     f_all: 'الكل', f_live: 'المنشورة', f_wip: 'قيد التطوير', apps_word: 'تطبيق',
     live_group: 'تطبيقات متاحة', wip_group: 'مشاريع تحت العمل'
-  },
-  en: {
-    dir: 'ltr', label: 'English',
-    about: 'About Us', works: 'Our Apps & Projects',
-    all: 'View All →', articles: 'Our Articles', skills: 'Our Skills', contact: 'Contact Us',
-    read: 'Read More', min: 'min read', avail: 'Available Now',
-    back: 'Back', install: 'Install', downloads: 'Downloads', view_all_btn: 'View All Apps & Projects',
-    downloads_total: 'Total Downloads', user_rating: 'User Rating', security_check: 'Security Check',
-    safe: 'Safe & Verified', direct_install_hint: 'Direct instant APK download for Android devices',
-    app_details: '📱 App Details & Installation', all_apps_title: '🚀 All Apps & Company Projects',
-    art_details: '📄 Article Details', about_app: 'About the App', app_screens: 'Screenshots & UI:',
-    app_features: 'Key Features:', intro: '📌 Overview', article_content: '📖 Full Article',
-    team: 'FastCrand Team', download_apk_btn: 'Download for Android (APK)',
-    dl_android_btn: 'Download for Android (APK)',
-    dl_play_store: 'Download (Google Play)',
-    dl_ios_btn: 'Download for iPhone (iOS)',
-    pwa_title: '🍏 Steps to Install Web App on iPhone (iOS)',
-    pwa_step1_title: 'Step 1: Open in Safari',
-    pwa_step1_desc: 'Click "Continue & Open Website" below to open the URL in your Safari browser.',
-    pwa_step2_title: 'Step 2: Tap Share Button',
-    pwa_step2_desc: 'Tap the Safari share icon (⎋) at the bottom toolbar.',
-    pwa_step3_title: 'Step 3: Add to Home Screen',
-    pwa_step3_desc: 'Scroll and select "Add to Home Screen" (➕) to install the web app icon directly.',
-    pwa_continue_btn: 'Continue & Open Website on iPhone →',
-    reviews_title: '⭐ Ratings',
-    admin_rating_badge: 'Platform Official Rating',
-    add_review_title: 'Add your rating and feedback:',
-    rate_after_dl_title: '⭐ Rate your download experience:',
-    your_name: 'Your Name',
-    your_comment: 'Write your thoughts or review...',
-    submit_review: 'Submit Review Now',
-    skip_review: 'Close & Continue',
-    review_success: 'Thank you! Your review has been added.',
-    rate_app: 'Rate App',
-    submit_rate_btn: 'Submit Rating',
-    mute_rate_btn: 'Don\'t Show Again',
-    mute_rate_success: 'Rating prompt disabled.',
-    get_demo: 'Start Now',
-    demo_header: 'Start Now',
-    demo_title: 'Start Now',
-    demo_desc: 'Fill in your details and support will promptly send a demo model and custom pitch for your project via WhatsApp.',
-    demo_success_title: 'Your request has been submitted and is under review',
-    demo_success_desc: 'Support will contact you shortly via WhatsApp with a demo model for your work.',
-    share_app_btn: 'Share App Link',
-    share_copied: 'App link copied to clipboard successfully!',
-    your_fullname: 'Full Name',
-    your_whatsapp: 'WhatsApp Number (without country code)',
-    project_idea: 'Tell us about the project you want to build (Idea & Requirements)',
-    send_demo_req: 'Submit Request Now',
-    ig_active: 'Account Active', ig_disabled: 'Account Currently Inactive', ig_last_updated: '🕐 Last Updated:',
-    visitors_label: 'Website Visitors:',
-    wip: 'In Development', soon: 'Coming Soon', wip_title: 'This project is under development',
-    wip_desc: 'We are working on it and it will be available soon.', progress_lbl: 'Progress',
-    f_all: 'All', f_live: 'Published', f_wip: 'In Development', apps_word: 'apps',
-    live_group: 'Available Apps', wip_group: 'Projects In Progress'
   }
 };
 
@@ -3670,9 +3502,7 @@ function resetAppForm(){
   switchAdminTab('apps');
   document.getElementById('form_app_id').value = '';
   document.getElementById('form_app_title').value = '';
-  document.getElementById('form_app_title_en').value = '';
   document.getElementById('form_app_category').value = '';
-  document.getElementById('form_app_category_en').value = '';
   document.getElementById('form_app_web_url').value = '';
   document.getElementById('form_app_downloads').value = 1000;
   document.getElementById('form_app_rating').value = 4.9;
@@ -3681,9 +3511,7 @@ function resetAppForm(){
   document.getElementById('form_app_status').value = 'live';
   document.getElementById('form_app_progress').value = 0;
   document.getElementById('form_app_desc').value = '';
-  document.getElementById('form_app_desc_en').value = '';
   document.getElementById('form_app_features').value = '';
-  document.getElementById('form_app_features_en').value = '';
   resetAndroidOptions();
   document.getElementById('appFormHeading').textContent = 'نشر تطبيق APK جديد باللغتين';
   document.getElementById('appSubmitBtnText').textContent = 'حفظ ونشر التطبيق';
@@ -3694,17 +3522,12 @@ function resetArticleForm(){
   switchAdminTab('articles');
   document.getElementById('form_art_id').value = '';
   document.getElementById('form_art_title').value = '';
-  document.getElementById('form_art_title_en').value = '';
   document.getElementById('form_art_badge').value = 'تطوير';
-  document.getElementById('form_art_badge_en').value = 'Dev';
   document.getElementById('form_art_read_time').value = 4;
   document.getElementById('form_art_author').value = 'سارة علي';
-  document.getElementById('form_art_author_en').value = 'Sara Ali';
   document.getElementById('form_art_date').value = new Date().toISOString().slice(0, 10);
   document.getElementById('form_art_desc').value = '';
-  document.getElementById('form_art_desc_en').value = '';
   document.getElementById('form_art_full').value = '';
-  document.getElementById('form_art_full_en').value = '';
   const previewBox = document.getElementById('author_photo_preview_box');
   if(previewBox) previewBox.style.display = 'none';
   document.getElementById('artFormHeading').textContent = 'نشر مقال جديد باللغتين';
@@ -3829,12 +3652,6 @@ function closeOverlay(id){
   updateFloatingButtonsState();
 }
 
-function toggleDD(){
-  document.getElementById('ld').classList.toggle('open');
-}
-document.addEventListener('click', e => {
-  if(!e.target.closest('.lang-wrap')) document.getElementById('ld')?.classList.remove('open');
-});
 
 function toggleTheme(){
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -3900,80 +3717,8 @@ async function loadData(){
     console.error(e);
     const main = document.getElementById('mainApp');
     if(main) main.innerHTML = '<div style="text-align:center;padding:50px;color:var(--muted);font-weight:700;"><i class="fas fa-triangle-exclamation"></i> ' +
-      (CL === 'en' ? 'Failed to load content. Please refresh the page.' : 'تعذر تحميل المحتوى، يرجى تحديث الصفحة.') + '</div>';
+      'تعذر تحميل المحتوى، يرجى تحديث الصفحة.' + '</div>';
   }
-}
-
-function setL(l){
-  CL = l;
-  document.documentElement.dir = LANGS[l].dir;
-  document.documentElement.lang = l;
-  document.getElementById('curL').textContent = LANGS[l].label;
-
-  // تحديث حالة أزرار اختيار اللغة النشطة
-  document.querySelectorAll('.lang-opt').forEach(btn => {
-    btn.classList.toggle('active', btn.getAttribute('data-lang') === l);
-  });
-  
-  document.querySelectorAll('.lbl-back').forEach(el => el.textContent = LANGS[l].back);
-  
-  const appTitleEl = document.getElementById('overlayAppTitle');
-  if(appTitleEl) appTitleEl.textContent = LANGS[l].app_details;
-  
-  const allTitleEl = document.getElementById('overlayAllTitle');
-  if(allTitleEl) allTitleEl.textContent = LANGS[l].all_apps_title;
-  
-  const artTitleEl = document.getElementById('overlayArtTitle');
-  if(artTitleEl) artTitleEl.textContent = LANGS[l].art_details;
-  
-  const pwaTitleEl = document.getElementById('pwaOverlayTitle');
-  if(pwaTitleEl) pwaTitleEl.textContent = LANGS[l].pwa_title;
-
-  const submitLbl = document.getElementById('lblSubmitRate');
-  if(submitLbl) submitLbl.textContent = LANGS[l].submit_rate_btn || (l === 'en' ? 'Submit Rating' : 'إرسال التقييم');
-  const muteLbl = document.getElementById('lblMuteRate');
-  if(muteLbl) muteLbl.textContent = LANGS[l].mute_rate_btn || (l === 'en' ? "Don't Show Again" : 'منع العرض');
-
-  const demoBtnLbl = document.getElementById('lblFloatingDemo');
-  if(demoBtnLbl) demoBtnLbl.textContent = LANGS[l].get_demo || (l === 'en' ? 'Start Now' : 'ابدأ الآن');
-  const demoModalTitle = document.getElementById('lblDemoModalTitle');
-  if(demoModalTitle) demoModalTitle.textContent = LANGS[l].demo_title || (l === 'en' ? 'Start Now' : 'ابدأ الآن');
-  const demoModalDesc = document.getElementById('lblDemoModalDesc');
-  if(demoModalDesc) demoModalDesc.textContent = LANGS[l].demo_desc;
-  const demoNameLbl = document.getElementById('lblDemoName');
-  if(demoNameLbl) demoNameLbl.innerHTML = `<i class="fas fa-user" style="color:var(--blue)"></i> <span>${(LANGS[l].your_fullname || (l === 'en' ? 'Full Name' : 'الاسم الكامل'))} *</span>`;
-  const demoWhatsappLbl = document.getElementById('lblDemoWhatsapp');
-  if(demoWhatsappLbl) demoWhatsappLbl.innerHTML = `<i class="fab fa-whatsapp" style="color:#25D366;font-size:0.95rem;"></i> <span>${(LANGS[l].your_whatsapp || (l === 'en' ? 'WhatsApp Number (without country code)' : 'رقم الواتساب (بدون رمز الدولة)'))} *</span>`;
-  const demoProjectLbl = document.getElementById('lblDemoProject');
-  if(demoProjectLbl) demoProjectLbl.innerHTML = `<i class="fas fa-lightbulb" style="color:var(--gold)"></i> <span>${LANGS[l].project_idea} *</span>`;
-  const submitDemoText = document.getElementById('lblSubmitDemoText');
-  if(submitDemoText) submitDemoText.textContent = LANGS[l].send_demo_req;
-  const successTitleEl = document.getElementById('lblDemoSuccessTitle');
-  if(successTitleEl) successTitleEl.textContent = LANGS[l].demo_success_title;
-  const successDescEl = document.getElementById('lblDemoSuccessDesc');
-  if(successDescEl) successDescEl.textContent = LANGS[l].demo_success_desc;
-
-  // الحقول النصية (Placeholders) بالإنجليزية والعربية
-  const demoNameInput = document.getElementById('demo_name');
-  if(demoNameInput) demoNameInput.placeholder = l === 'en' ? 'e.g. John Doe' : 'مثال: أحمد محمد';
-  const demoWhatsappInput = document.getElementById('demo_whatsapp');
-  if(demoWhatsappInput) demoWhatsappInput.placeholder = l === 'en' ? 'e.g. 7700000000' : 'مثال: 07700000000';
-  const demoProjectInput = document.getElementById('demo_project_details');
-  if(demoProjectInput) demoProjectInput.placeholder = l === 'en' ? 'Explain your project idea, required features, and any details...' : 'اشرح لنا نوع وفكرة المشروع، المميزات التي تحتاجها، وأي تفاصيل ترغب بها...';
-
-  // تلميحات أزرار الإجراءات
-  const floatingDemoBtn = document.getElementById('floatingMainDemoBtn');
-  if(floatingDemoBtn) floatingDemoBtn.title = LANGS[l].get_demo;
-  const floatingBackBtn = document.getElementById('floatingAppBackBtn');
-  if(floatingBackBtn){
-    floatingBackBtn.title = LANGS[l].back;
-    const arrowIco = floatingBackBtn.querySelector('i');
-    if(arrowIco){
-      arrowIco.className = l === 'en' ? 'fas fa-arrow-left' : 'fas fa-arrow-right';
-    }
-  }
-
-  render();
 }
 
 function render(){
@@ -3990,7 +3735,7 @@ function render(){
 
   const makeCard = (w) => {
     const iconContent = upl(w.icon) ? `<img src="${upl(w.icon)}" alt="" loading="lazy">` : `<i class="${esc(w.icon_class || 'fas fa-mobile-screen')}"></i>`;
-    const title = (CL === 'en' && w.title_en) ? w.title_en : w.title;
+    const title = w.title;
 
     return `
       <div class="app-card-item" onclick="showAppDetail(${jsArg(w.id)})">
@@ -4010,8 +3755,8 @@ function render(){
     `;
   };
 
-  const roleText = (CL === 'en' && P.role_en) ? P.role_en : (P.role || '');
-  const aboutText = (CL === 'en' && P.about_en) ? P.about_en : (P.about || '');
+  const roleText = (P.role || '');
+  const aboutText = (P.about || '');
 
   let h = `
     <!-- ==================== القسم الأول: البطاقة التعريفية + التطبيقات ==================== -->
@@ -4078,9 +3823,9 @@ function render(){
         </div>
         <div class="art-list">
           ${A.map(a => {
-            const aTitle = (CL === 'en' && a.title_en) ? a.title_en : a.title;
-            const aDesc = (CL === 'en' && a.description_en) ? a.description_en : a.description;
-            const aBadge = (CL === 'en' && a.badge_en) ? a.badge_en : a.badge;
+            const aTitle = a.title;
+            const aDesc = a.description;
+            const aBadge = a.badge;
 
             return `
               <div class="b-art" onclick="showArticleDetail(${jsArg(a.id)})">
@@ -4148,8 +3893,8 @@ function render(){
             </div>
 
             <div class="ct-icons">
-              <button type="button" class="ct-btn ct-btn-whatsapp ct-btn-collide-right" onclick="openWhatsAppContact()"><i class="fab fa-whatsapp"></i> <span>${CL==='en'?'WhatsApp':'واتساب'}</span></button>
-              <button type="button" class="ct-btn ct-btn-instagram ct-btn-collide-left" onclick="showInstagramStatus()"><i class="fab fa-instagram"></i> <span>${CL==='en'?'Instagram':'إنستغرام'}</span></button>
+              <button type="button" class="ct-btn ct-btn-whatsapp ct-btn-collide-right" onclick="openWhatsAppContact()"><i class="fab fa-whatsapp"></i> <span>${'واتساب'}</span></button>
+              <button type="button" class="ct-btn ct-btn-instagram ct-btn-collide-left" onclick="showInstagramStatus()"><i class="fab fa-instagram"></i> <span>${'إنستغرام'}</span></button>
             </div>
           </div>
         </div>
@@ -4520,9 +4265,7 @@ function editApp(ap){
   switchAdminTab('apps');
   document.getElementById('form_app_id').value = ap.id || '';
   document.getElementById('form_app_title').value = ap.title || '';
-  document.getElementById('form_app_title_en').value = ap.title_en || '';
   document.getElementById('form_app_category').value = ap.category || '';
-  document.getElementById('form_app_category_en').value = ap.category_en || '';
   document.getElementById('form_app_web_url').value = ap.web_url || '';
   document.getElementById('form_app_downloads').value = ap.downloads !== undefined ? ap.downloads : 0;
   document.getElementById('form_app_rating').value = ap.rating !== undefined ? ap.rating : 4.9;
@@ -4531,9 +4274,7 @@ function editApp(ap){
   document.getElementById('form_app_status').value = ap.status === 'wip' ? 'wip' : 'live';
   document.getElementById('form_app_progress').value = ap.progress !== undefined ? ap.progress : 0;
   document.getElementById('form_app_desc').value = ap.description || '';
-  document.getElementById('form_app_desc_en').value = ap.description_en || '';
   document.getElementById('form_app_features').value = (ap.features || []).join('\n');
-  document.getElementById('form_app_features_en').value = (ap.features_en || []).join('\n');
 
   // تعبئة خيارات الأندرويد وإدارة الحصرية
   resetAndroidOptions();
@@ -4568,17 +4309,12 @@ function editArticle(ar){
   switchAdminTab('articles');
   document.getElementById('form_art_id').value = ar.id || '';
   document.getElementById('form_art_title').value = ar.title || '';
-  document.getElementById('form_art_title_en').value = ar.title_en || '';
   document.getElementById('form_art_badge').value = ar.badge || 'تطوير';
-  document.getElementById('form_art_badge_en').value = ar.badge_en || 'Dev';
   document.getElementById('form_art_read_time').value = ar.read_time || 4;
   document.getElementById('form_art_author').value = ar.author || 'سارة علي';
-  document.getElementById('form_art_author_en').value = ar.author_en || 'Sara Ali';
   document.getElementById('form_art_date').value = ar.date || new Date().toISOString().slice(0, 10);
   document.getElementById('form_art_desc').value = ar.description || '';
-  document.getElementById('form_art_desc_en').value = ar.description_en || '';
   document.getElementById('form_art_full').value = ar.full || '';
-  document.getElementById('form_art_full_en').value = ar.full_en || '';
   
   const previewBox = document.getElementById('author_photo_preview_box');
   const previewImg = document.getElementById('author_photo_preview_img');
@@ -4603,8 +4339,8 @@ function allAppsCardHtml(w){
   const L = LANGS[CL];
   const wip = w.status === 'wip';
   const iconContent = upl(w.icon) ? `<img src="${upl(w.icon)}" alt="" loading="lazy">` : `<i class="${esc(w.icon_class || 'fas fa-mobile-screen')}"></i>`;
-  const title = (CL === 'en' && w.title_en) ? w.title_en : w.title;
-  const cat = (CL === 'en' && w.category_en) ? w.category_en : (w.category || '');
+  const title = w.title;
+  const cat = (w.category || '');
   const pct = Math.max(0, Math.min(100, Number(w.progress) || 0));
   return `
     <div class="app-square-card${wip ? ' is-wip' : ''}" onclick="closeOverlay('allAppsOverlay'); showAppDetail(${jsArg(w.id)})">
@@ -4629,7 +4365,7 @@ function renderAllApps(){
   const wip = DATA.works.filter(w => w.status === 'wip');
   const hasWip = wip.length > 0;
   let html = `<div class="apps-all-head">
-    <h3>${CL === 'en' ? 'All Apps & Projects' : 'جميع التطبيقات والمشاريع'} <small>(${DATA.works.length})</small></h3>
+    <h3>${'جميع التطبيقات والمشاريع'} <small>(${DATA.works.length})</small></h3>
     ${hasWip ? `<div class="apps-filter">
       <button type="button" class="${allAppsFilter === 'all' ? 'active' : ''}" onclick="setAllAppsFilter('all')">${L.f_all}</button>
       <button type="button" class="${allAppsFilter === 'live' ? 'active' : ''}" onclick="setAllAppsFilter('live')">${L.f_live} (${live.length})</button>
@@ -4671,11 +4407,11 @@ function openBottomRatePopup(appId){
   const app = (DATA && DATA.works) ? DATA.works.find(w => w.id === appId) : null;
   if(!app) return;
   const L = LANGS[CL];
-  const title = (CL === 'en' && app.title_en) ? app.title_en : app.title;
+  const title = app.title;
 
   const titleEl = document.getElementById('bottomRateAppTitle');
   if(titleEl){
-    titleEl.textContent = (CL === 'en' ? 'Rate ' : 'تقييم ') + title;
+    titleEl.textContent = 'تقييم ' + title;
   }
   const submitLbl = document.getElementById('lblSubmitRate');
   if(submitLbl) submitLbl.textContent = L.submit_rate_btn || 'إرسال التقييم';
@@ -4940,7 +4676,7 @@ function showToastNotification(msg, isSuccess = true){
 async function shareApp(appId){
   const app = (DATA && DATA.works) ? DATA.works.find(w => w.id === appId) : null;
   if(!app) return;
-  const title = (CL === 'en' && app.title_en) ? app.title_en : app.title;
+  const title = app.title;
   const L = LANGS[CL];
   const seq = getAppSeq(app.id);
 
@@ -4951,7 +4687,7 @@ async function shareApp(appId){
 
   const shareData = {
     title: `${title} - FastCrand`,
-    text: (CL === 'en' ? `Download ${title} app:` : `تحميل تطبيق ${title}:`),
+    text: `تحميل تطبيق ${title}:`,
     url: shareUrl
   };
 
@@ -4981,7 +4717,7 @@ async function shareApp(appId){
     }
     showToastNotification(L.share_copied || 'تم نسخ رابط التطبيق بنجاح! جاهز للمشاركة.');
   } catch(e){
-    prompt((CL === 'en' ? 'Copy app link:' : 'انسخ رابط التطبيق:'), shareUrl);
+    prompt('انسخ رابط التطبيق:', shareUrl);
   }
 }
 
@@ -4998,13 +4734,13 @@ async function submitDemoPresentation(event){
   const project = projectInput ? projectInput.value.trim() : '';
 
   if(!name || !whatsapp || !project){
-    alert(CL === 'en' ? 'Please fill in all fields.' : 'يرجى ملء جميع الحقول المطلوبة.');
+    alert('يرجى ملء جميع الحقول المطلوبة.');
     return;
   }
 
   if(submitBtn){
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + (CL === 'en' ? 'Sending...' : 'جارٍ الإرسال...');
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> ' + 'جارٍ الإرسال...';
   }
 
   let cleanWhatsapp = whatsapp.replace(/^\+/, '').replace(/^00/, '').trim();
@@ -5046,11 +4782,11 @@ async function submitDemoPresentation(event){
         startSuccessCountdown();
       }
     } else {
-      alert((data && data.message) ? data.message : (CL === 'en' ? 'Failed to send request. Please try again.' : 'تعذر إرسال الطلب، يرجى المحاولة لاحقاً.'));
+      alert((data && data.message) ? data.message : 'تعذر إرسال الطلب، يرجى المحاولة لاحقاً.');
     }
   } catch(err){
     console.error(err);
-    alert(CL === 'en' ? 'Connection error. Please try again.' : 'حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى.');
+    alert('حدث خطأ في الاتصال، يرجى المحاولة مرة أخرى.');
   } finally {
     if(submitBtn){
       submitBtn.disabled = false;
@@ -5082,7 +4818,7 @@ function triggerAndroidDownload(appId){
     app.downloads = Math.max(0, (parseInt(app.downloads) || 1) - 1);
     if(statBoxNum) statBoxNum.innerHTML = `<i class="fas fa-download"></i> ` + Number(app.downloads).toLocaleString();
     if(!openExternal(app.web_url)){
-      showToastNotification(CL === 'en' ? 'Android version is coming soon.' : 'نسخة الأندرويد ستتوفر قريباً.', false);
+      showToastNotification('نسخة الأندرويد ستتوفر قريباً.', false);
     }
   } else {
     // بدء التنزيل المباشر لحزمة APK وتحديث العداد بالسيرفر
@@ -5101,7 +4837,7 @@ function openIosPwaSteps(appId){
   if(!app) return;
   const L = LANGS[CL];
   const webUrl = safeHref(app.web_url) || '#';
-  const title = (CL === 'en' && app.title_en) ? app.title_en : app.title;
+  const title = app.title;
 
   const html = `
     <!-- ترويسة تعليمات الآيفون المتساقطة -->
@@ -5191,9 +4927,9 @@ function showAppDetail(appId){
   if(!app) return;
   const L = LANGS[CL];
   const iconHtml = upl(app.icon) ? `<img src="${upl(app.icon)}" alt="">` : `<i class="${esc(app.icon_class || 'fas fa-mobile-screen')}"></i>`;
-  const title = (CL === 'en' && app.title_en) ? app.title_en : app.title;
-  const desc = (CL === 'en' && app.description_en) ? app.description_en : app.description;
-  const cat = (CL === 'en' && app.category_en) ? app.category_en : (app.category || 'App');
+  const title = app.title;
+  const desc = app.description;
+  const cat = (app.category || 'App');
   const isWip = app.status === 'wip';
   const wipPct = Math.max(0, Math.min(100, Number(app.progress) || 0));
   const ratingValue = (app.rating !== undefined) ? Number(app.rating).toFixed(1) : '4.9';
@@ -5205,7 +4941,7 @@ function showAppDetail(appId){
     `</div></div>`;
   }
 
-  const rawFeatures = (CL === 'en' && app.features_en && app.features_en.length > 0) ? app.features_en : (app.features || []);
+  const rawFeatures = app.features || [];
   let featsHtml = '';
   if(rawFeatures && rawFeatures.length > 0){
     featsHtml = `<div style="margin:16px 0;"><h4 style="font-size:0.85rem;margin-bottom:8px;font-weight:800;"><i class="fas fa-check-double" style="color:var(--blue)"></i> ${L.app_features}</h4>` +
@@ -5293,11 +5029,11 @@ function showArticleDetail(artId){
   const a = (DATA && DATA.articles) ? DATA.articles.find(item => item.id === artId) : null;
   if(!a) return;
   const L = LANGS[CL];
-  const aTitle = (CL === 'en' && a.title_en) ? a.title_en : a.title;
-  const aDesc = (CL === 'en' && a.description_en) ? a.description_en : a.description;
-  const aBadge = (CL === 'en' && a.badge_en) ? a.badge_en : a.badge;
-  const aFull = (CL === 'en' && a.full_en) ? a.full_en : (a.full || '');
-  const aAuthor = (CL === 'en' && a.author_en) ? a.author_en : (a.author || 'سارة علي');
+  const aTitle = a.title;
+  const aDesc = a.description;
+  const aBadge = a.badge;
+  const aFull = (a.full || '');
+  const aAuthor = (a.author || 'سارة علي');
   const aPhoto = upl(a.author_photo) ? `<img src="${upl(a.author_photo)}" alt="${esc(aAuthor)}">` : `<i class="fas fa-user"></i>`;
   const aRealDate = a.date || new Date().toISOString().slice(0, 10);
 
@@ -5325,7 +5061,7 @@ function showArticleDetail(artId){
       <div style="font-size:0.82rem;">
         <strong style="color:var(--text);font-size:0.9rem;">${esc(aAuthor)}</strong>
         <div style="color:var(--muted);font-size:0.7rem;margin-top:2px;">
-          <span><i class="far fa-calendar-check" style="color:var(--blue);"></i> ${CL==='en'?'Published:':'تاريخ النشر:'} ${esc(aRealDate)}</span>
+          <span><i class="far fa-calendar-check" style="color:var(--blue);"></i> ${'تاريخ النشر:'} ${esc(aRealDate)}</span>
         </div>
       </div>
     </div>
@@ -5338,7 +5074,7 @@ function showInstagramStatus(){
   const L = LANGS[CL];
   const meta = DATA.instagram_meta || {};
   const isAct = meta.status === 'active';
-  const msg = (CL === 'en' && meta.message_en) ? meta.message_en : (meta.message || '');
+  const msg = (meta.message || '');
 
   const html = `
     <div class="instagram-card">
@@ -5346,7 +5082,7 @@ function showInstagramStatus(){
       <h2 style="font-size:1.4rem;font-weight:900;margin-bottom:8px;">@${esc(meta.user || 'fastcrand_official')}</h2>
       ${isAct ? `
         <div style="display:inline-block;padding:6px 20px;border-radius:100px;background:#22c55e;color:#fff;font-weight:800;margin:12px 0;"><i class="fas fa-circle-check"></i> ${L.ig_active}</div>
-        <p style="color:var(--muted);font-size:0.9rem;line-height:1.7;">${CL==='en'?'Follow our latest updates and projects.':'يمكنك متابعة أحدث أخبارنا ومشاريعنا فوراً.'}</p>
+        <p style="color:var(--muted);font-size:0.9rem;line-height:1.7;">${'يمكنك متابعة أحدث أخبارنا ومشاريعنا فوراً.'}</p>
       ` : `
         <div class="ig-status"><i class="fas fa-circle-exclamation"></i> ${L.ig_disabled}</div>
         <p style="color:var(--muted);font-size:0.9rem;line-height:1.8;white-space:pre-line;">${esc(msg)}</p>
