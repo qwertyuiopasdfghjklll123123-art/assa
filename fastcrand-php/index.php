@@ -562,6 +562,11 @@ if (isset($_GET['download_app']) || isset($_GET['increment_download'])) {
     }
 
     // زيادة العداد مرة واحدة لكل تطبيق في الجلسة (منع التلاعب بالتحديث المتكرر)
+    if (($siteApps[$idx]['status'] ?? 'live') === 'wip') {
+        if ($isAjax) jsonResponse(['success' => false], 403);
+        header('Location: ./');
+        exit;
+    }
     $downloads = (int)($siteApps[$idx]['downloads'] ?? 0);
     if (empty($_SESSION['dl_counted'][$targetId])) {
         $_SESSION['dl_counted'][$targetId] = true;
@@ -711,17 +716,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (($_POST['action'] ?? '') === 'test
 }
 
 // ===================== API بيانات الواجهة =====================
-if (($_GET['api'] ?? '') === 'data') {
+function buildPublicData(array $siteApps, array $siteArticles, array $siteConfig, int $totalVisitors): array {
     // حذف أي حقول حساسة من التطبيقات قبل إرسالها
     $publicApps = array_map(function ($a) {
         $a['android_url'] = safeUrl($a['android_url'] ?? '');
         $a['web_url'] = safeUrl($a['web_url'] ?? '');
         $a['has_apk'] = ($a['apk_file'] ?? '') !== '';
+        $a['status'] = (($a['status'] ?? 'live') === 'wip') ? 'wip' : 'live';
+        $a['progress'] = max(0, min(100, (int)($a['progress'] ?? 0)));
         unset($a['apk_file']);
         return $a;
     }, $siteApps);
 
-    jsonResponse([
+    return [
         'profile' => [
             'name' => $siteConfig['name'],
             'role' => $siteConfig['role'],
@@ -733,8 +740,8 @@ if (($_GET['api'] ?? '') === 'data') {
         ],
         'works' => $publicApps,
         'articles' => $siteArticles,
-        'reviews' => loadJson($reviewsFile),
-        'total_visitors' => $totalVisitorsCount,
+        'reviews' => new stdClass(),
+        'total_visitors' => $totalVisitors,
         'skills' => [
             ['name' => 'Python', 'icon' => 'fab fa-python', 'color' => 'var(--gradient-primary)', 'percentage' => 95],
             ['name' => 'JavaScript', 'icon' => 'fab fa-js', 'color' => 'linear-gradient(135deg,#ffa64d,#d08030)', 'percentage' => 92],
@@ -754,7 +761,12 @@ if (($_GET['api'] ?? '') === 'data') {
             'message_en' => $siteConfig['instagram_message_en'] ?: $siteConfig['instagram_message'],
         ],
         'whatsapp_target' => whatsappLink($siteConfig['whatsapp_url']),
-    ]);
+    ];
+}
+
+if (($_GET['api'] ?? '') === 'data') {
+    session_write_close(); // تحرير قفل الجلسة حتى لا تتأخر الطلبات المتوازية
+    jsonResponse(buildPublicData($siteApps, $siteArticles, $siteConfig, $totalVisitorsCount));
 }
 
 // ===================== لوحة التحكم =====================
@@ -880,6 +892,8 @@ if ($adminActionAllowed && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act
     $downloads = max(0, (int)($_POST['downloads'] ?? 0));
     $rating = round(max(1, min(5, (float)($_POST['rating'] ?? 4.9))), 1);
     $color = in_array($_POST['color'] ?? '', APP_COLORS, true) ? $_POST['color'] : 'blue';
+    $status = (($_POST['status'] ?? 'live') === 'wip') ? 'wip' : 'live';
+    $progress = max(0, min(100, (int)($_POST['progress'] ?? 0)));
     $feats = array_values(array_filter(array_map(fn($f) => clip($f, 200), explode("\n", (string)($_POST['features'] ?? '')))));
     $feats_en = array_values(array_filter(array_map(fn($f) => clip($f, 200), explode("\n", (string)($_POST['features_en'] ?? '')))));
 
@@ -898,6 +912,7 @@ if ($adminActionAllowed && $_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['act
             'description' => $desc, 'description_en' => $desc_en,
             'version' => $version, 'web_url' => $web_url,
             'downloads' => $downloads, 'rating' => $rating, 'color' => $color,
+            'status' => $status, 'progress' => $progress,
             'features' => $feats, 'features_en' => $feats_en ?: $feats,
         ]);
 
@@ -1059,6 +1074,8 @@ if ($adminActionAllowed && isset($_GET['delete_demo_req'])) {
 $reqUri = $_SERVER['REQUEST_URI'] ?? '';
 $showAdminPanel = isset($_GET['admin']) || $isAdmin || (bool)preg_match('#/admin/?(\?.*)?$#i', $reqUri);
 $csrfQs = 'csrf_token=' . urlencode($csrfToken);
+$initialData = buildPublicData($siteApps, $siteArticles, $siteConfig, $totalVisitorsCount);
+session_write_close(); // لا كتابة للجلسة بعد هذه النقطة: تحرير القفل لتسريع الطلبات
 ?>
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
@@ -1066,6 +1083,9 @@ $csrfQs = 'csrf_token=' . urlencode($csrfToken);
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title><?= e($siteConfig['name']) ?></title>
+<link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
@@ -1095,7 +1115,6 @@ body{
   background:var(--bg);color:var(--text);
   width:100%;max-width:100%;margin:0;padding:0 0 20px 0;
   min-height:100vh;overflow-x:hidden;position:relative;
-  transition:background 0.3s,color 0.3s;
   scrollbar-width:none;-ms-overflow-style:none;
   -webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none;
 }
@@ -1106,9 +1125,9 @@ input, textarea, select, [contenteditable="true"]{
 ::selection{background:transparent;color:inherit}
 input::selection, textarea::selection{background:var(--blue);color:#fff}
 
-.bg-orb{position:fixed;border-radius:50%;filter:blur(80px);pointer-events:none;z-index:0}
-.bo1{width:350px;height:350px;background:rgba(255,122,26,0.08);top:-100px;right:-80px}
-.bo2{width:250px;height:250px;background:rgba(242,106,0,0.05);bottom:20%;left:-60px}
+.bg-orb{position:fixed;border-radius:50%;pointer-events:none;z-index:0}
+.bo1{width:500px;height:500px;background:radial-gradient(circle,rgba(255,122,26,0.12),transparent 68%);top:-190px;right:-170px}
+.bo2{width:400px;height:400px;background:radial-gradient(circle,rgba(242,106,0,0.08),transparent 68%);bottom:10%;left:-170px}
 
 /* HEADER & NAVBAR */
 .hdr{
@@ -1165,29 +1184,25 @@ input::selection, textarea::selection{background:var(--blue);color:#fff}
 .site-section{
   margin-bottom: 24px;
   border-radius: 26px;
-  transition: filter 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: filter, opacity;
+  transition: opacity 0.3s ease;
 }
 
 /* القسم النشط والمركز عليه: واضح وبارز بالكامل ومفتوح للتفاعل */
 .site-section.is-focused{
-  filter: blur(0px) grayscale(0%);
   opacity: 1;
   pointer-events: auto;
 }
 
 /* الأقسام الأخرى: مغبشة وهادئة (Blur) لكن قابلة للمس والنقر للتركيز المباشر دون أي اهتزاز أو إزاحة */
 .site-section.is-blurred{
-  filter: blur(4.5px) grayscale(18%);
-  opacity: 0.42;
+  opacity: 0.38;
   pointer-events: auto;
   cursor: pointer;
 }
 
 /* عند لمس أو مرور المؤشر على القسم المغبش */
 .site-section.is-blurred:hover{
-  filter: blur(2px) grayscale(5%);
-  opacity: 0.75;
+  opacity: 0.72;
 }
 
 /* HERO PROFILE CARD (البطاقة البرتقالية التعريفية اللامعة) */
@@ -2633,6 +2648,69 @@ input::selection, textarea::selection{background:var(--blue);color:#fff}
   color:#22c55e;
   font-size:1.15rem;
 }
+
+/* ===== تحسينات الأداء ===== */
+/* تعطيل الانتقالات لحظياً عند تبديل الوضع الداكن ليتم التبديل فوراً */
+html.theme-switching *, html.theme-switching *::before, html.theme-switching *::after{
+  transition:none !important;
+}
+/* إيقاف حركة الشريطين عندما لا يكون القسم نشطاً أو عند فتح نافذة فوقه */
+.site-section.is-blurred .marquee-track-inner, body.has-overlay .marquee-track-inner{animation-play-state:paused}
+.marquee-track-inner{will-change:transform;backface-visibility:hidden}
+.app-card-item, .app-square-card, .b-art, .sk-card{contain:layout paint}
+@media (prefers-reduced-motion: reduce){
+  .marquee-track-inner{animation:none !important}
+}
+
+/* ===== مشاريع قيد التطوير + ترتيب شاشة عرض الكل ===== */
+.wip-badge{
+  display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:100px;
+  background:rgba(245,158,11,0.16);color:#d97706;font-size:0.62rem;font-weight:900;white-space:nowrap;
+}
+[data-theme="dark"] .wip-badge{color:#fbbf24}
+.app-btn-action.is-wip, .app-square-card-btn.is-wip{
+  background:rgba(245,158,11,0.16);color:#d97706;box-shadow:none;cursor:pointer;
+}
+[data-theme="dark"] .app-btn-action.is-wip, [data-theme="dark"] .app-square-card-btn.is-wip{color:#fbbf24}
+.wip-progress{height:5px;border-radius:100px;background:var(--hover-bg);overflow:hidden;width:100%}
+.wip-progress > span{display:block;height:100%;border-radius:100px;background:linear-gradient(90deg,#f59e0b,#ff7a1a)}
+
+.apps-all-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin:2px 0 12px}
+.apps-all-head h3{font-size:1.05rem;font-weight:900}
+.apps-all-head small{color:var(--muted);font-weight:700}
+.apps-filter{display:flex;gap:6px;flex-wrap:wrap}
+.apps-filter button{
+  border:1.5px solid var(--border);background:var(--card);color:var(--text);font-family:inherit;
+  font-size:0.74rem;font-weight:800;padding:6px 14px;border-radius:100px;cursor:pointer;
+}
+.apps-filter button.active{background:var(--gradient-primary);color:#fff;border-color:transparent}
+.apps-group-title{font-size:0.88rem;font-weight:900;margin:14px 2px 8px;display:flex;align-items:center;gap:8px}
+.apps-group-title .cnt{background:var(--hover-bg);border-radius:100px;padding:1px 9px;font-size:0.7rem;color:var(--muted)}
+
+.all-apps-square-grid{grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)) !important;gap:12px !important;padding:2px 0 10px !important}
+.app-square-card{
+  aspect-ratio:auto !important;max-width:none !important;margin:0 !important;
+  padding:14px 10px 10px !important;gap:8px;justify-content:flex-start !important;
+}
+.app-square-card-icon{width:56px !important;height:56px !important;border-radius:16px !important;font-size:1.5rem !important}
+.app-square-card-info{gap:4px !important}
+.app-square-card-info h4{font-size:0.88rem !important}
+.app-square-card-cat{font-size:0.66rem;color:var(--muted);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.app-square-card-meta{gap:10px !important;flex-wrap:wrap}
+.app-square-card .wip-progress{margin-top:2px}
+.app-square-card-btn{margin-top:auto}
+.app-square-card.is-wip{border-style:dashed}
+@media (max-width: 480px){
+  .all-apps-square-grid{grid-template-columns:repeat(2, 1fr) !important;gap:10px !important}
+}
+.wip-box{
+  border:2px dashed rgba(245,158,11,0.55);background:rgba(245,158,11,0.08);border-radius:18px;
+  padding:16px;text-align:center;margin:14px 0;
+}
+.wip-box .ico{font-size:1.8rem;margin-bottom:6px}
+.wip-box h4{font-size:0.95rem;font-weight:900;margin-bottom:4px}
+.wip-box p{font-size:0.78rem;color:var(--muted);font-weight:700;margin-bottom:10px}
+.wip-box .pct{font-size:0.75rem;font-weight:900;margin-top:6px;color:#d97706}
 </style>
 </head>
 <body>
@@ -2980,6 +3058,20 @@ input::selection, textarea::selection{background:var(--blue);color:#fff}
               </div>
             </div>
 
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+              <div>
+                <label class="admin-label">حالة المشروع 🚧</label>
+                <select name="status" id="form_app_status" class="admin-input">
+                  <option value="live">منشور ومتاح للتحميل</option>
+                  <option value="wip">قيد التطوير (تحت العمل)</option>
+                </select>
+              </div>
+              <div>
+                <label class="admin-label">نسبة الإنجاز % (للمشاريع قيد التطوير)</label>
+                <input type="number" min="0" max="100" name="progress" id="form_app_progress" class="admin-input" value="0">
+              </div>
+            </div>
+
             <label class="admin-label">لوجو وأيقونة التطبيق (صورة)</label>
             <input type="file" name="app_icon" accept="image/*" class="admin-input">
 
@@ -3070,7 +3162,7 @@ input::selection, textarea::selection{background:var(--blue);color:#fff}
                     <?php endif; ?>
                   </div>
                   <div>
-                    <strong style="color:var(--text);font-size:0.88rem;"><?= e($ap['title'] ?? '') ?></strong>
+                    <strong style="color:var(--text);font-size:0.88rem;"><?= e($ap['title'] ?? '') ?></strong><?php if (($ap['status'] ?? 'live') === 'wip'): ?> <span class="wip-badge">🚧 قيد التطوير <?= (int)($ap['progress'] ?? 0) ?>%</span><?php endif; ?>
                     <div style="font-size:0.72rem;color:var(--muted);margin-top:2px;">
                       <span><?= e($ap['title_en'] ?? '') ?></span> · 
                       <span><i class="fas fa-download"></i> <?= intval($ap['downloads'] ?? 0) ?></span> · 
@@ -3378,6 +3470,7 @@ input::selection, textarea::selection{background:var(--blue);color:#fff}
 
 <script>
 let DATA = null;
+const INITIAL_DATA = <?= json_encode($initialData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_INVALID_UTF8_SUBSTITUTE) ?>;
 const ENDPOINT = <?= json_encode($_SERVER['SCRIPT_NAME'] ?? 'index.php', JSON_UNESCAPED_SLASHES | JSON_HEX_TAG) ?>;
 const CSRF_TOKEN = <?= json_encode($isAdmin ? $csrfToken : '', JSON_HEX_TAG) ?>;
 
@@ -3467,7 +3560,11 @@ const LANGS = {
     project_idea: 'شلون المشروع اللي بتحب تشتغله؟ (فكرة ومتطلبات مشروعك)',
     send_demo_req: 'إرسال الطلب الآن',
     ig_active: 'الحساب نشط الآن', ig_disabled: 'الحساب معطل حالياً', ig_last_updated: '🕐 آخر تحديث:',
-    visitors_label: 'عدد زوار الموقع:'
+    visitors_label: 'عدد زوار الموقع:',
+    wip: 'قيد التطوير', soon: 'قريباً', wip_title: 'هذا المشروع قيد التطوير حالياً',
+    wip_desc: 'نعمل عليه الآن وسيتوفر للتحميل قريباً.', progress_lbl: 'نسبة الإنجاز',
+    f_all: 'الكل', f_live: 'المنشورة', f_wip: 'قيد التطوير', apps_word: 'تطبيق',
+    live_group: 'تطبيقات متاحة', wip_group: 'مشاريع تحت العمل'
   },
   en: {
     dir: 'ltr', label: 'English',
@@ -3518,7 +3615,11 @@ const LANGS = {
     project_idea: 'Tell us about the project you want to build (Idea & Requirements)',
     send_demo_req: 'Submit Request Now',
     ig_active: 'Account Active', ig_disabled: 'Account Currently Inactive', ig_last_updated: '🕐 Last Updated:',
-    visitors_label: 'Website Visitors:'
+    visitors_label: 'Website Visitors:',
+    wip: 'In Development', soon: 'Coming Soon', wip_title: 'This project is under development',
+    wip_desc: 'We are working on it and it will be available soon.', progress_lbl: 'Progress',
+    f_all: 'All', f_live: 'Published', f_wip: 'In Development', apps_word: 'apps',
+    live_group: 'Available Apps', wip_group: 'Projects In Progress'
   }
 };
 
@@ -3577,6 +3678,8 @@ function resetAppForm(){
   document.getElementById('form_app_rating').value = 4.9;
   document.getElementById('form_app_version').value = '1.0.0';
   document.getElementById('form_app_color').value = 'blue';
+  document.getElementById('form_app_status').value = 'live';
+  document.getElementById('form_app_progress').value = 0;
   document.getElementById('form_app_desc').value = '';
   document.getElementById('form_app_desc_en').value = '';
   document.getElementById('form_app_features').value = '';
@@ -3659,6 +3762,7 @@ function updateFloatingButtonsState(){
   const pwaOverlayOpen = document.getElementById('pwaStepsOverlay')?.classList.contains('open');
   const demoModalOpen = document.getElementById('demoPresentationOverlay')?.classList.contains('open');
   const anyOpen = document.querySelectorAll('.page-overlay.open').length > 0 || demoModalOpen;
+  document.body.classList.toggle('has-overlay', !!anyOpen);
   const demoBtn = document.getElementById('floatingMainDemoBtn');
   const backBtn = document.getElementById('floatingAppBackBtn');
 
@@ -3735,9 +3839,12 @@ document.addEventListener('click', e => {
 function toggleTheme(){
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   const next = isDark ? 'light' : 'dark';
+  const root = document.documentElement;
+  root.classList.add('theme-switching');
   if(next === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
   else document.documentElement.removeAttribute('data-theme');
   try{ localStorage.setItem('theme', next); }catch(e){}
+  requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('theme-switching')));
 }
 (function(){
   try{
@@ -3759,9 +3866,7 @@ function getAppBySeq(seq){
 
 async function loadData(){
   try{
-    const r = await fetch(ENDPOINT + '?api=data', { credentials:'same-origin' });
-    if(!r.ok) throw new Error('HTTP ' + r.status);
-    DATA = await r.json();
+    DATA = INITIAL_DATA; // البيانات مضمّنة في الصفحة: لا طلب شبكة إضافي
     render();
 
     // فتح التطبيق فوراً عند الدخول عبر رابط المشاركة التسلسلي (مثال: ?app1 أو ?app2)
@@ -3893,10 +3998,14 @@ function render(){
         <div class="app-card-details">
           <h4>${esc(title)}</h4>
           <div class="app-card-meta">
-            <span class="badge"><i class="fas fa-download"></i> ${Number(w.downloads || 0).toLocaleString()}</span>
+            ${w.status === 'wip'
+              ? `<span class="wip-badge">🚧 ${L.wip} ${Number(w.progress) || 0}%</span>`
+              : `<span class="badge"><i class="fas fa-download"></i> ${Number(w.downloads || 0).toLocaleString()}</span>`}
           </div>
         </div>
-        <button type="button" class="app-btn-action"><i class="fas fa-download"></i> ${L.install}</button>
+        ${w.status === 'wip'
+          ? `<button type="button" class="app-btn-action is-wip"><i class="fas fa-hammer"></i> ${L.soon}</button>`
+          : `<button type="button" class="app-btn-action"><i class="fas fa-download"></i> ${L.install}</button>`}
       </div>
     `;
   };
@@ -4313,8 +4422,13 @@ function setupScrollBlurObserver(){
 
   // إزالة المستمع السابق فعلياً (كان يتراكم مستمع جديد مع كل render / تغيير لغة)
   if(scrollBlurHandler) window.removeEventListener('scroll', scrollBlurHandler);
-  scrollBlurHandler = onScroll;
-  window.addEventListener('scroll', onScroll, { passive: true });
+  let ticking = false;
+  scrollBlurHandler = () => {
+    if(ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => { ticking = false; onScroll(); });
+  };
+  window.addEventListener('scroll', scrollBlurHandler, { passive: true });
   // تشغيل فحص أولي لضمان ظهور القسم الأول بوضوح
   onScroll();
 }
@@ -4414,6 +4528,8 @@ function editApp(ap){
   document.getElementById('form_app_rating').value = ap.rating !== undefined ? ap.rating : 4.9;
   document.getElementById('form_app_version').value = ap.version || '1.0.0';
   document.getElementById('form_app_color').value = ap.color || 'blue';
+  document.getElementById('form_app_status').value = ap.status === 'wip' ? 'wip' : 'live';
+  document.getElementById('form_app_progress').value = ap.progress !== undefined ? ap.progress : 0;
   document.getElementById('form_app_desc').value = ap.description || '';
   document.getElementById('form_app_desc_en').value = ap.description_en || '';
   document.getElementById('form_app_features').value = (ap.features || []).join('\n');
@@ -4481,37 +4597,61 @@ function editArticle(ar){
   document.getElementById('artFormBox').scrollIntoView({ behavior: 'smooth' });
 }
 
-// عرض جميع التطبيقات في بطاقات مربعة متساوية الطول والارتفاع جنباً إلى جنب
+// عرض جميع التطبيقات: ترويسة + فلاتر + مجموعتان (متاحة / قيد التطوير)
+let allAppsFilter = 'all';
+function allAppsCardHtml(w){
+  const L = LANGS[CL];
+  const wip = w.status === 'wip';
+  const iconContent = upl(w.icon) ? `<img src="${upl(w.icon)}" alt="" loading="lazy">` : `<i class="${esc(w.icon_class || 'fas fa-mobile-screen')}"></i>`;
+  const title = (CL === 'en' && w.title_en) ? w.title_en : w.title;
+  const cat = (CL === 'en' && w.category_en) ? w.category_en : (w.category || '');
+  const pct = Math.max(0, Math.min(100, Number(w.progress) || 0));
+  return `
+    <div class="app-square-card${wip ? ' is-wip' : ''}" onclick="closeOverlay('allAppsOverlay'); showAppDetail(${jsArg(w.id)})">
+      <div class="app-square-card-icon" style="background:${COLORS[w.color] || COLORS.blue}">${iconContent}</div>
+      <div class="app-square-card-info">
+        <h4>${esc(title)}</h4>
+        ${cat ? `<div class="app-square-card-cat">${esc(cat)}</div>` : ''}
+        ${wip
+          ? `<span class="wip-badge">🚧 ${L.wip}</span><div class="wip-progress"><span style="width:${pct}%"></span></div>`
+          : `<div class="app-square-card-meta"><span><i class="fas fa-download"></i> ${Number(w.downloads || 0).toLocaleString()}</span><span><i class="fas fa-star" style="color:var(--gold)"></i> ${Number(w.rating !== undefined ? w.rating : 4.9).toFixed(1)}</span></div>`}
+      </div>
+      <button type="button" class="app-square-card-btn${wip ? ' is-wip' : ''}">
+        <i class="fas ${wip ? 'fa-hammer' : 'fa-download'}"></i>
+        <span>${wip ? L.soon : L.install}</span>
+      </button>
+    </div>`;
+}
+function renderAllApps(){
+  if(!DATA || !DATA.works) return '';
+  const L = LANGS[CL];
+  const live = DATA.works.filter(w => w.status !== 'wip');
+  const wip = DATA.works.filter(w => w.status === 'wip');
+  const hasWip = wip.length > 0;
+  let html = `<div class="apps-all-head">
+    <h3>${CL === 'en' ? 'All Apps & Projects' : 'جميع التطبيقات والمشاريع'} <small>(${DATA.works.length})</small></h3>
+    ${hasWip ? `<div class="apps-filter">
+      <button type="button" class="${allAppsFilter === 'all' ? 'active' : ''}" onclick="setAllAppsFilter('all')">${L.f_all}</button>
+      <button type="button" class="${allAppsFilter === 'live' ? 'active' : ''}" onclick="setAllAppsFilter('live')">${L.f_live} (${live.length})</button>
+      <button type="button" class="${allAppsFilter === 'wip' ? 'active' : ''}" onclick="setAllAppsFilter('wip')">🚧 ${L.f_wip} (${wip.length})</button>
+    </div>` : ''}
+  </div>`;
+  const group = (title, icon, list) => list.length ? `
+    <div class="apps-group-title"><i class="${icon}" style="color:var(--blue)"></i> ${title} <span class="cnt">${list.length}</span></div>
+    <div class="all-apps-square-grid">${list.map(allAppsCardHtml).join('')}</div>` : '';
+  if(allAppsFilter !== 'wip') html += group(L.live_group, 'fas fa-mobile-screen-button', live);
+  if(allAppsFilter !== 'live') html += group(L.wip_group, 'fas fa-hammer', wip);
+  return html;
+}
+function setAllAppsFilter(f){
+  allAppsFilter = f;
+  const box = document.getElementById('allAppsListContent');
+  if(box) box.innerHTML = renderAllApps();
+}
 function showAllAppsModal(){
   if(!DATA || !DATA.works) return;
-  const W = DATA.works;
-  const L = LANGS[CL];
-  let html = `<div class="all-apps-square-grid">`;
-  W.forEach(w => {
-    const iconContent = upl(w.icon) ? `<img src="${upl(w.icon)}" alt="" loading="lazy">` : `<i class="${esc(w.icon_class || 'fas fa-mobile-screen')}"></i>`;
-    const title = (CL === 'en' && w.title_en) ? w.title_en : w.title;
-
-    html += `
-      <div class="app-square-card" onclick="closeOverlay('allAppsOverlay'); showAppDetail(${jsArg(w.id)})">
-        <div class="app-square-card-icon" style="background:${COLORS[w.color] || COLORS.blue}">
-          ${iconContent}
-        </div>
-        <div class="app-square-card-info">
-          <h4>${esc(title)}</h4>
-          <div class="app-square-card-meta">
-            <i class="fas fa-download"></i>
-            <span>${Number(w.downloads || 0).toLocaleString()} ${L.downloads}</span>
-          </div>
-        </div>
-        <button type="button" class="app-square-card-btn">
-          <i class="fas fa-download"></i>
-          <span>${L.install}</span>
-        </button>
-      </div>
-    `;
-  });
-  html += `</div>`;
-  openOverlay('allAppsOverlay', html);
+  allAppsFilter = 'all';
+  openOverlay('allAppsOverlay', renderAllApps());
 }
 
 // بطاقة تقييم صغيرة منبثقة بأسفل الشاشة تظهر عند الدخول على التطبيق
@@ -4922,7 +5062,7 @@ async function submitDemoPresentation(event){
 // تحميل للأندرويد: فتح سوق بلاي أو تنزيل APK مباشر
 function triggerAndroidDownload(appId){
   const app = (DATA && DATA.works) ? DATA.works.find(w => w.id === appId) : null;
-  if(!app) return;
+  if(!app || app.status === 'wip') return;
 
   // تحديث عداد التحميلات محلياً
   app.downloads = (parseInt(app.downloads) || 0) + 1;
@@ -5054,6 +5194,8 @@ function showAppDetail(appId){
   const title = (CL === 'en' && app.title_en) ? app.title_en : app.title;
   const desc = (CL === 'en' && app.description_en) ? app.description_en : app.description;
   const cat = (CL === 'en' && app.category_en) ? app.category_en : (app.category || 'App');
+  const isWip = app.status === 'wip';
+  const wipPct = Math.max(0, Math.min(100, Number(app.progress) || 0));
   const ratingValue = (app.rating !== undefined) ? Number(app.rating).toFixed(1) : '4.9';
 
   let screenshotsHtml = '';
@@ -5099,6 +5241,14 @@ function showAppDetail(appId){
     </div>
 
     <!-- زرا التحميل: أندرويد (سوق بلاي أو APK)، وآيفون يعرض خطوات التثبيت عبر Safari -->
+    ${isWip ? `
+    <div class="wip-box">
+      <div class="ico">🚧</div>
+      <h4>${L.wip_title}</h4>
+      <p>${L.wip_desc}</p>
+      <div class="wip-progress"><span style="width:${wipPct}%"></span></div>
+      <div class="pct">${L.progress_lbl}: ${wipPct}%</div>
+    </div>` : `
     <div class="download-action-grid">
       <button type="button" class="btn-dl-android" onclick="triggerAndroidDownload(${jsArg(app.id)})">
         <i class="${safeHref(app.android_url) ? 'fab fa-google-play' : 'fab fa-android'}" style="font-size:0.95rem;"></i>
@@ -5109,7 +5259,7 @@ function showAppDetail(appId){
         <i class="fab fa-apple" style="font-size:0.95rem;"></i>
         <span>${L.dl_ios_btn}</span>
       </button>
-    </div>
+    </div>`}
 
     <!-- زر مشاركة رابط التطبيق المباشر -->
     <button type="button" class="btn-share-app" onclick="shareApp(${jsArg(app.id)})">
@@ -5131,9 +5281,11 @@ function showAppDetail(appId){
   if(window.history && window.history.replaceState){
     history.replaceState({ appId: app.id, seq }, '', `?app${seq}`);
   }
-  setTimeout(() => {
-    openBottomRatePopup(app.id);
-  }, 250);
+  if(!isWip){
+    setTimeout(() => {
+      openBottomRatePopup(app.id);
+    }, 250);
+  }
 }
 
 // عرض المقال مع اسم المستخدم (سارة علي مثلاً) وصورته والتاريخ الحقيقي
