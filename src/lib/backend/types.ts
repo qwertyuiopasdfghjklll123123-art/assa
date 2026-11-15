@@ -11,10 +11,12 @@ export interface AuthInfo {
 /**
  * Minimal storage + auth contract. Two implementations exist:
  *  - local:    browser-only demo database (localStorage), zero configuration
- *  - firebase: Firestore + Firebase Auth + Storage (production)
+ *  - php:      the PHP + JSON-files API in /api (production)
  */
 export interface Backend {
-  mode: 'local' | 'firebase'
+  mode: 'local' | 'php'
+  /** True when the server recomputes orders and deducts redeemed points itself. */
+  serverSide: boolean
   list<T>(col: string, filter?: Filter): Promise<T[]>
   get<T>(col: string, id: string): Promise<T | null>
   /** Merge-writes `data` into the document (creates it if missing). */
@@ -26,11 +28,12 @@ export interface Backend {
 
   onAuth(cb: (info: AuthInfo | null) => void): () => void
   signIn(email: string, password: string): Promise<AuthInfo>
-  signUp(email: string, password: string): Promise<AuthInfo>
-  signInGoogle(): Promise<AuthInfo>
+  signUp(email: string, password: string, profile: { name: string; phone: string }): Promise<AuthInfo>
   signOut(): Promise<void>
-  resetPassword(email: string): Promise<void>
   deleteAuthUser(): Promise<void>
+  changePassword(current: string, next: string): Promise<void>
+  /** Admin only: sets a new password for a customer. */
+  setUserPassword(uid: string, password: string): Promise<void>
   uploadImage(file: File, folder: string): Promise<string>
 }
 

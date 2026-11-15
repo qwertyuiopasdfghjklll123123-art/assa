@@ -3,6 +3,7 @@
 import { Check, MapPin, Phone, Store } from 'lucide-react'
 import { cx, dateTime, money, num } from '@/lib/format'
 import { STATUS_LABEL, type Order, type OrderStatus } from '@/lib/models'
+import { LocationPreview } from './location-map'
 import { Thumb } from './ui'
 
 const FLOW: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'on_the_way', 'delivered']
@@ -90,6 +91,7 @@ export function OrderDetails({ order, currency }: { order: Order; currency: stri
         <p className="flex items-center gap-2">
           <Phone className="size-4 text-sky" /> <span className="num">{order.userPhone}</span>
         </p>
+        {order.location && <LocationPreview value={order.location} />}
         {order.notes && <p className="rounded-lg bg-warn-50 p-2 text-amber-800">ملاحظة: {order.notes}</p>}
         <p className="text-xs text-ink-3">{dateTime(order.createdAt)}</p>
       </div>

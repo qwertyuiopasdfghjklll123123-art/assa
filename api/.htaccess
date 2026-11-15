@@ -1,0 +1,10 @@
+Options -Indexes
+<Files "config.php">
+  Require all denied
+</Files>
+<Files "db.php">
+  Require all denied
+</Files>
+<Files "seed.json">
+  Require all denied
+</Files>

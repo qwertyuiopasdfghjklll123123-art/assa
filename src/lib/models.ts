@@ -1,11 +1,17 @@
 export type Role = 'user' | 'admin'
 
+export interface GeoPoint {
+  lat: number
+  lng: number
+}
+
 export interface UserProfile {
   id: string
   name: string
   email: string
   phone?: string
   address?: string
+  location?: GeoPoint
   role: Role
   points: number
   totalOrders: number
@@ -83,6 +89,7 @@ export interface Order {
   total: number
   type: 'delivery' | 'pickup'
   address: string
+  location?: GeoPoint | null
   notes: string
   status: OrderStatus
   history: { status: OrderStatus; at: number }[]

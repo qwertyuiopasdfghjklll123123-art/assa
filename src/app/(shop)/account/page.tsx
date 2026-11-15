@@ -1,6 +1,6 @@
 'use client'
 
-import { AlertTriangle, Bell, ChevronLeft, Gift, Info, LayoutDashboard, LogOut, MessageCircle, Pencil, ReceiptText } from 'lucide-react'
+import { AlertTriangle, Bell, ChevronLeft, Gift, Info, KeyRound, LayoutDashboard, LogOut, MessageCircle, Pencil, ReceiptText } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, type ReactNode } from 'react'
@@ -26,6 +26,8 @@ function Account() {
   const router = useRouter()
   const [edit, setEdit] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [pwOpen, setPwOpen] = useState(false)
+  const [pw, setPw] = useState({ current: '', next: '' })
   const [busy, setBusy] = useState(false)
   const [form, setForm] = useState({ name: user!.name, phone: user!.phone ?? '', address: user!.address ?? '' })
 
@@ -73,6 +75,13 @@ function Account() {
         />
         <Row href="/contact/" icon={<MessageCircle className="size-5" />} tone="bg-ok-50 text-ok" title="اتصل بنا" />
         <Row href="/about/" icon={<Info className="size-5" />} tone="bg-brand-50 text-brand" title="حول التطبيق" />
+        <button onClick={() => setPwOpen(true)} className="flex w-full items-center gap-3 p-4 text-right transition hover:bg-bg">
+          <span className="grid size-10 place-items-center rounded-xl bg-sky-50 text-sky">
+            <KeyRound className="size-5" />
+          </span>
+          <span className="flex-1 font-semibold">تغيير كلمة المرور</span>
+          <ChevronLeft className="size-5 text-ink-3" />
+        </button>
         <button
           onClick={async () => {
             await (await getBackend()).signOut()
@@ -112,6 +121,37 @@ function Account() {
             <textarea className="field min-h-20" value={form.address} onChange={(e) => setForm({ ...form, address: e.target.value })} />
           </Field>
           <Button className="w-full" loading={busy} onClick={save} disabled={!form.name.trim()}>
+            حفظ
+          </Button>
+        </div>
+      </Sheet>
+
+      <Sheet open={pwOpen} onClose={() => setPwOpen(false)} title="تغيير كلمة المرور">
+        <div className="space-y-3">
+          <Field label="كلمة المرور الحالية">
+            <input className="field" type="password" dir="ltr" value={pw.current} onChange={(e) => setPw({ ...pw, current: e.target.value })} />
+          </Field>
+          <Field label="كلمة المرور الجديدة" hint="6 أحرف على الأقل">
+            <input className="field" type="password" dir="ltr" value={pw.next} onChange={(e) => setPw({ ...pw, next: e.target.value })} />
+          </Field>
+          <Button
+            className="w-full"
+            loading={busy}
+            disabled={!pw.current || pw.next.length < 6}
+            onClick={async () => {
+              setBusy(true)
+              try {
+                await (await getBackend()).changePassword(pw.current, pw.next)
+                toast('تم تغيير كلمة المرور')
+                setPw({ current: '', next: '' })
+                setPwOpen(false)
+              } catch (e) {
+                toast(errorMessage(e), 'err')
+              } finally {
+                setBusy(false)
+              }
+            }}
+          >
             حفظ
           </Button>
         </div>

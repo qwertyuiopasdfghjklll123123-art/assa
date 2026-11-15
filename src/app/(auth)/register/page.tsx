@@ -6,7 +6,7 @@ import { AuthLayout, useAfterAuth } from '@/components/auth-layout'
 import { useToast } from '@/components/providers'
 import { Button, Field } from '@/components/ui'
 import { getBackend } from '@/lib/backend'
-import { ensureProfile, errorMessage, updateMyProfile } from '@/lib/services'
+import { errorMessage } from '@/lib/services'
 
 export default function RegisterPage() {
   return (
@@ -26,10 +26,7 @@ function Register() {
     e.preventDefault()
     setBusy(true)
     try {
-      const info = await (await getBackend()).signUp(f.email, f.password)
-      await ensureProfile(info.uid, { name: f.name.trim(), email: info.email, phone: f.phone.trim() })
-      // The auth listener may have created the profile first; make sure name/phone are saved.
-      await updateMyProfile(info.uid, { name: f.name.trim(), phone: f.phone.trim() })
+      await (await getBackend()).signUp(f.email, f.password, { name: f.name.trim(), phone: f.phone.trim() })
       toast('تم إنشاء حسابك 🎉')
     } catch (err) {
       toast(errorMessage(err), 'err')

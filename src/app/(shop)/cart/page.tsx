@@ -4,12 +4,14 @@ import { Bike, ShoppingBag, Store, Trash2, Zap } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState } from 'react'
+import { LocationPicker } from '@/components/location-map'
 import { QtyStepper } from '@/components/product-card'
 import { useAuth, useBranch, useCart, useToast } from '@/components/providers'
 import { BranchPicker } from '@/components/shop-shell'
 import { Button, Empty, Field, PageTitle, Thumb, Toggle } from '@/components/ui'
 import { cx, money, num } from '@/lib/format'
 import { useSettings } from '@/lib/hooks'
+import type { GeoPoint } from '@/lib/models'
 import { errorMessage, placeOrder, quote } from '@/lib/services'
 
 export default function CartPage() {
@@ -25,10 +27,12 @@ export default function CartPage() {
   const [phone, setPhone] = useState<string | null>(null)
   const [notes, setNotes] = useState('')
   const [usePoints, setUsePoints] = useState(false)
+  const [location, setLocation] = useState<GeoPoint | null>(null)
   const [busy, setBusy] = useState(false)
 
   const addr = address ?? user?.address ?? ''
   const tel = phone ?? user?.phone ?? ''
+  const loc = location ?? user?.location ?? null
   const q = quote(items, settings, type, user?.points ?? 0, usePoints)
   const belowMin = q.subtotal < settings.minOrder
   const cur = settings.currency
@@ -55,10 +59,11 @@ export default function CartPage() {
     if (!branch) return toast('اختر الفرع أولاً', 'err')
     if (!branch.open) return toast('هذا الفرع مغلق حالياً', 'err')
     if (!tel.trim()) return toast('أدخل رقم الهاتف', 'err')
-    if (type === 'delivery' && !addr.trim()) return toast('أدخل عنوان التوصيل', 'err')
+    if (type === 'delivery' && !loc) return toast('حدد موقع بيتك على الخريطة', 'err')
+    if (type === 'delivery' && !addr.trim()) return toast('أدخل تفاصيل العنوان', 'err')
     setBusy(true)
     try {
-      await placeOrder({ user, branch, items, settings, type, address: addr.trim(), phone: tel.trim(), notes: notes.trim(), usePoints })
+      await placeOrder({ user, branch, items, settings, type, address: addr.trim(), phone: tel.trim(), notes: notes.trim(), usePoints, location: loc })
       clear()
       toast('تم إرسال طلبك بنجاح 🎉')
       router.push('/orders/')
@@ -124,9 +129,14 @@ export default function CartPage() {
               <input className="field num text-right" inputMode="tel" value={tel} onChange={(e) => setPhone(e.target.value)} placeholder="07xx xxx xxxx" />
             </Field>
             {type === 'delivery' && (
-              <Field label="عنوان التوصيل">
-                <textarea className="field min-h-20" value={addr} onChange={(e) => setAddress(e.target.value)} placeholder="المنطقة، الشارع، أقرب نقطة دالة" />
-              </Field>
+              <>
+                <Field label="موقع البيت على الخريطة">
+                  <LocationPicker value={loc} onChange={setLocation} />
+                </Field>
+                <Field label="تفاصيل العنوان">
+                  <textarea className="field min-h-20" value={addr} onChange={(e) => setAddress(e.target.value)} placeholder="المنطقة، الشارع، رقم البيت، أقرب نقطة دالة" />
+                </Field>
+              </>
             )}
             <Field label="ملاحظات (اختياري)">
               <input className="field" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="مثلاً: بدون بصل" />

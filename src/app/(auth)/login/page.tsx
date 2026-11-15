@@ -3,10 +3,10 @@
 import { Eye, EyeOff, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
 import { Suspense, useState } from 'react'
-import { AuthLayout, GoogleIcon, useAfterAuth } from '@/components/auth-layout'
+import { AuthLayout, useAfterAuth } from '@/components/auth-layout'
 import { useToast } from '@/components/providers'
 import { Button, Field } from '@/components/ui'
-import { getBackend, isFirebaseConfigured } from '@/lib/backend'
+import { getBackend } from '@/lib/backend'
 import { useSettings } from '@/lib/hooks'
 import { errorMessage } from '@/lib/services'
 
@@ -25,37 +25,22 @@ function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [show, setShow] = useState(false)
-  const [busy, setBusy] = useState<'email' | 'google' | null>(null)
+  const [busy, setBusy] = useState(false)
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
-    setBusy('email')
+    setBusy(true)
     try {
       await (await getBackend()).signIn(email, password)
     } catch (err) {
       toast(errorMessage(err), 'err')
-      setBusy(null)
-    }
-  }
-
-  async function google() {
-    setBusy('google')
-    try {
-      await (await getBackend()).signInGoogle()
-    } catch (err) {
-      toast(errorMessage(err), 'err')
-      setBusy(null)
+      setBusy(false)
     }
   }
 
   return (
     <AuthLayout title="أهلاً بعودتك" subtitle="سجّل الدخول لمتابعة طلباتك ونقاطك">
       <div className="grid gap-2">
-        {isFirebaseConfigured && (
-          <Button variant="outline" onClick={google} loading={busy === 'google'}>
-            <GoogleIcon /> المتابعة بحساب جوجل
-          </Button>
-        )}
         <a
           href={`https://wa.me/${s.whatsapp.replace(/\D/g, '')}`}
           target="_blank"
@@ -95,7 +80,7 @@ function Login() {
             نسيت كلمة المرور؟
           </Link>
         </div>
-        <Button type="submit" className="w-full" size="lg" loading={busy === 'email'}>
+        <Button type="submit" className="w-full" size="lg" loading={busy}>
           تسجيل الدخول
         </Button>
       </form>

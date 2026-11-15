@@ -26,19 +26,15 @@ export async function ensureProfile(uid: string, data: { name?: string; email: s
   return { ...profile, id: uid }
 }
 
-export async function updateMyProfile(uid: string, data: Partial<Pick<UserProfile, 'name' | 'phone' | 'address' | 'notifSeenAt'>>) {
+export async function updateMyProfile(uid: string, data: Partial<Pick<UserProfile, 'name' | 'phone' | 'address' | 'notifSeenAt' | 'location'>>) {
   await (await getBackend()).set('users', uid, data)
 }
 
 export async function deleteMyAccount(uid: string) {
   const b = await getBackend()
   // Orders and loyalty history are kept; the profile is only deactivated.
-  await b.set('users', uid, { deleted: true, deletedAt: Date.now() })
-  try {
-    await b.deleteAuthUser()
-  } catch {
-    // e.g. requires-recent-login: the profile is already deactivated, which blocks access.
-  }
+  if (!b.serverSide) await b.set('users', uid, { deleted: true, deletedAt: Date.now() })
+  await b.deleteAuthUser()
   await b.signOut()
 }
 
@@ -61,6 +57,7 @@ export interface PlaceOrderInput {
   phone: string
   notes: string
   usePoints: boolean
+  location: { lat: number; lng: number } | null
 }
 
 export function quote(items: OrderItem[], s: Settings, type: 'delivery' | 'pickup', availablePoints: number, usePoints: boolean) {
@@ -90,6 +87,7 @@ export async function placeOrder(input: PlaceOrderInput) {
     type: input.type,
     address: input.type === 'delivery' ? input.address : '',
     notes: input.notes,
+    location: input.type === 'delivery' ? input.location : null,
     status: 'pending',
     history: [{ status: 'pending', at: now }],
     pointsEarned: pointsForTotal(q.total, settings),
@@ -97,10 +95,16 @@ export async function placeOrder(input: PlaceOrderInput) {
     updatedAt: now,
   }
   const id = await b.add('orders', order)
-  const profilePatch: Record<string, unknown> = { phone: input.phone }
-  if (input.type === 'delivery') profilePatch.address = input.address
-  if (q.pointsUsed) profilePatch.points = user.points - q.pointsUsed
-  await b.set('users', user.id, profilePatch)
+  // The PHP server recalculates the order and updates the profile itself.
+  if (!b.serverSide) {
+    const profilePatch: Record<string, unknown> = { phone: input.phone }
+    if (input.type === 'delivery') {
+      profilePatch.address = input.address
+      if (input.location) profilePatch.location = input.location
+    }
+    if (q.pointsUsed) profilePatch.points = user.points - q.pointsUsed
+    await b.set('users', user.id, profilePatch)
+  }
   return id
 }
 
@@ -202,17 +206,26 @@ export async function uploadImage(file: File, folder: string) {
 
 export function errorMessage(e: unknown) {
   const code = e instanceof Error ? (e as Error & { code?: string }).code || e.message : String(e)
-  if (code.includes('invalid-credential') || code.includes('wrong-password') || code.includes('user-not-found'))
-    return 'البريد الإلكتروني أو كلمة المرور غير صحيحة'
-  if (code.includes('email-already-in-use')) return 'هذا البريد مسجّل مسبقاً'
-  if (code.includes('weak-password')) return 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'
-  if (code.includes('invalid-email')) return 'البريد الإلكتروني غير صالح'
-  if (code.includes('google-needs-firebase')) return 'تسجيل الدخول بجوجل يتطلب ربط Firebase'
-  if (code.includes('reset-needs-firebase')) return 'استعادة كلمة المرور تتطلب ربط Firebase'
-  if (code.includes('requires-recent-login')) return 'يرجى تسجيل الخروج ثم الدخول مجدداً لإتمام العملية'
-  if (code.includes('popup-closed')) return 'تم إغلاق نافذة تسجيل الدخول'
-  if (code.includes('permission')) return 'ليست لديك صلاحية لتنفيذ هذا الإجراء'
-  if (code === 'not-cancellable') return 'لا يمكن إلغاء هذا الطلب، تواصل مع المطعم'
-  if (code === 'min-order') return 'لم يصل الطلب إلى الحد الأدنى'
+  const map: [string, string][] = [
+    ['invalid-credential', 'البريد الإلكتروني أو كلمة المرور غير صحيحة'],
+    ['wrong-password', 'كلمة المرور الحالية غير صحيحة'],
+    ['email-already-in-use', 'هذا البريد مسجّل مسبقاً'],
+    ['weak-password', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'],
+    ['invalid-email', 'البريد الإلكتروني غير صالح'],
+    ['user-blocked', 'تم إيقاف هذا الحساب، تواصل مع المطعم'],
+    ['permission', 'ليست لديك صلاحية لتنفيذ هذا الإجراء'],
+    ['unauthenticated', 'انتهت الجلسة، سجّل الدخول من جديد'],
+    ['not-cancellable', 'لا يمكن إلغاء هذا الطلب، تواصل مع المطعم'],
+    ['min-order', 'لم يصل الطلب إلى الحد الأدنى'],
+    ['branch-closed', 'هذا الفرع مغلق حالياً'],
+    ['product-unavailable', 'أحد الأصناف في السلة لم يعد متوفراً'],
+    ['empty-order', 'السلة فارغة'],
+    ['phone-required', 'أدخل رقم الهاتف'],
+    ['address-required', 'أدخل عنوان التوصيل'],
+    ['bad-image', 'الصورة يجب أن تكون JPG أو PNG أو WEBP'],
+    ['file-too-large', 'حجم الصورة كبير جداً (الحد 5MB)'],
+    ['Failed to fetch', 'تعذّر الاتصال بالخادم، تحقق من الإنترنت'],
+  ]
+  for (const [k, msg] of map) if (code.includes(k)) return msg
   return 'حدث خطأ غير متوقع، حاول مرة أخرى'
 }

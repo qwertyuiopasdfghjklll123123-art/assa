@@ -1,48 +1,26 @@
 'use client'
 
+import { MessageCircle } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
 import { AuthLayout } from '@/components/auth-layout'
-import { useToast } from '@/components/providers'
-import { Button, Field } from '@/components/ui'
-import { getBackend } from '@/lib/backend'
-import { errorMessage } from '@/lib/services'
+import { useSettings } from '@/lib/hooks'
 
 export default function ForgotPage() {
-  const toast = useToast()
-  const [email, setEmail] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [sent, setSent] = useState(false)
-
-  async function submit(e: React.FormEvent) {
-    e.preventDefault()
-    setBusy(true)
-    try {
-      await (await getBackend()).resetPassword(email)
-      setSent(true)
-    } catch (err) {
-      toast(errorMessage(err), 'err')
-    } finally {
-      setBusy(false)
-    }
-  }
-
+  const s = useSettings()
+  const text = encodeURIComponent('مرحباً، نسيت كلمة المرور لحسابي في التطبيق. بريدي الإلكتروني هو: ')
   return (
-    <AuthLayout title="استعادة كلمة المرور" subtitle="أدخل بريدك وسنرسل لك رابطاً لتعيين كلمة مرور جديدة">
-      {sent ? (
-        <div className="rounded-2xl border border-emerald-200 bg-ok-50 p-4 text-sm font-semibold text-emerald-800">
-          تم إرسال رابط الاستعادة إلى بريدك الإلكتروني. تحقق من صندوق الوارد.
-        </div>
-      ) : (
-        <form onSubmit={submit} className="space-y-4">
-          <Field label="البريد الإلكتروني">
-            <input className="field" type="email" required dir="ltr" value={email} onChange={(e) => setEmail(e.target.value)} />
-          </Field>
-          <Button type="submit" className="w-full" size="lg" loading={busy}>
-            إرسال الرابط
-          </Button>
-        </form>
-      )}
+    <AuthLayout title="نسيت كلمة المرور؟" subtitle="تواصل معنا عبر واتساب وسنعيد تعيين كلمة المرور لحسابك فوراً">
+      <a
+        href={`https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${text}`}
+        target="_blank"
+        rel="noreferrer"
+        className="flex h-12 items-center justify-center gap-2 rounded-xl bg-ok font-bold text-white shadow-[0_6px_18px_rgba(16,185,129,0.3)] transition hover:opacity-90"
+      >
+        <MessageCircle className="size-5" /> تواصل عبر واتساب
+      </a>
+      <p className="mt-4 rounded-xl bg-sky-50 p-3 text-sm leading-relaxed text-sky-800">
+        أرسل لنا البريد الإلكتروني المسجّل في حسابك، وسيرسل لك فريق المطعم كلمة مرور جديدة يمكنك تغييرها لاحقاً من صفحة «حسابي».
+      </p>
       <p className="mt-6 text-center text-sm">
         <Link href="/login/" className="font-bold text-sky-600">
           العودة لتسجيل الدخول

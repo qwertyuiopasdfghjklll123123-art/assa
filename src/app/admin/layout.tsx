@@ -2,14 +2,15 @@
 
 import { Bell, Home, LayoutDashboard, LogOut, MapPin, ReceiptText, Settings, ShieldAlert, Users, UtensilsCrossed } from 'lucide-react'
 import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { useEffect, type ReactNode } from 'react'
-import { useAuth } from '@/components/providers'
-import { Button, Spinner } from '@/components/ui'
+import { usePathname } from 'next/navigation'
+import { useState, type ReactNode } from 'react'
+import { useAuth, useToast } from '@/components/providers'
+import { Button, Field, Spinner } from '@/components/ui'
 import { getBackend } from '@/lib/backend'
 import { cx } from '@/lib/format'
 import { useCollection, useSettings } from '@/lib/hooks'
 import type { Order } from '@/lib/models'
+import { errorMessage } from '@/lib/services'
 
 const NAV = [
   { href: '/admin/', label: 'نظرة عامة', icon: LayoutDashboard },
@@ -23,16 +24,12 @@ const NAV = [
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, isAdmin, loading } = useAuth()
-  const router = useRouter()
   const path = usePathname()
   const settings = useSettings()
   const { items: pending } = useCollection<Order>(isAdmin ? 'orders' : null, { field: 'status', op: '==', value: 'pending' })
 
-  useEffect(() => {
-    if (!loading && !user) router.replace('/login/?next=/admin/')
-  }, [loading, user, router])
-
-  if (loading || !user) return <Spinner className="min-h-dvh" />
+  if (loading) return <Spinner className="min-h-dvh" />
+  if (!user) return <AdminLogin />
   if (!isAdmin)
     return (
       <div className="grid min-h-dvh place-items-center p-6 text-center">
@@ -117,6 +114,48 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         </header>
         <main className="mx-auto max-w-6xl p-4 lg:p-8">{children}</main>
       </div>
+    </div>
+  )
+}
+
+function AdminLogin() {
+  const settings = useSettings()
+  const toast = useToast()
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [busy, setBusy] = useState(false)
+  return (
+    <div className="navy-grad grid min-h-dvh place-items-center p-4">
+      <form
+        className="card w-full max-w-sm space-y-4 p-6"
+        onSubmit={async (e) => {
+          e.preventDefault()
+          setBusy(true)
+          try {
+            await (await getBackend()).signIn(email, password)
+          } catch (err) {
+            toast(errorMessage(err), 'err')
+            setBusy(false)
+          }
+        }}
+      >
+        <div className="flex items-center gap-3">
+          <span className="hero-grad grid size-12 place-items-center rounded-xl font-display text-xl font-black text-white">{settings.restaurantName.slice(0, 1)}</span>
+          <div>
+            <h1 className="font-display text-xl font-extrabold">لوحة الإدارة</h1>
+            <p className="text-sm text-ink-2">{settings.restaurantName}</p>
+          </div>
+        </div>
+        <Field label="البريد الإلكتروني">
+          <input className="field" type="email" dir="ltr" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
+        </Field>
+        <Field label="كلمة المرور">
+          <input className="field" type="password" dir="ltr" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+        </Field>
+        <Button type="submit" size="lg" className="w-full" loading={busy}>
+          دخول
+        </Button>
+      </form>
     </div>
   )
 }

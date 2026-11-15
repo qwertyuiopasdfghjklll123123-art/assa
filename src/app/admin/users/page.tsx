@@ -3,6 +3,7 @@
 import { Search, ShieldCheck, Users } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { useAuth, useToast } from '@/components/providers'
+import { getBackend } from '@/lib/backend'
 import { Button, Empty, PageTitle, Sheet, StatusBadge } from '@/components/ui'
 import { cx, dateTime, money, num } from '@/lib/format'
 import { byNewest, useCollection, useSettings } from '@/lib/hooks'
@@ -19,6 +20,7 @@ export default function AdminUsersPage() {
   const [openId, setOpenId] = useState<string | null>(null)
   const [delta, setDelta] = useState('')
   const [msg, setMsg] = useState({ title: '', body: '' })
+  const [newPass, setNewPass] = useState('')
   const [busy, setBusy] = useState(false)
 
   const shown = useMemo(() => {
@@ -158,6 +160,26 @@ export default function AdminUsersPage() {
                 </Button>
               </div>
             </div>
+
+            {!open.deleted && (
+              <div className="rounded-2xl border border-line p-3">
+                <div className="mb-2 text-sm font-bold">إعادة تعيين كلمة المرور</div>
+                <div className="flex gap-2">
+                  <input className="field h-10" dir="ltr" placeholder="كلمة مرور جديدة (6+ أحرف)" value={newPass} onChange={(e) => setNewPass(e.target.value)} />
+                  <Button
+                    variant="sky"
+                    loading={busy}
+                    disabled={newPass.length < 6}
+                    onClick={async () => {
+                      if (await run(async () => (await getBackend()).setUserPassword(open.id, newPass), 'تم تعيين كلمة المرور الجديدة')) setNewPass('')
+                    }}
+                  >
+                    حفظ
+                  </Button>
+                </div>
+                <p className="mt-1.5 text-xs text-ink-3">أرسلها للعميل عبر واتساب، ويمكنه تغييرها من صفحة «حسابي».</p>
+              </div>
+            )}
 
             {open.id !== me?.id && !open.deleted && (
               <div className="grid grid-cols-2 gap-2">

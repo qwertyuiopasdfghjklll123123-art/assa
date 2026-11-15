@@ -1,4 +1,4 @@
-import { SEED, SEED_ADMIN } from './seed'
+import seedJson from '../../../api/seed.json'
 import { fileToDataUrl, matches, type AuthInfo, type Backend, type Filter } from './types'
 
 /*
@@ -37,9 +37,17 @@ function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8)
 }
 
+/** Demo admin for local mode (same defaults as api/config.php). */
+const SEED_ADMIN = { uid: 'admin', email: 'admin@sufra.app', password: 'admin123' }
+
 async function ensureSeed() {
   if (localStorage.getItem(DB_KEY)) return
-  localStorage.setItem(DB_KEY, JSON.stringify(SEED))
+  const now = Date.now()
+  const seed = JSON.parse(JSON.stringify(seedJson)) as DB
+  for (const rows of Object.values(seed)) for (const r of Object.values(rows)) if ('createdAt' in r) r.createdAt = now
+  seed.users = { admin: { name: 'مدير النظام', email: SEED_ADMIN.email, phone: '', role: 'admin', points: 0, totalOrders: 0, totalSpent: 0, createdAt: now } }
+  seed.orders = {}
+  localStorage.setItem(DB_KEY, JSON.stringify(seed))
   const creds: Creds = { [SEED_ADMIN.email]: { uid: SEED_ADMIN.uid, hash: await hash(SEED_ADMIN.password) } }
   localStorage.setItem(CRED_KEY, JSON.stringify(creds))
 }
@@ -69,6 +77,7 @@ export async function createLocalBackend(): Promise<Backend> {
 
   const backend: Backend = {
     mode: 'local',
+    serverSide: false,
     async list<T>(col: string, filter?: Filter) {
       return withId(db()[col]).filter((d) => matches(d, filter)) as T[]
     },
@@ -125,7 +134,7 @@ export async function createLocalBackend(): Promise<Backend> {
       write(SESSION_KEY, info)
       return info
     },
-    async signUp(email, password) {
+    async signUp(email, password, profile) {
       const key = email.trim().toLowerCase()
       const creds = read<Creds>(CRED_KEY, {})
       if (creds[key]) throw new Error('auth/email-already-in-use')
@@ -133,18 +142,15 @@ export async function createLocalBackend(): Promise<Backend> {
       const info = { uid: uid(), email: key }
       creds[key] = { uid: info.uid, hash: await hash(password) }
       localStorage.setItem(CRED_KEY, JSON.stringify(creds))
+      await backend.set('users', info.uid, {
+        ...profile, email: key, role: 'user', points: 0, totalOrders: 0, totalSpent: 0, createdAt: Date.now(),
+      })
       write(SESSION_KEY, info)
       return info
-    },
-    async signInGoogle() {
-      throw new Error('auth/google-needs-firebase')
     },
     async signOut() {
       localStorage.removeItem(SESSION_KEY)
       window.dispatchEvent(new Event(EVT))
-    },
-    async resetPassword() {
-      throw new Error('auth/reset-needs-firebase')
     },
     async deleteAuthUser() {
       const s = session()
@@ -153,6 +159,23 @@ export async function createLocalBackend(): Promise<Backend> {
       delete creds[s.email]
       localStorage.setItem(CRED_KEY, JSON.stringify(creds))
       await backend.signOut()
+    },
+    async changePassword(current, next) {
+      const s = session()
+      if (!s) throw new Error('unauthenticated')
+      const creds = read<Creds>(CRED_KEY, {})
+      if (creds[s.email]?.hash !== (await hash(current))) throw new Error('auth/wrong-password')
+      if (next.length < 6) throw new Error('auth/weak-password')
+      creds[s.email].hash = await hash(next)
+      localStorage.setItem(CRED_KEY, JSON.stringify(creds))
+    },
+    async setUserPassword(uid, password) {
+      if (password.length < 6) throw new Error('auth/weak-password')
+      const creds = read<Creds>(CRED_KEY, {})
+      const email = Object.keys(creds).find((e) => creds[e].uid === uid)
+      if (!email) throw new Error('not-found')
+      creds[email].hash = await hash(password)
+      localStorage.setItem(CRED_KEY, JSON.stringify(creds))
     },
     async uploadImage(file) {
       return fileToDataUrl(file, 600)

@@ -3,7 +3,7 @@
 import { useState, type ReactNode } from 'react'
 import { useToast } from '@/components/providers'
 import { Button, Field, PageTitle } from '@/components/ui'
-import { isFirebaseConfigured } from '@/lib/backend'
+import { isDemoMode } from '@/lib/backend'
 import { money } from '@/lib/format'
 import { useSettings } from '@/lib/hooks'
 import type { Settings } from '@/lib/models'
@@ -41,7 +41,7 @@ export default function AdminSettingsPage() {
     >
       <PageTitle
         title="الإعدادات"
-        subtitle={isFirebaseConfigured ? 'متصل بقاعدة بيانات Firebase' : 'وضع تجريبي — البيانات في هذا المتصفح فقط'}
+        subtitle={isDemoMode ? 'وضع تجريبي — البيانات في هذا المتصفح فقط' : 'متصل بالخادم — البيانات محفوظة في ملفات JSON'}
         action={
           <Button type="submit" loading={busy} disabled={!draft}>
             حفظ التغييرات
