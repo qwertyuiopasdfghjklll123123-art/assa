@@ -1,113 +1,127 @@
-# Revil | Main Profile
-![Next.js](https://img.shields.io/badge/Next.js%2015-black?style=flat-square&logo=next.js)
-![React](https://img.shields.io/badge/React%2019-%2320232a.svg?style=flat-square&logo=react&logoColor=%2361DAFB)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind%204-%2338B2AC.svg?style=flat-square&logo=tailwind-css&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat-square&logo=typescript&logoColor=white)
-![Motion](https://img.shields.io/badge/Motion-000000?style=flat-square&logo=framer&logoColor=white)
-![Firebase](https://img.shields.io/badge/Firebase-%23039BE5.svg?style=flat-square&logo=firebase)
+# سُفرة — تطبيق طلبات مطعم (لوحة مستخدم + لوحة أدمن)
 
-**Revil** is my **Main Professional Profile** and a premium, ultra-responsive developer portfolio ecosystem. Designed for high-end digital presence, it consists of a stunning user-facing showcase and a powerful, real-time Administrative Dashboard to manage every facet of my professional career as a **Frontend & AI Expert**.
+تطبيق عربي (RTL) لطلب الطعام يُثبَّت على الهاتف كتطبيق (PWA)، مع خادم **PHP** وقاعدة بيانات **JSON**.
+الألوان: برتقالي، أبيض، وسماوي. الخطوط: IBM Plex Sans Arabic و Tajawal.
 
----
+## الصفحات
 
-## ✨ Core Pillars
+**الروابط:** لكل قسم رابط خاص: `/home` `/menu` `/cart` `/orders` `/loyalty` `/account` `/notifications` `/contact` `/about` `/login`، ولوحة الأدمن `/admin` و `/admin/orders` … إلخ.
+الرابط الرئيسي `/` يحوّل تلقائياً إلى `/home` بعد تسجيل الدخول، أو إلى `/login`.
 
-### 🎨 High-Fidelity UI/UX
-Designed with a "Ceramic-Glass" aesthetic, Revil features:
-- **Liquid Navigation**: Ultra-smooth page transitions and scroll-aware animations powered by **Anime.js** and **Framer Motion**.
-- **Adaptive Precision**: A hand-crafted CSS design system providing a seamless experience from 320px mobile devices to 4K displays.
-- **Atmospheric Themes**: Intelligent Dark/Light mode system with deep glassmorphism and animated background blobs.
+**السرعة:** البيانات تُحفظ في الذاكرة وتُشارك بين الصفحات (طلب واحد للخادم لكل نوع بيانات)، ويُحمَّل مسبقاً ما تحتاجه التبويبات، والمنيو محفوظ على الجهاز ليظهر فوراً عند فتح التطبيق، والصفحات تُعرض من ذاكرة التطبيق (Service Worker) ثم تُحدَّث في الخلفية.
 
-### 🛡️ The Admin Dashboard (Canary)
-A private, real-time command center built for elite project management:
-- **Project Orchestrator**: Add, edit, and organize projects with dynamic image cropping and multi-tag filtering.
-- **Canary Engine**: A built-in mail inbox for direct client communication and a meeting calendar with **Google Calendar API** synchronization.
-- **The "Algorithm"**: Proprietary session tracking that monitors project engagement, stack time, and visitor intent.
-- **Link Architect**: Generate trackable custom URLs for specific clients to monitor when they view your portfolio.
+**لوحة المستخدم**
 
-### ⚡ Technical Excellence
-- **React 19 & Next.js 15**: Leveraging the latest in front-end performance, App Router, and server-side capabilities.
-- **Robust Security**: Hardened Firestore rules, environment variable isolation, CSP compliance, and secure sanitized SVG rendering.
-- **Cloud Infrastructure**: Scalable backend logic using Firebase Cloud Functions, Realtime live data synchronization, and secure file handling via Firebase Storage.
+| الصفحة | المسار | الوصف |
+|---|---|---|
+| الرئيسية | `/home` | ترحيب، اختيار الفرع، بطاقة عرض الولاء، رصيد النقاط، الأكثر طلباً، الفروع |
+| المنيو | `/menu` | أقسام وبحث، إضافة للسلة، الأصناف غير المتوفرة |
+| السلة | `/cart` | الكميات، توصيل أو استلام، تحديد موقع البيت على الخريطة، استخدام النقاط كخصم |
+| طلباتي | `/orders` | فلترة حسب الحالة، تفاصيل الطلب وخط سير الحالة، إلغاء الطلب المنتظر |
+| الولاء | `/loyalty` | الرصيد، التقدم نحو المكافأة، الإحصائيات، شرح البرنامج |
+| حسابي | `/account` | تعديل البيانات، الإشعارات، اتصل بنا، حول التطبيق، تسجيل الخروج، حذف الحساب |
+| الدخول | `/login` `/register` | بطاقة واحدة فيها زرّان: **واتساب** (رقم الهاتف + رمز تحقق، ينشئ الحساب تلقائياً إن كان الرقم جديداً) و **البريد (Gmail)** (تسجيل دخول أو إنشاء حساب في الموقع ببريد وكلمة مرور) |
 
----
+**لوحة الأدمن** (`/admin`، لحساب الأدمن فقط)
 
-## 🚀 Experience it Locally
+| الصفحة | الوصف |
+|---|---|
+| نظرة عامة | طلبات اليوم، الطلبات النشطة، المبيعات، العملاء، رسم بياني لآخر 7 أيام، الأكثر مبيعاً |
+| الطلبات | فلترة وبحث، تغيير الحالة بنقرة (مؤكد ← قيد التحضير ← في الطريق ← تم التسليم)، رفض/إلغاء، يصل إشعار للعميل تلقائياً |
+| المنيو | إضافة/تعديل/حذف الأقسام والأصناف، رفع الصور، السعر، التوفر، التمييز |
+| الفروع | إضافة/تعديل الفروع، فتح/إغلاق الفرع |
+| المستخدمون | البحث، تعديل النقاط، إعادة تعيين كلمة المرور، إشعار خاص، منح/سحب صلاحية الأدمن، الحظر، سجل الطلبات |
+| الإشعارات | إرسال إشعار لجميع العملاء |
+| الإعدادات | اسم المطعم، رسوم التوصيل، الحد الأدنى، نسبة الولاء وقيمة النقطة، معلومات التواصل |
 
-### Prerequisites
-- Node.js (v18+)
-- Firebase CLI (`npm install -g firebase-tools`)
+**النقاط:** عند تحويل الطلب إلى «تم التسليم» يحصل العميل على نسبة (افتراضياً 5%) من قيمة الطلب كنقاط. عند إلغاء طلب استُخدمت فيه نقاط تُعاد النقاط للعميل.
 
-### Installation
+**الموقع:** العميل يحدد موقع بيته على الخريطة (أو «موقعي الحالي») عند طلب التوصيل، والأدمن يرى الموقع مع زر «فتح في خرائط جوجل».
+
+**التثبيت إجباري (PWA):** تطبيق العميل لا يعمل في تبويب متصفح عادي؛ تظهر شاشة تطلب تثبيته أولاً
+(زر «تثبيت التطبيق» على أندرويد/كروم، وخطوات «إضافة إلى الشاشة الرئيسية» على آيفون/Safari).
+لوحة الأدمن مستثناة لتعمل من كمبيوتر المطعم. لإلغاء الشرط: `NEXT_PUBLIC_REQUIRE_PWA=false` قبل البناء.
+
+## الدخول عبر واتساب
+
+في `api/config.php` → `whatsapp`:
+
+| المزوّد | الإعداد |
+|---|---|
+| `meta` (الرسمي) | من Meta Business: `meta_token` و `meta_phone_number_id`، وقالب رسائل من نوع **Authentication** باسم `meta_template` (بلغة `ar`) فيه متغير الرمز وزر نسخ الرمز. |
+| `ultramsg` (الأسهل) | أنشئ Instance في ultramsg.com واربط رقم واتساب المطعم بمسح QR، ثم ضع `ultramsg_instance` و `ultramsg_token`. |
+| `none` | لا يُرسل شيء. مع `otp_debug => true` يظهر الرمز على الشاشة للتجربة فقط. |
+
+> **قبل الإطلاق:** اختر مزوّداً واجعل `'otp_debug' => false`.
+
+## الدخول بالبريد الإلكتروني
+
+زر «البريد (Gmail)» يفتح نموذج «لدي حساب / حساب جديد» بالبريد وكلمة المرور (أي بريد، ليس Gmail فقط).
+من ينسى كلمة المرور يتواصل عبر واتساب، والأدمن يعيّن له كلمة جديدة من صفحة المستخدمين، ويستطيع العميل تغييرها من «حسابي».
+
+> الكود يحتوي أيضاً على دخول Google الحقيقي (OAuth) في الخادم (`auth.google`) إن أردت تفعيله لاحقاً عبر `google_client_id`.
+
+## إشعارات الهاتف (Push)
+
+- عند فتح التطبيق المثبّت يُطلب من العميل تفعيل الإشعارات (ويمكنه تفعيلها/إيقافها من «حسابي»).
+- تصل الإشعارات للهاتف حتى والتطبيق مغلق: قبول الطلب، التحضير، في الطريق، التسليم، وكل إشعار يرسله الأدمن.
+- أنواع الإشعارات التي يرسلها الأدمن: العروض، الخصومات، أصناف جديدة، أخبار المطعم، تنبيه مهم.
+- لا تحتاج أي حساب خارجي: الخادم يولّد مفاتيح VAPID تلقائياً. يتطلب HTTPS وامتداد PHP `curl` و `openssl`.
+- على آيفون تعمل الإشعارات بعد تثبيت التطبيق على الشاشة الرئيسية (iOS 16.4 فأحدث).
+
+## التقنيات
+
+- **الواجهة:** Next.js 16 + React 19 + Tailwind CSS 4 — تُبنى كملفات ثابتة (HTML/JS/CSS).
+- **الخادم:** PHP 8.1+ بدون أي مكتبات (`api/index.php`).
+- **قاعدة البيانات:** ملفات JSON في `api/data/` (ملف لكل جدول، مع قفل للكتابة المتزامنة).
+- **الخرائط:** Leaflet + OpenStreetMap (مجانية، بدون مفتاح).
+
+## الرفع على الاستضافة (Hostinger أو أي استضافة PHP)
+
 ```bash
-# Clone the repository
-git clone https://github.com/temrevil/red.git
-
-# Install dependencies
 npm install
-
-# Start development server
-npm run dev
+npm run build        # يُنتج مجلد dist جاهزاً للرفع (الواجهة + api)
 ```
 
-### 🐳 Run with Docker
-You can directly run the application inside an isolated Docker container without needing Node installed locally:
+1. **قبل البناء** عدّل `api/config.php`: بريد وكلمة مرور حساب الأدمن (`admin_email` / `admin_password`).
+2. ارفع **محتويات** مجلد `dist/` إلى `public_html` (يجب أن يكون الموقع على **HTTPS** — شرط لتثبيت التطبيق).
+3. تأكد أن المجلدين `api/data` و `uploads` قابلان للكتابة (صلاحية 755 أو 775).
+4. افتح `https://موقعك/admin/` وسجّل الدخول بحساب الأدمن. قاعدة البيانات تُنشأ تلقائياً مع بيانات تجريبية للمنيو.
+5. عدّل المنيو والفروع والإعدادات من لوحة الأدمن.
+
+> عند رفع نسخة جديدة لا تحذف مجلد `api/data` على الخادم — فيه كل البيانات (المستخدمون والطلبات).
+> للأمان الأعلى يمكن نقل البيانات خارج `public_html` بتعديل `data_dir` في `api/config.php`.
+
+### الحماية
+- كلمات المرور مشفّرة بـ `password_hash`، والجلسات برموز عشوائية.
+- الخادم يعيد حساب سعر الطلب من المنيو (لا يمكن للعميل التلاعب بالسعر) ويخصم النقاط بنفسه.
+- العميل لا يستطيع رفع نقاطه أو تغيير صلاحياته أو حالة طلبه (إلا إلغاء طلب منتظر).
+- ملفات البيانات محمية بـ `.htaccess` وبحارس PHP داخل كل ملف، ولا يُسمح بتنفيذ ملفات من مجلد الصور.
+
+## التطوير محلياً
+
 ```bash
-# Build the Docker image
-docker build -t revil-portfolio .
-
-# Run the container on port 3000
-docker run -p 3000:3000 revil-portfolio
+npm run dev                  # وضع تجريبي سريع: البيانات في المتصفح فقط (أدمن: admin@sufra.app / admin123)
+npm run build && npm start   # النسخة الكاملة مع PHP على http://localhost:8000
 ```
 
-## 🤖 Continuous Integration & Security
+أو باستخدام Docker: `docker build -t sufra . && docker run -p 8080:80 sufra`
 
-We maintain high-end reliability and stability across the entire project through automated defenses and strict security policies:
-- **Zero-Error Automation**: Every push to the protected `main` branch runs through aggressive GitHub Action workflows. It rigidly tests against `npm run lint`, `npm run build`, and enforces strict TypeScript standards.
-- **Data & Configuration Security**: The project utilizes hardened, defense-in-depth Firestore and Storage rules, consolidated real-time listeners, and strict CSP headers. Environment variables are managed securely using `NEXT_PUBLIC_*` prefixes.
-- **Rogue DOM Protection**: The React application runs `ClientProtection`, an aggressive `MutationObserver` on the real DOM. It shields against malicious external browser extensions, strictly sanitizes HTML/SVG injections via `sanitizeSvg()`, and destroys unauthorized style injections.
-- **Email Red Alerts**: If a syntax error, bad prop, or type issue is ever committed, the deployment instantly aborts to protect production, and GitHub natively emails the owner with a link to the exact line of code failure.
+## بنية الكود
 
----
-
-## 📂 Architecture Overview
-
-
-```text
+```
+api/
+  index.php        كل عمليات الخادم + الصلاحيات
+  db.php           قاعدة بيانات ملفات JSON
+  config.php       إعدادات الأدمن ومسار البيانات
+  seed.json        بيانات المنيو الأولية
 src/
-├── app/                 # Next.js App Router (layout, pages, globals.css)
-│   └── ClientProtection.tsx # Core DOM shield & security layer
-├── components/          # React components
-│   ├── dashboard/       # Specialized Admin Dashboard modules
-│   └── M-*.tsx          # Reusable Modals
-├── hooks/               # Custom React hooks (e.g., useTheme)
-├── lib/                 # Core logic (Firebase setup, data structures)
-├── utils/               # Global utility functions (e.g., sanitizeSvg)
-└── App.tsx              # Main Navigation & Global Application Wrapper
+  app/(shop)/      صفحات العميل
+  app/(auth)/      الدخول والتسجيل
+  app/admin/       لوحة الأدمن
+  components/      المكونات (الواجهة، الخريطة، شاشة التثبيت…)
+  lib/backend/     php.ts (الإنتاج) و local.ts (تجريبي)
+  lib/services.ts  منطق الطلبات والنقاط والإشعارات
+public/
+  manifest.webmanifest, sw.js, icons/   ملفات تطبيق PWA
 ```
-
----
-
-## 🛠️ Tech Stack
-
-| Domain | Technology |
-| :--- | :--- |
-| **Framework** | [React 19](https://react.dev/), [Next.js 15](https://nextjs.org/) |
-| **Backend** | [Firebase](https://firebase.google.com/) (Firestore, Functions, Storage) |
-| **Animation** | [Anime.js](https://animejs.com/), [Framer Motion](https://motion.dev/) |
-| **Security** | ClientProtection DOM Shield, Hardened Rules, strict CSP |
-| **Icons** | [Lucide React](https://lucide.dev/) |
-| **Styling** | Vanilla CSS (Custom Design System), Tailwind CSS v4 |
-| **Logic** | TypeScript |
-
----
-
-## 📜 License
-
-Distributed under the MIT License. See `LICENSE` for more information.
-
----
-
-Built with precision for the next generation of web presence.
-**[Visit Website](https://temrevil.com)** • **Main Portfolio of Mohammed Ahmed**
-

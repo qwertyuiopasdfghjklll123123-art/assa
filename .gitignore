@@ -1,0 +1,13 @@
+node_modules/
+.next/
+dist/
+out/
+.env
+.env.local
+.env*.local
+*.tsbuildinfo
+.DS_Store
+api/data/*.php
+api/data/*.lock
+api/data/*.tmp
+public/uploads/*/
