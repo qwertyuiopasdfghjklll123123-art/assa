@@ -2,20 +2,15 @@
 const configuredBasePath = process.env.NEXT_PUBLIC_BASE_PATH?.replace(/\/$/, '') || ''
 
 const nextConfig = {
+  // Static export: the whole app is client-side and talks to Firebase directly
+  // (or to the browser's local demo database when Firebase is not configured).
   output: 'export',
   distDir: 'dist',
-  // NOTE: no `images` block — `output: 'export'` disables the Next image optimizer,
-  // and the app uses a custom <FileImage> instead of next/image, so any images config
-  // would be a no-op. (sharp was also removed from deps for the same reason.)
+  trailingSlash: true,
+  images: { unoptimized: true },
   ...(configuredBasePath
-    ? {
-        basePath: configuredBasePath,
-        assetPrefix: `${configuredBasePath}/`,
-      }
+    ? { basePath: configuredBasePath, assetPrefix: `${configuredBasePath}/` }
     : {}),
-  typescript: {
-    ignoreBuildErrors: false,
-  },
 }
 
 export default nextConfig

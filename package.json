@@ -1,7 +1,7 @@
 {
-  "name": "revil",
+  "name": "sufra",
   "private": true,
-  "version": "0.0.0",
+  "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "next dev",
@@ -22,15 +22,12 @@
   },
   "dependencies": {
     "@tailwindcss/postcss": "^4.2.2",
-    "animejs": "^3.2.2",
     "firebase": "^12.6.0",
-    "lottie-react": "^2.4.1",
     "lucide-react": "^0.555.0",
     "motion": "^12.24.7",
     "next": "^16.2.4",
     "react": "^19.2.3",
     "react-dom": "^19.2.3",
-    "react-easy-crop": "^5.5.6",
     "recharts": "^2.5.0"
   },
   "browserslist": [
@@ -41,7 +38,6 @@
   ],
   "devDependencies": {
     "@eslint/js": "^9.39.1",
-    "@types/animejs": "^3.1.4",
     "@types/react": "^19.2.5",
     "@types/react-dom": "^19.2.3",
     "eslint": "^9.39.1",
