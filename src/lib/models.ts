@@ -12,6 +12,9 @@ export interface UserProfile {
   phone?: string
   address?: string
   location?: GeoPoint
+  avatar?: string
+  /** How the customer signs in. Missing on older / admin accounts (password). */
+  loginMethod?: 'whatsapp' | 'google'
   role: Role
   points: number
   totalOrders: number

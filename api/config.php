@@ -39,6 +39,11 @@ return [
         'ultramsg_token' => '',
     ],
 
+    // ── Sign in with Google ──
+    // Google Cloud Console → APIs & Services → Credentials → OAuth client ID (type: Web application).
+    // Add your site (https://your-domain) to "Authorized JavaScript origins", then paste the Client ID here.
+    'google_client_id' => '',
+
     // TESTING ONLY: when no provider is configured, show the code on screen instead of sending it.
     // Set to false before going live!
     'otp_debug' => true,

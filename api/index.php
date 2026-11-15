@@ -260,70 +260,92 @@ function build_order(JsonDB $db, array $me, array $in): array
 /* ------------------------------------------------------------------ actions */
 
 switch ($action) {
-    /* ---------- auth: customers sign up with their phone + a WhatsApp code */
+    /* ---------- auth: customers continue with WhatsApp (phone + code) or Google */
+    case 'auth.config':
+        ok([
+            'googleClientId' => (string) ($CFG['google_client_id'] ?? ''),
+            'whatsapp' => ($CFG['whatsapp']['provider'] ?? 'none') !== 'none' || !empty($CFG['otp_debug']),
+        ]);
+
     case 'otp.send': {
         $phone = normalize_phone((string) ($in['phone'] ?? ''), $CFG['default_country_code']);
         if (strlen($phone) < 10 || strlen($phone) > 15) throw new ApiError('auth/invalid-phone');
-        $purpose = ($in['purpose'] ?? '') === 'reset' ? 'reset' : 'signup';
-        $exists = (bool) $db->get('credentials', $phone);
-        if ($purpose === 'signup' && $exists) throw new ApiError('auth/phone-already-in-use');
-        if ($purpose === 'reset' && !$exists) throw new ApiError('auth/phone-not-found');
         $prev = $db->get('otps', $phone);
         if ($prev && now_ms() - $prev['sentAt'] < 60000) throw new ApiError('otp/too-soon', 429);
+        $cred = $db->get('credentials', $phone);
+        $existing = $cred ? $db->get('users', $cred['uid']) : null;
+        $exists = $existing && empty($existing['deleted']);
 
         $code = (string) random_int(100000, 999999);
-        $db->merge('otps', $phone, ['hash' => password_hash($code, PASSWORD_DEFAULT), 'purpose' => $purpose,
+        $db->merge('otps', $phone, ['hash' => password_hash($code, PASSWORD_DEFAULT), 'purpose' => 'auth',
             'expires' => now_ms() + 10 * 60000, 'attempts' => 0, 'sentAt' => now_ms()]);
         $settings = $db->get('config', 'settings') ?? [];
         $sent = whatsapp_send_code($CFG, $phone, $code, (string) ($settings['restaurantName'] ?? 'التطبيق'));
         if (!$sent) {
-            if (!empty($CFG['otp_debug'])) ok(['phone' => $phone, 'debugCode' => $code]);
+            if (!empty($CFG['otp_debug'])) ok(['phone' => $phone, 'exists' => $exists, 'debugCode' => $code]);
             $db->delete('otps', $phone);
             throw new ApiError(($CFG['whatsapp']['provider'] ?? 'none') === 'none' ? 'otp/not-configured' : 'otp/send-failed', 503);
         }
-        ok(['phone' => $phone]);
+        ok(['phone' => $phone, 'exists' => $exists]);
     }
 
-    case 'auth.signup': {
+    /** Signs in with a WhatsApp code; creates the account if the number is new. */
+    case 'auth.whatsapp': {
         $phone = normalize_phone((string) ($in['phone'] ?? ''), $CFG['default_country_code']);
-        $password = (string) ($in['password'] ?? '');
+        $cred = $db->get('credentials', $phone);
+        $profile = $cred ? $db->get('users', $cred['uid']) : null;
+        $isNew = !$profile || !empty($profile['deleted']);
         $name = str_field($in['name'] ?? '', 80);
-        if ($name === '') throw new ApiError('auth/name-required');
-        if (mb_strlen($password) < 6) throw new ApiError('auth/weak-password');
-        verify_otp($db, $phone, 'signup', (string) ($in['code'] ?? ''));
+        if ($isNew && $name === '') throw new ApiError('auth/name-required');
+        verify_otp($db, $phone, 'auth', (string) ($in['code'] ?? ''));
+
+        if (!$isNew) {
+            if (!empty($profile['blocked'])) throw new ApiError('auth/user-blocked', 403);
+            ok(['token' => start_session($db, $cred['uid'], $CFG['session_days']), 'uid' => $cred['uid'], 'email' => '+' . $phone, 'isNew' => false]);
+        }
         $uid = new_id();
-        $created = $db->mutate('credentials', function (array $rows, &$res) use ($phone, $password, $uid) {
-            if (isset($rows[$phone])) { $res = false; return $rows; }
-            $rows[$phone] = ['uid' => $uid, 'hash' => password_hash($password, PASSWORD_DEFAULT)];
-            $res = true;
-            return $rows;
-        });
-        if (!$created) throw new ApiError('auth/phone-already-in-use');
+        $db->merge('credentials', $phone, ['uid' => $uid, 'hash' => null, 'method' => 'whatsapp']);
         $db->merge('users', $uid, [
-            'name' => $name, 'email' => '', 'phone' => '+' . $phone, 'login' => $phone, 'role' => 'user',
+            'name' => $name, 'email' => '', 'phone' => '+' . $phone, 'login' => $phone, 'loginMethod' => 'whatsapp', 'role' => 'user',
             'points' => 0, 'totalOrders' => 0, 'totalSpent' => 0, 'createdAt' => now_ms(),
         ]);
-        ok(['token' => start_session($db, $uid, $CFG['session_days']), 'uid' => $uid, 'email' => '+' . $phone]);
+        ok(['token' => start_session($db, $uid, $CFG['session_days']), 'uid' => $uid, 'email' => '+' . $phone, 'isNew' => true]);
     }
 
-    case 'auth.resetPassword': {
-        $phone = normalize_phone((string) ($in['phone'] ?? ''), $CFG['default_country_code']);
-        $password = (string) ($in['password'] ?? '');
-        if (mb_strlen($password) < 6) throw new ApiError('auth/weak-password');
-        $cred = $db->get('credentials', $phone);
-        if (!$cred) throw new ApiError('auth/phone-not-found');
-        verify_otp($db, $phone, 'reset', (string) ($in['code'] ?? ''));
-        $db->merge('credentials', $phone, ['hash' => password_hash($password, PASSWORD_DEFAULT)]);
-        $profile = $db->get('users', $cred['uid']);
-        if (!$profile || !empty($profile['deleted']) || !empty($profile['blocked'])) throw new ApiError('auth/user-blocked', 403);
-        ok(['token' => start_session($db, $cred['uid'], $CFG['session_days']), 'uid' => $cred['uid'], 'email' => '+' . $phone]);
+    /** Signs in with a Google access token; creates the account on first use. */
+    case 'auth.google': {
+        $clientId = (string) ($CFG['google_client_id'] ?? '');
+        if ($clientId === '') throw new ApiError('auth/google-not-configured', 503);
+        $token = (string) ($in['accessToken'] ?? '');
+        if ($token === '') throw new ApiError('bad-request');
+        $info = http_get_json('https://oauth2.googleapis.com/tokeninfo?access_token=' . rawurlencode($token));
+        if (!$info || (($info['aud'] ?? '') !== $clientId && ($info['azp'] ?? '') !== $clientId)) throw new ApiError('auth/google-invalid', 401);
+        $me_g = http_get_json('https://www.googleapis.com/oauth2/v3/userinfo', ['Authorization: Bearer ' . $token]);
+        $sub = (string) ($me_g['sub'] ?? '');
+        if ($sub === '' || $sub !== (string) ($info['sub'] ?? $sub)) throw new ApiError('auth/google-invalid', 401);
+        $key = 'g:' . $sub;
+        $cred = $db->get('credentials', $key);
+        $profile = $cred ? $db->get('users', $cred['uid']) : null;
+        if ($profile && empty($profile['deleted'])) {
+            if (!empty($profile['blocked'])) throw new ApiError('auth/user-blocked', 403);
+            ok(['token' => start_session($db, $cred['uid'], $CFG['session_days']), 'uid' => $cred['uid'], 'email' => $profile['email'], 'isNew' => false]);
+        }
+        $uid = new_id();
+        $email = strtolower((string) ($me_g['email'] ?? ''));
+        $db->merge('credentials', $key, ['uid' => $uid, 'hash' => null, 'method' => 'google']);
+        $db->merge('users', $uid, [
+            'name' => str_field($me_g['name'] ?? '', 80) ?: explode('@', $email)[0], 'email' => $email, 'phone' => '',
+            'avatar' => (string) ($me_g['picture'] ?? ''), 'login' => $key, 'loginMethod' => 'google', 'role' => 'user',
+            'points' => 0, 'totalOrders' => 0, 'totalSpent' => 0, 'createdAt' => now_ms(),
+        ]);
+        ok(['token' => start_session($db, $uid, $CFG['session_days']), 'uid' => $uid, 'email' => $email, 'isNew' => true]);
     }
 
     case 'auth.signin': {
         $login = trim((string) ($in['login'] ?? $in['email'] ?? ''));
         $key = str_contains($login, '@') ? strtolower($login) : normalize_phone($login, $CFG['default_country_code']);
         $cred = $key !== '' ? $db->get('credentials', $key) : null;
-        if (!$cred || !password_verify((string) ($in['password'] ?? ''), $cred['hash'])) {
+        if (!$cred || empty($cred['hash']) || !password_verify((string) ($in['password'] ?? ''), $cred['hash'])) {
             usleep(400000); // slow down guessing
             throw new ApiError('auth/invalid-credential', 401);
         }
@@ -365,7 +387,7 @@ switch ($action) {
         $u = require_user();
         $key = login_key($u['profile']);
         $cred = $db->get('credentials', $key);
-        if (!$cred || !password_verify((string) ($in['current'] ?? ''), $cred['hash'])) throw new ApiError('auth/wrong-password');
+        if (!$cred || empty($cred['hash']) || !password_verify((string) ($in['current'] ?? ''), $cred['hash'])) throw new ApiError('auth/wrong-password');
         if (mb_strlen((string) ($in['password'] ?? '')) < 6) throw new ApiError('auth/weak-password');
         $db->merge('credentials', $key, ['hash' => password_hash((string) $in['password'], PASSWORD_DEFAULT)]);
         ok();

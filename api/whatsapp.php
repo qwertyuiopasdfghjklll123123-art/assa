@@ -67,3 +67,15 @@ function http_post_json(string $url, array $body, array $headers = []): bool
     if ($code < 200 || $code >= 300) error_log("[sufra] whatsapp send failed ($code): " . substr((string) $res, 0, 300));
     return $code >= 200 && $code < 300;
 }
+
+function http_get_json(string $url, array $headers = []): ?array
+{
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 10, CURLOPT_HTTPHEADER => $headers]);
+    $res = curl_exec($ch);
+    $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+    if ($code !== 200) return null;
+    $j = json_decode((string) $res, true);
+    return is_array($j) ? $j : null;
+}

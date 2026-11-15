@@ -158,12 +158,13 @@ export async function createPhpBackend(): Promise<Backend> {
     async signIn(login, password) {
       return session(await call('auth.signin', { login, password }))
     },
-    sendOtp: (phone, purpose) => call('otp.send', { phone, purpose }),
-    async signUp(input) {
-      return session(await call('auth.signup', input))
+    authConfig: () => call('auth.config'),
+    sendOtp: (phone) => call('otp.send', { phone }),
+    async signInWhatsApp(input) {
+      return session(await call('auth.whatsapp', input))
     },
-    async resetPassword(input) {
-      return session(await call('auth.resetPassword', input))
+    async signInGoogle(accessToken) {
+      return session(await call('auth.google', { accessToken }))
     },
     async signOut() {
       await call('auth.signout').catch(() => null)

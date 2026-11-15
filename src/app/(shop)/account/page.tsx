@@ -19,7 +19,8 @@ import {
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useState, useSyncExternalStore, type ReactNode } from 'react'
-import { PasswordInput } from '@/components/auth-layout'
+import { GoogleLogo } from '@/components/auth-card'
+import { PasswordInput, WhatsAppBadge } from '@/components/auth-layout'
 import { useAuth, useToast } from '@/components/providers'
 import { useUnreadCount } from '@/components/shop-shell'
 import { Button, Field, RequireUser, Sheet, Toggle } from '@/components/ui'
@@ -74,8 +75,8 @@ function Account() {
           <div className="dots absolute inset-0 opacity-50" />
         </div>
         <div className="relative -mt-10 flex items-end justify-between px-4">
-          <div className="sky-grad grid size-20 shrink-0 place-items-center rounded-3xl font-display text-3xl font-black text-white shadow-[0_8px_20px_rgba(14,165,233,0.3)] ring-4 ring-white">
-            {user!.name.trim().slice(0, 1)}
+          <div className="sky-grad grid size-20 shrink-0 place-items-center overflow-hidden rounded-3xl font-display text-3xl font-black text-white shadow-[0_8px_20px_rgba(14,165,233,0.3)] ring-4 ring-white">
+            {user!.avatar ? <img src={user!.avatar} alt="" referrerPolicy="no-referrer" className="size-full object-cover" /> : user!.name.trim().slice(0, 1)}
           </div>
           <button
             onClick={() => setSheet('edit')}
@@ -120,7 +121,19 @@ function Account() {
 
       <Group title="الحساب والإعدادات">
         <Row onClick={() => setSheet('edit')} icon={<UserRound />} tone="bg-bg text-ink-2" title="البيانات الشخصية" sub="الاسم، رقم التواصل، العنوان" />
-        <Row onClick={() => setSheet('password')} icon={<KeyRound />} tone="bg-bg text-ink-2" title="تغيير كلمة المرور" />
+        {user!.loginMethod ? (
+          <div className="flex items-center gap-3 p-4">
+            <span className="grid size-10 place-items-center rounded-xl bg-bg text-ink-2 [&>svg]:size-5">
+              {user!.loginMethod === 'google' ? <GoogleLogo /> : <span className="text-[#25D366]"><WhatsAppBadge /></span>}
+            </span>
+            <span className="flex-1">
+              <span className="block font-semibold">طريقة الدخول</span>
+              <span className="block text-xs text-ink-3">{user!.loginMethod === 'google' ? `حساب Google — ${user!.email}` : 'واتساب — برمز تحقق بدون كلمة مرور'}</span>
+            </span>
+          </div>
+        ) : (
+          <Row onClick={() => setSheet('password')} icon={<KeyRound />} tone="bg-bg text-ink-2" title="تغيير كلمة المرور" />
+        )}
         <div className="flex items-center gap-3 p-4">
           <span className="grid size-10 place-items-center rounded-xl bg-brand-50 text-brand [&>svg]:size-5">
             <BellRing />
@@ -183,7 +196,7 @@ function Account() {
             <LogOut className="size-8" />
           </div>
           <h2 className="mt-4 font-display text-xl font-black">تسجيل الخروج؟</h2>
-          <p className="mt-1 text-sm text-ink-2">ستحتاج لإدخال رقم هاتفك وكلمة المرور للدخول مرة أخرى.</p>
+          <p className="mt-1 text-sm text-ink-2">يمكنك العودة في أي وقت بالدخول عبر واتساب أو Google.</p>
           <div className="mt-6 grid grid-cols-2 gap-2">
             <Button variant="outline" size="lg" onClick={() => setSheet(null)}>
               إلغاء

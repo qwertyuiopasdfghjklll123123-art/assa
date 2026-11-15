@@ -29,10 +29,14 @@ export interface Backend {
   onAuth(cb: (info: AuthInfo | null) => void): () => void
   /** `login` is a phone number (customers) or an e-mail (admin). */
   signIn(login: string, password: string): Promise<AuthInfo>
-  /** Sends a 6-digit code over WhatsApp. `debugCode` is only returned in test mode. */
-  sendOtp(phone: string, purpose: 'signup' | 'reset'): Promise<{ phone: string; debugCode?: string }>
-  signUp(input: { phone: string; code: string; name: string; password: string }): Promise<AuthInfo>
-  resetPassword(input: { phone: string; code: string; password: string }): Promise<AuthInfo>
+  /** Which customer sign-in methods are switched on. */
+  authConfig(): Promise<{ googleClientId: string; whatsapp: boolean }>
+  /** Sends a 6-digit code over WhatsApp. `exists` tells whether the number already has an account. */
+  sendOtp(phone: string): Promise<{ phone: string; exists: boolean; debugCode?: string }>
+  /** Signs in with the WhatsApp code, creating the account (with `name`) if the number is new. */
+  signInWhatsApp(input: { phone: string; code: string; name?: string }): Promise<AuthInfo>
+  /** Signs in with a Google OAuth access token, creating the account on first use. */
+  signInGoogle(accessToken: string): Promise<AuthInfo>
   signOut(): Promise<void>
   deleteAuthUser(): Promise<void>
   changePassword(current: string, next: string): Promise<void>

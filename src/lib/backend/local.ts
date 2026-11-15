@@ -138,48 +138,48 @@ export async function createLocalBackend(): Promise<Backend> {
       const key = login.includes('@') ? login.trim().toLowerCase() : normalizePhone(login)
       const creds = read<Creds>(CRED_KEY, {})
       const c = creds[key]
-      if (!c || c.hash !== (await hash(password))) throw new Error('auth/invalid-credential')
+      if (!c || !c.hash || c.hash !== (await hash(password))) throw new Error('auth/invalid-credential')
       const info = { uid: c.uid, email: key }
       write(SESSION_KEY, info)
       return info
     },
-    async sendOtp(raw, purpose) {
+    async authConfig() {
+      return { googleClientId: '', whatsapp: true }
+    },
+    async sendOtp(raw) {
       const phone = normalizePhone(raw)
       if (phone.length < 10 || phone.length > 15) throw new Error('auth/invalid-phone')
-      const exists = !!read<Creds>(CRED_KEY, {})[phone]
-      if (purpose === 'signup' && exists) throw new Error('auth/phone-already-in-use')
-      if (purpose === 'reset' && !exists) throw new Error('auth/phone-not-found')
+      const c = read<Creds>(CRED_KEY, {})[phone]
+      const exists = !!c && !!(await backend.get<{ deleted?: boolean }>('users', c.uid)) && !(await backend.get<{ deleted?: boolean }>('users', c.uid))?.deleted
       // Demo mode cannot send WhatsApp messages: the code is shown on screen instead.
       const code = String(Math.floor(100000 + Math.random() * 900000))
-      otps.set(phone, { code, purpose })
-      return { phone, debugCode: code }
+      otps.set(phone, { code, purpose: 'auth' })
+      return { phone, exists, debugCode: code }
     },
-    async signUp({ phone: raw, code, name, password }) {
+    async signInWhatsApp({ phone: raw, code, name }) {
       const phone = normalizePhone(raw)
-      checkOtp(phone, 'signup', code)
-      if (password.length < 6) throw new Error('auth/weak-password')
       const creds = read<Creds>(CRED_KEY, {})
-      if (creds[phone]) throw new Error('auth/phone-already-in-use')
+      const existing = creds[phone] ? await backend.get<{ deleted?: boolean }>('users', creds[phone].uid) : null
+      const isNew = !existing || existing.deleted
+      if (isNew && !name?.trim()) throw new Error('auth/name-required')
+      checkOtp(phone, 'auth', code)
+      if (!isNew) {
+        const info = { uid: creds[phone].uid, email: phone }
+        write(SESSION_KEY, info)
+        return info
+      }
       const info = { uid: uid(), email: phone }
-      creds[phone] = { uid: info.uid, hash: await hash(password) }
+      creds[phone] = { uid: info.uid, hash: '' }
       localStorage.setItem(CRED_KEY, JSON.stringify(creds))
       await backend.set('users', info.uid, {
-        name, email: '', phone: '+' + phone, login: phone, role: 'user', points: 0, totalOrders: 0, totalSpent: 0, createdAt: Date.now(),
+        name: name!.trim(), email: '', phone: '+' + phone, login: phone, loginMethod: 'whatsapp', role: 'user',
+        points: 0, totalOrders: 0, totalSpent: 0, createdAt: Date.now(),
       })
       write(SESSION_KEY, info)
       return info
     },
-    async resetPassword({ phone: raw, code, password }) {
-      const phone = normalizePhone(raw)
-      checkOtp(phone, 'reset', code)
-      if (password.length < 6) throw new Error('auth/weak-password')
-      const creds = read<Creds>(CRED_KEY, {})
-      if (!creds[phone]) throw new Error('auth/phone-not-found')
-      creds[phone].hash = await hash(password)
-      localStorage.setItem(CRED_KEY, JSON.stringify(creds))
-      const info = { uid: creds[phone].uid, email: phone }
-      write(SESSION_KEY, info)
-      return info
+    async signInGoogle() {
+      throw new Error('auth/google-not-configured')
     },
     async signOut() {
       localStorage.removeItem(SESSION_KEY)
