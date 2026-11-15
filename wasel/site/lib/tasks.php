@@ -130,7 +130,7 @@ function run_scheduled_tasks(): array
 function handle_engine_hook(): void
 {
     $secret = (string)($_SERVER['HTTP_X_ENGINE_SECRET'] ?? '');
-    if (!hash_equals(ENGINE_SECRET, $secret)) {
+    if (ENGINE_SECRET === '' || !hash_equals(ENGINE_SECRET, $secret)) {
         json_err('unauthorized', 401);
     }
     $d = request_json();

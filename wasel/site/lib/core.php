@@ -135,7 +135,9 @@ function start_session(): void
     $life = 365 * 24 * 3600; // الجلسة ما تنتهي إلا بتسجيل خروج صريح (تقريباً)
     ini_set('session.gc_maxlifetime', (string)$life);
     ini_set('session.use_strict_mode', '1');
-    session_save_path($dir);
+    if (is_dir($dir) && is_writable($dir)) {
+        session_save_path($dir);
+    }
     session_name('wasel_sid');
     session_set_cookie_params([
         'lifetime' => $life,

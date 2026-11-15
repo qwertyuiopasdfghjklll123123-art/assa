@@ -31,7 +31,7 @@ if ($path === '/engine_hook' && $method === 'POST') {
     handle_engine_hook();
 }
 if ($path === '/cron') {
-    if (!hash_equals(CRON_KEY, (string)($_GET['key'] ?? ''))) {
+    if (CRON_KEY === '' || !hash_equals(CRON_KEY, (string)($_GET['key'] ?? ''))) {
         json_err('unauthorized', 401);
     }
     json_out(run_scheduled_tasks());
@@ -41,6 +41,11 @@ if ($path === '/api/v1/send' && $method === 'POST') {
 }
 
 start_session();
+
+// الموقع لسا ما تنصّب: كل الصفحات تروح لصفحة التنصيب
+if (!APP_INSTALLED && $method === 'GET' && !preg_match('#^/(branding/logo|icon\.svg|manifest\.json|sw\.js)$#', $path)) {
+    redirect_to(($base ?: '') . '/install.php');
+}
 
 $routes = [
     // ------------------------------------------------ الصفحات
@@ -98,6 +103,8 @@ $routes = [
 
     // ------------------------------------------------ تسجيل الدخول
     ['POST', '#^/auth/google$#', 'handle_google_login'],
+    ['POST', '#^/auth/email/signup$#', 'handle_email_signup'],
+    ['POST', '#^/auth/email/login$#', 'handle_email_login'],
     ['POST', '#^/auth/whatsapp/send_code$#', 'handle_send_code'],
     ['GET', '#^/auth/whatsapp/send_status$#', 'handle_send_status'],
     ['POST', '#^/auth/whatsapp/verify$#', 'handle_verify_code'],
@@ -245,7 +252,7 @@ $routes = [
                 'id' => $u['id'], 'email' => $u['email'], 'phone' => $u['phone'], 'name' => $u['name'],
                 'is_admin' => !empty($u['is_admin']) ? 1 : 0, 'plan_active' => effective_plan_active($u),
                 'plan_ends_at' => $u['plan_ends_at'], 'trial_ends_at' => $u['trial_ends_at'],
-                'created_at' => $u['created_at'], 'login' => !empty($u['google_sub']) ? 'google' : 'whatsapp',
+                'created_at' => $u['created_at'], 'login' => !empty($u['google_sub']) ? 'google' : (!empty($u['password_hash']) ? 'email' : 'whatsapp'),
             ];
         }
         json_out($rows);
@@ -376,9 +383,15 @@ $routes = [
     }],
     ['GET', '#^/accounts/([\w-]+)/qr$#', function ($accId) {
         require_login();
-        if (!owned_account($accId)) {
+        $acc = owned_account($accId);
+        if (!$acc) {
             http_response_code(204);
             return;
+        }
+        // حساب محفوظ بالموقع لكن المحرك ما يعرفه (منقول من النسخة القديمة أو المحرك انمسح) - نسجّله
+        if (!isset(engine_accounts()[$accId])) {
+            engine_request('POST', '/accounts', ['id' => $accId, 'owner' => (int)$acc['owner'], 'name' => $acc['name']], 8);
+            engine_sync_account($acc);
         }
         output_engine_qr($accId);
     }],

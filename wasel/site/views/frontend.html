@@ -207,6 +207,9 @@ __WELCOME_FONT_LINKS__
   .subtitle { margin-top:3px; color:var(--muted); font-size:12.5px; line-height:1.6; font-weight:400; }
 
   .google-block { margin:6px 0 4px; }
+  .email-tabs { display:flex; gap:6px; background:var(--card-soft); padding:4px; border-radius:12px; margin-top:6px; }
+  .email-tabs button { flex:1; height:36px; border-radius:9px; font-size:13.5px; font-weight:600; color:var(--muted); }
+  .email-tabs button.active { background:var(--card); color:var(--gold); box-shadow:0 2px 8px rgba(0,0,0,.06); }
   .google-btn-wrap { display:flex; justify-content:center; min-height:44px; }
   .or-divider { display:flex; align-items:center; gap:10px; margin:14px 0 6px; color:var(--faint); font-size:12px; }
   .or-divider::before, .or-divider::after { content:""; flex:1; height:1px; background:var(--border-2); }
@@ -411,7 +414,7 @@ __WELCOME_GOOGLE_SCRIPT__
       </div>
 
       <section class="actions">
-        <button type="button" class="btn primary" onclick="goToLogin()">
+        <button type="button" class="btn primary" onclick="goToSignup()">
           <strong>ابدأ الآن</strong>
           <small>إنشاء حساب جديد</small>
         </button>
@@ -436,7 +439,7 @@ __WELCOME_GOOGLE_SCRIPT__
       <header class="header">
         <div class="__WELCOME_LOGIN_LOGO_CLASS__">__WELCOME_LOGIN_LOGO_HTML__</div>
         <h1 class="title">تسجيل الدخول</h1>
-        <p class="subtitle">سجّل دخولك بحساب كوكل أو برقم واتساب - بدون كلمة مرور</p>
+        <p class="subtitle">سجّل دخولك بالبريد الإلكتروني أو كوكل أو رقم واتساب</p>
       </header>
 
       <section class="login-card">
@@ -463,6 +466,28 @@ __WELCOME_GOOGLE_SCRIPT__
           </div>
           <button class="btn-primary" id="sendBtn" data-label="متابعة" onclick="sendCode()"><span class="btn-label">متابعة</span> __WELCOME_ICON_SEND_ARROW__</button>
           <div class="secure">آمن وسريع بدون كلمة مرور __WELCOME_ICON_LOCK_SM__</div>
+          <button class="btn-outline" type="button" onclick="showStep('email')">الدخول أو إنشاء حساب بالبريد الإلكتروني</button>
+        </div>
+
+        <div id="emailStep" style="display:none">
+          <div class="email-tabs">
+            <button type="button" id="tabLogin" class="active" onclick="setEmailMode('login')">تسجيل الدخول</button>
+            <button type="button" id="tabSignup" onclick="setEmailMode('signup')">إنشاء حساب</button>
+          </div>
+          <div class="input-group" id="emailNameGroup" style="display:none">
+            <label>الاسم</label>
+            <input type="text" id="emailName" placeholder="اسمك الكامل" autocomplete="name">
+          </div>
+          <div class="input-group">
+            <label>البريد الإلكتروني</label>
+            <input type="email" id="emailInput" placeholder="example@gmail.com" dir="ltr" autocomplete="email">
+          </div>
+          <div class="input-group">
+            <label>كلمة المرور</label>
+            <input type="password" id="passInput" placeholder="6 أحرف أو أكثر" dir="ltr" autocomplete="current-password">
+          </div>
+          <button class="btn-primary" id="emailBtn" data-label="دخول" onclick="submitEmail()"><span class="btn-label">دخول</span> __WELCOME_ICON_SEND_ARROW__</button>
+          <button class="btn-outline" type="button" onclick="showStep('phone')">الدخول برقم واتساب</button>
         </div>
 
         <div id="qrStep" style="display:none">
@@ -511,6 +536,38 @@ function showScreen(id) {
   el.classList.add('screen-fade-in');
 }
 function goToLogin() { showScreen('loginScreen'); }
+function goToSignup() { showScreen('loginScreen'); showStep('email'); setEmailMode('signup'); }
+
+let emailMode = 'login';
+function setEmailMode(mode) {
+  emailMode = mode;
+  document.getElementById('tabLogin').classList.toggle('active', mode === 'login');
+  document.getElementById('tabSignup').classList.toggle('active', mode === 'signup');
+  document.getElementById('emailNameGroup').style.display = mode === 'signup' ? 'block' : 'none';
+  const btn = document.getElementById('emailBtn');
+  btn.dataset.label = mode === 'signup' ? 'إنشاء الحساب' : 'دخول';
+  btn.querySelector('.btn-label').textContent = btn.dataset.label;
+  document.getElementById('passInput').autocomplete = mode === 'signup' ? 'new-password' : 'current-password';
+  setStatus('authStatus', '', false);
+}
+
+async function submitEmail() {
+  const email = document.getElementById('emailInput').value.trim();
+  const password = document.getElementById('passInput').value;
+  const name = document.getElementById('emailName').value.trim();
+  if (!email || !password || (emailMode === 'signup' && !name)) { setStatus('authStatus', 'عبّي كل الحقول', true); return; }
+  btnLoading('emailBtn', true);
+  let r;
+  try {
+    r = await fetch('/auth/email/' + emailMode, {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({email: email, password: password, name: name})
+    }).then(res => res.json());
+  } catch (e) { r = {ok: false, error: 'تعذر الاتصال بالسيرفر'}; }
+  btnLoading('emailBtn', false);
+  if (!r.ok) { setStatus('authStatus', r.error || 'حدث خطأ', true); return; }
+  window.leaveAndGo(function() { window.location.href = '/app'; });
+}
 function goToWelcome() { showStep('phone'); showScreen('welcomeScreen'); }
 
 (function() {
@@ -582,7 +639,8 @@ function showStep(step) {
   document.getElementById('qrStep').style.display = step === 'qr' ? 'block' : 'none';
   document.getElementById('codeStep').style.display = step === 'code' ? 'block' : 'none';
   document.getElementById('nameStep').style.display = step === 'name' ? 'block' : 'none';
-  document.getElementById('googleBlock').style.display = (step === 'phone' && GOOGLE_ENABLED) ? 'block' : 'none';
+  document.getElementById('emailStep').style.display = step === 'email' ? 'block' : 'none';
+  document.getElementById('googleBlock').style.display = ((step === 'phone' || step === 'email') && GOOGLE_ENABLED) ? 'block' : 'none';
   setStatus('authStatus', '', false);
   if (step !== 'qr') clearInterval(bootstrapPoll);
 }

@@ -82,6 +82,78 @@ function handle_google_login(): void
     json_out(['ok' => true, 'is_new' => $isNew && empty($user['name'])]);
 }
 
+// ================================================================ البريد الإلكتروني وكلمة المرور
+
+function client_ip(): string
+{
+    return (string)($_SERVER['REMOTE_ADDR'] ?? '0');
+}
+
+/** يمنع تخمين كلمات المرور: 10 محاولات فاشلة كل 15 دقيقة لكل IP */
+function login_throttle(bool $failed = false): bool
+{
+    $ip = client_ip();
+    $allowed = true;
+    store_update_doc('loginrl', function ($d) use ($ip, $failed, &$allowed) {
+        $now = time();
+        foreach ($d as $k => $times) {
+            $d[$k] = array_values(array_filter($times, fn($t) => $now - $t < 900));
+            if (!$d[$k]) {
+                unset($d[$k]);
+            }
+        }
+        $allowed = count($d[$ip] ?? []) < 10;
+        if ($failed) {
+            $d[$ip][] = $now;
+        }
+        return $d;
+    });
+    return $allowed;
+}
+
+function handle_email_signup(): void
+{
+    $d = request_json();
+    $name = clean_text(mb_substr(trim((string)($d['name'] ?? '')), 0, 60));
+    $email = strtolower(trim((string)($d['email'] ?? '')));
+    $password = (string)($d['password'] ?? '');
+    if ($name === '' || $email === '' || $password === '') {
+        json_err('عبّي كل الحقول');
+    }
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        json_err('أدخل بريد إلكتروني صحيح');
+    }
+    if (mb_strlen($password) < 6) {
+        json_err('كلمة المرور لازم تكون 6 أحرف أو أكثر');
+    }
+    if (user_by('email', $email)) {
+        json_err('هذا البريد مسجّل من قبل - سجّل دخولك بدل إنشاء حساب');
+    }
+    $user = create_user(['email' => $email, 'name' => $name, 'password_hash' => password_hash($password, PASSWORD_DEFAULT)], users_count() === 0);
+    cleanup_bootstrap();
+    set_session_user($user);
+    json_out(['ok' => true]);
+}
+
+function handle_email_login(): void
+{
+    if (!login_throttle()) {
+        json_err('محاولات كثيرة، حاول بعد 15 دقيقة', 429);
+    }
+    $d = request_json();
+    $email = strtolower(trim((string)($d['email'] ?? '')));
+    $user = user_by('email', $email);
+    if (!$user || empty($user['password_hash']) || !password_verify((string)($d['password'] ?? ''), $user['password_hash'])) {
+        login_throttle(true);
+        if ($user && empty($user['password_hash']) && !empty($user['google_sub'])) {
+            json_err('هذا الحساب مسجّل بكوكل - استخدم زر كوكل');
+        }
+        json_err('البريد الإلكتروني أو كلمة المرور غير صحيحة');
+    }
+    set_session_user($user);
+    json_out(['ok' => true]);
+}
+
 // ================================================================ تسجيل الدخول برمز واتساب
 
 function otp_store(string $phone, string $code): void
@@ -134,8 +206,7 @@ function handle_send_code(): void
             store_update_doc('bootstrap', fn($d) => ['acc_id' => $accId, 'phone' => $phone, 'code_sent' => ($d['phone'] ?? '') === $phone && !empty($d['code_sent']) && ($d['acc_id'] ?? '') === $accId]);
             json_out(['ok' => true, 'bootstrap' => true, 'acc_id' => $accId]);
         }
-        $hint = GOOGLE_CLIENT_ID !== '' ? ' - تقدر تسجّل دخولك بحساب كوكل' : '';
-        json_err('تسجيل الدخول عبر واتساب غير مفعّل حالياً' . $hint);
+        json_err('تسجيل الدخول عبر واتساب غير مفعّل حالياً - سجّل بالبريد الإلكتروني' . (GOOGLE_CLIENT_ID !== '' ? ' أو بحساب كوكل' : ''));
     }
     $code = (string)random_int(100000, 999999);
     otp_store($phone, $code);

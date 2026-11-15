@@ -9,6 +9,9 @@
  */
 function engine_request(string $method, string $path, $body = null, int $timeout = 15): array
 {
+    if (ENGINE_SECRET === '') {
+        return [0, null];
+    }
     $ch = curl_init(rtrim(ENGINE_URL, '/') . $path);
     $headers = ['X-Engine-Secret: ' . ENGINE_SECRET];
     if ($body !== null) {
@@ -19,7 +22,7 @@ function engine_request(string $method, string $path, $body = null, int $timeout
         CURLOPT_CUSTOMREQUEST => $method,
         CURLOPT_HTTPHEADER => $headers,
         CURLOPT_RETURNTRANSFER => true,
-        CURLOPT_CONNECTTIMEOUT => 5,
+        CURLOPT_CONNECTTIMEOUT => 3,
         CURLOPT_TIMEOUT => $timeout,
         CURLOPT_HEADER => true,
     ]);
@@ -44,11 +47,11 @@ function engine_request(string $method, string $path, $body = null, int $timeout
 function engine_json(string $method, string $path, $body = null, int $timeout = 15): array
 {
     [$status, $data] = engine_request($method, $path, $body, $timeout);
-    if ($status === 0) {
-        return ['ok' => false, 'error' => 'محرك واتساب غير متصل حالياً - تأكد أن تطبيق Node.js شغّال', '_status' => 503];
+    if ($status === 0 || !is_array($data)) {
+        return ['ok' => false, 'error' => 'محرك واتساب غير شغّال حالياً - الأدمن يفتح صفحة install.php ويتبع خطوة «محرك واتساب»', '_status' => 503];
     }
-    if (!is_array($data)) {
-        return ['ok' => false, 'error' => 'رد غير متوقع من محرك واتساب', '_status' => 502];
+    if ($status === 401) {
+        return ['ok' => false, 'error' => 'المفتاح السري للمحرك غير مطابق - من صفحة install.php اضغط «إعادة كتابة إعدادات المحرك» ثم Restart', '_status' => 503];
     }
     $data['_status'] = $status;
     return $data;

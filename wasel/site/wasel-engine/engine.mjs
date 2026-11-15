@@ -695,6 +695,8 @@ const server = http.createServer(async (req, res) => {
     let pathname = url.pathname.replace(/\/+$/, '') || '/';
     const base = process.env.BASE_PATH || '';
     if (base && pathname.startsWith(base)) pathname = pathname.slice(base.length) || '/';
+    // Setup Node.js App يمرر المسار كامل (مثل /engine/health) - نشيل البادئة تلقائياً
+    pathname = pathname.replace(/^(\/[\w.-]+)*\/engine(?=\/|$)/, '') || '/';
     if (pathname === '/' && req.method === 'GET') return send(res, 200, { ok: true, name: 'wasel-engine' });
     if (!authOk(req)) return send(res, 401, { ok: false, error: 'unauthorized' });
     for (const [method, re, fn] of routes) {
