@@ -146,8 +146,8 @@ function AdminLogin() {
             <p className="text-sm text-ink-2">{settings.restaurantName}</p>
           </div>
         </div>
-        <Field label="البريد الإلكتروني">
-          <input className="field" type="email" dir="ltr" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
+        <Field label="البريد الإلكتروني أو رقم الهاتف">
+          <input className="field" dir="ltr" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
         </Field>
         <Field label="كلمة المرور">
           <input className="field" type="password" dir="ltr" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />

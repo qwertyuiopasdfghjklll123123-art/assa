@@ -113,7 +113,7 @@ export const useBranch = () => useContext(BranchContext)
 interface CartCtx {
   items: OrderItem[]
   count: number
-  add: (p: Product) => void
+  add: (p: Product, qty?: number, note?: string) => void
   setQty: (productId: string, qty: number) => void
   clear: () => void
 }
@@ -142,11 +142,11 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [items, ready])
 
-  const add = useCallback((p: Product) => {
+  const add = useCallback((p: Product, qty = 1) => {
     setItems((cur) => {
       const found = cur.find((i) => i.productId === p.id)
-      if (found) return cur.map((i) => (i.productId === p.id ? { ...i, qty: i.qty + 1 } : i))
-      return [...cur, { productId: p.id, name: p.name, price: p.price, qty: 1, image: p.image, emoji: p.emoji }]
+      if (found) return cur.map((i) => (i.productId === p.id ? { ...i, qty: Math.min(50, i.qty + qty) } : i))
+      return [...cur, { productId: p.id, name: p.name, price: p.price, qty, image: p.image, emoji: p.emoji }]
     })
   }, [])
   const setQty = useCallback((productId: string, qty: number) => {

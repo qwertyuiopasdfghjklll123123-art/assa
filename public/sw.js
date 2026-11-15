@@ -1,6 +1,6 @@
 /* Sufra service worker: caches the app shell so it opens instantly and works offline.
    API calls (/api/) always go to the network — orders and points must be live. */
-const CACHE = 'sufra-v1'
+const CACHE = 'sufra-v2'
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', 'manifest.webmanifest', 'icons/icon-192.png'])).then(() => self.skipWaiting()))
@@ -37,3 +37,42 @@ function put(req, res) {
   }
   return res
 }
+
+/* ---------- push notifications (sent by the PHP server) ---------- */
+self.addEventListener('push', (e) => {
+  let data = {}
+  try {
+    data = e.data ? e.data.json() : {}
+  } catch {
+    data = { title: e.data && e.data.text() }
+  }
+  const base = self.registration.scope
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'إشعار جديد', {
+      body: data.body || '',
+      icon: base + 'icons/icon-192.png',
+      badge: base + 'icons/icon-192.png',
+      tag: data.tag,
+      renotify: true,
+      dir: 'rtl',
+      lang: 'ar',
+      data: { url: base + (data.url || 'notifications/') },
+    }),
+  )
+})
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  const url = (e.notification.data && e.notification.data.url) || self.registration.scope
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      for (const c of list) {
+        if ('focus' in c) {
+          c.navigate(url)
+          return c.focus()
+        }
+      }
+      return self.clients.openWindow(url)
+    }),
+  )
+})

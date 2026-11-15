@@ -104,6 +104,13 @@ function poll<T>(load: () => Promise<T>, cb: (v: T) => void, onError?: (e: Error
   }
 }
 
+function session(r: { token: string; uid: string; email: string }): AuthInfo {
+  setToken(r.token)
+  const info = { uid: r.uid, email: r.email }
+  emitAuth(info)
+  return info
+}
+
 export async function createPhpBackend(): Promise<Backend> {
   const authReady = (async () => {
     if (!getToken()) return null
@@ -148,19 +155,15 @@ export async function createPhpBackend(): Promise<Backend> {
       authReady.then(() => cb(currentAuth))
       return () => authListeners.delete(cb)
     },
-    async signIn(email, password) {
-      const r = await call<{ token: string; uid: string; email: string }>('auth.signin', { email, password })
-      setToken(r.token)
-      const info = { uid: r.uid, email: r.email }
-      emitAuth(info)
-      return info
+    async signIn(login, password) {
+      return session(await call('auth.signin', { login, password }))
     },
-    async signUp(email, password, profile) {
-      const r = await call<{ token: string; uid: string; email: string }>('auth.signup', { email, password, ...profile })
-      setToken(r.token)
-      const info = { uid: r.uid, email: r.email }
-      emitAuth(info)
-      return info
+    sendOtp: (phone, purpose) => call('otp.send', { phone, purpose }),
+    async signUp(input) {
+      return session(await call('auth.signup', input))
+    },
+    async resetPassword(input) {
+      return session(await call('auth.resetPassword', input))
     },
     async signOut() {
       await call('auth.signout').catch(() => null)
@@ -183,6 +186,13 @@ export async function createPhpBackend(): Promise<Backend> {
       fd.append('file', blob, 'image.jpg')
       fd.append('folder', folder)
       return call<string>('upload', {}, fd)
+    },
+    pushKey: () => call<string>('push.key').catch(() => null),
+    async pushSubscribe(subscription) {
+      await call('push.subscribe', { subscription })
+    },
+    async pushUnsubscribe(endpoint) {
+      await call('push.unsubscribe', { endpoint })
     },
   }
   return backend

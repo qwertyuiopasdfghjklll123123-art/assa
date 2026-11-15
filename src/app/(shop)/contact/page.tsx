@@ -1,11 +1,14 @@
 'use client'
 
 import { Instagram, Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
+import { BranchCard } from '@/components/branch-card'
+import { useBranch } from '@/components/providers'
 import { PageTitle } from '@/components/ui'
 import { useSettings } from '@/lib/hooks'
 
 export default function ContactPage() {
   const s = useSettings()
+  const { branches } = useBranch()
   const items = [
     { icon: MessageCircle, label: 'واتساب', value: s.whatsapp, href: `https://wa.me/${s.whatsapp.replace(/\D/g, '')}`, tone: 'bg-ok-50 text-ok' },
     { icon: Phone, label: 'اتصال هاتفي', value: s.phone, href: `tel:${s.phone.replace(/\s/g, '')}`, tone: 'bg-sky-50 text-sky' },
@@ -37,6 +40,12 @@ export default function ContactPage() {
           <span className="block text-xs text-ink-3">العنوان</span>
           <span className="block font-semibold">{s.address}</span>
         </span>
+      </div>
+      <h2 className="mt-6 mb-3 font-display text-lg font-extrabold">فروعنا على الخريطة</h2>
+      <div className="grid gap-3 sm:grid-cols-2">
+        {branches.map((b) => (
+          <BranchCard key={b.id} branch={b} />
+        ))}
       </div>
     </div>
   )

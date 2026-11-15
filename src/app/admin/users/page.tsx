@@ -5,9 +5,9 @@ import { useMemo, useState } from 'react'
 import { useAuth, useToast } from '@/components/providers'
 import { getBackend } from '@/lib/backend'
 import { Button, Empty, PageTitle, Sheet, StatusBadge } from '@/components/ui'
-import { cx, dateTime, money, num } from '@/lib/format'
+import { cx, dateTime, money, num, phoneDisplay } from '@/lib/format'
 import { byNewest, useCollection, useSettings } from '@/lib/hooks'
-import type { Order, UserProfile } from '@/lib/models'
+import { NOTIF_TYPES, type NotifType, type Order, type UserProfile } from '@/lib/models'
 import { errorMessage, orderCode, sendNotification, updateUserAdmin } from '@/lib/services'
 
 export default function AdminUsersPage() {
@@ -19,7 +19,7 @@ export default function AdminUsersPage() {
   const [q, setQ] = useState('')
   const [openId, setOpenId] = useState<string | null>(null)
   const [delta, setDelta] = useState('')
-  const [msg, setMsg] = useState({ title: '', body: '' })
+  const [msg, setMsg] = useState({ title: '', body: '', type: 'news' as NotifType })
   const [newPass, setNewPass] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -76,9 +76,9 @@ export default function AdminUsersPage() {
                       {u.name}
                       {u.role === 'admin' && <ShieldCheck className="size-4 text-sky" />}
                     </div>
-                    <div className="text-xs text-ink-3">{u.email}</div>
+                    <div className="num text-right text-xs text-ink-3">{u.email || phoneDisplay(u.phone)}</div>
                   </td>
-                  <td className="num p-3 text-right">{u.phone || '—'}</td>
+                  <td className="num p-3 text-right">{phoneDisplay(u.phone) || '—'}</td>
                   <td className="num p-3 font-bold text-sky-700">{num(u.points ?? 0)}</td>
                   <td className="num p-3">{num(u.totalOrders ?? 0)}</td>
                   <td className="num p-3">{num(u.totalSpent ?? 0)}</td>
@@ -115,7 +115,7 @@ export default function AdminUsersPage() {
               ))}
             </div>
             <div className="text-xs text-ink-3">
-              {open.email} · انضم {dateTime(open.createdAt)}
+              <span className="num">{phoneDisplay(open.phone) || open.email}</span> · انضم {dateTime(open.createdAt)}
             </div>
 
             <div className="rounded-2xl border border-line p-3">
@@ -132,7 +132,7 @@ export default function AdminUsersPage() {
                     if (
                       await run(async () => {
                         await updateUserAdmin(open.id, { points })
-                        await sendNotification(open.id, d > 0 ? 'نقاط هدية 🎁' : 'تعديل رصيد النقاط', `${d > 0 ? 'أُضيفت' : 'خُصمت'} ${Math.abs(d)} نقطة. رصيدك الآن ${points}.`)
+                        await sendNotification(open.id, d > 0 ? 'نقاط هدية 🎁' : 'تعديل رصيد النقاط', `${d > 0 ? 'أُضيفت' : 'خُصمت'} ${Math.abs(d)} نقطة. رصيدك الآن ${points}.`, 'offer', '/loyalty/')
                       }, 'تم تحديث النقاط')
                     )
                       setDelta('')
@@ -146,6 +146,15 @@ export default function AdminUsersPage() {
             <div className="rounded-2xl border border-line p-3">
               <div className="mb-2 text-sm font-bold">إرسال إشعار لهذا المستخدم</div>
               <div className="space-y-2">
+                <select className="field h-10 py-1 text-sm" value={msg.type} onChange={(e) => setMsg({ ...msg, type: e.target.value as NotifType })}>
+                  {(Object.keys(NOTIF_TYPES) as NotifType[])
+                    .filter((t) => t !== 'order')
+                    .map((t) => (
+                      <option key={t} value={t}>
+                        {NOTIF_TYPES[t].emoji} {NOTIF_TYPES[t].label}
+                      </option>
+                    ))}
+                </select>
                 <input className="field h-10" placeholder="العنوان" value={msg.title} onChange={(e) => setMsg({ ...msg, title: e.target.value })} />
                 <textarea className="field min-h-16" placeholder="النص" value={msg.body} onChange={(e) => setMsg({ ...msg, body: e.target.value })} />
                 <Button
@@ -153,7 +162,7 @@ export default function AdminUsersPage() {
                   loading={busy}
                   disabled={!msg.title.trim()}
                   onClick={async () => {
-                    if (await run(() => sendNotification(open.id, msg.title.trim(), msg.body.trim()), 'تم إرسال الإشعار')) setMsg({ title: '', body: '' })
+                    if (await run(() => sendNotification(open.id, msg.title.trim(), msg.body.trim(), msg.type), 'تم إرسال الإشعار')) setMsg({ title: '', body: '', type: 'news' })
                   }}
                 >
                   إرسال

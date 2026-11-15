@@ -19,4 +19,27 @@ return [
 
     // Login sessions stay valid for this many days.
     'session_days' => 60,
+
+    // Country code added to local numbers (07xx… → 9647xx…). 964 = Iraq.
+    'default_country_code' => '964',
+
+    // ── WhatsApp verification codes (sign-up and password reset) ──
+    'whatsapp' => [
+        // 'none' | 'meta' | 'ultramsg'  — see api/whatsapp.php for details.
+        'provider' => 'none',
+
+        // WhatsApp Cloud API (Meta Business → WhatsApp → API Setup)
+        'meta_token' => '',
+        'meta_phone_number_id' => '',
+        'meta_template' => 'otp_code',   // an approved "Authentication" template
+        'meta_language' => 'ar',
+
+        // UltraMsg (ultramsg.com → your instance)
+        'ultramsg_instance' => '',
+        'ultramsg_token' => '',
+    ],
+
+    // TESTING ONLY: when no provider is configured, show the code on screen instead of sending it.
+    // Set to false before going live!
+    'otp_debug' => true,
 ];

@@ -27,6 +27,8 @@ export interface Branch {
   name: string
   address: string
   phone: string
+  location?: GeoPoint | null
+  hours?: string
   image?: string
   open: boolean
   order: number
@@ -100,12 +102,27 @@ export interface Order {
   updatedAt: number
 }
 
+export type NotifType = 'order' | 'offer' | 'discount' | 'new_item' | 'news' | 'alert'
+
+/** Kinds of notifications the admin can send (orders are sent automatically). */
+export const NOTIF_TYPES: Record<NotifType, { label: string; emoji: string; tone: string }> = {
+  order: { label: 'الطلبات', emoji: '🧾', tone: 'bg-brand-50 text-brand-600' },
+  offer: { label: 'العروض', emoji: '🎁', tone: 'bg-brand-50 text-brand-600' },
+  discount: { label: 'الخصومات', emoji: '🏷️', tone: 'bg-red-50 text-red-600' },
+  new_item: { label: 'أصناف جديدة', emoji: '🍽️', tone: 'bg-ok-50 text-emerald-700' },
+  news: { label: 'أخبار المطعم', emoji: '📢', tone: 'bg-sky-50 text-sky-700' },
+  alert: { label: 'تنبيه مهم', emoji: '⚠️', tone: 'bg-warn-50 text-amber-700' },
+}
+
 export interface AppNotification {
   id: string
   userId: string // a user id, or 'all' for a broadcast
+  type?: NotifType
   title: string
   body: string
   orderId?: string
+  /** Optional in-app page to open, e.g. /menu/ */
+  link?: string
   createdAt: number
 }
 

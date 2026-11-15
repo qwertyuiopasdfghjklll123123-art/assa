@@ -1,5 +1,5 @@
 import seedJson from '../../../api/seed.json'
-import { fileToDataUrl, matches, type AuthInfo, type Backend, type Filter } from './types'
+import { fileToDataUrl, matches, normalizePhone, type AuthInfo, type Backend, type Filter } from './types'
 
 /*
  * Local demo backend: everything lives in this browser's localStorage.
@@ -45,7 +45,7 @@ async function ensureSeed() {
   const now = Date.now()
   const seed = JSON.parse(JSON.stringify(seedJson)) as DB
   for (const rows of Object.values(seed)) for (const r of Object.values(rows)) if ('createdAt' in r) r.createdAt = now
-  seed.users = { admin: { name: 'مدير النظام', email: SEED_ADMIN.email, phone: '', role: 'admin', points: 0, totalOrders: 0, totalSpent: 0, createdAt: now } }
+  seed.users = { admin: { name: 'مدير النظام', email: SEED_ADMIN.email, login: SEED_ADMIN.email, phone: '', role: 'admin', points: 0, totalOrders: 0, totalSpent: 0, createdAt: now } }
   seed.orders = {}
   localStorage.setItem(DB_KEY, JSON.stringify(seed))
   const creds: Creds = { [SEED_ADMIN.email]: { uid: SEED_ADMIN.uid, hash: await hash(SEED_ADMIN.password) } }
@@ -66,6 +66,14 @@ function onChange(fn: () => void) {
     window.removeEventListener(EVT, fn)
     window.removeEventListener('storage', storage)
   }
+}
+
+const otps = new Map<string, { code: string; purpose: string }>()
+function checkOtp(phone: string, purpose: string, code: string) {
+  const o = otps.get(phone)
+  if (!o || o.purpose !== purpose) throw new Error('otp/expired')
+  if (o.code !== code.trim()) throw new Error('otp/invalid')
+  otps.delete(phone)
 }
 
 function session(): AuthInfo | null {
@@ -126,25 +134,50 @@ export async function createLocalBackend(): Promise<Backend> {
         }
       })
     },
-    async signIn(email, password) {
+    async signIn(login, password) {
+      const key = login.includes('@') ? login.trim().toLowerCase() : normalizePhone(login)
       const creds = read<Creds>(CRED_KEY, {})
-      const c = creds[email.trim().toLowerCase()]
+      const c = creds[key]
       if (!c || c.hash !== (await hash(password))) throw new Error('auth/invalid-credential')
-      const info = { uid: c.uid, email: email.trim().toLowerCase() }
+      const info = { uid: c.uid, email: key }
       write(SESSION_KEY, info)
       return info
     },
-    async signUp(email, password, profile) {
-      const key = email.trim().toLowerCase()
-      const creds = read<Creds>(CRED_KEY, {})
-      if (creds[key]) throw new Error('auth/email-already-in-use')
+    async sendOtp(raw, purpose) {
+      const phone = normalizePhone(raw)
+      if (phone.length < 10 || phone.length > 15) throw new Error('auth/invalid-phone')
+      const exists = !!read<Creds>(CRED_KEY, {})[phone]
+      if (purpose === 'signup' && exists) throw new Error('auth/phone-already-in-use')
+      if (purpose === 'reset' && !exists) throw new Error('auth/phone-not-found')
+      // Demo mode cannot send WhatsApp messages: the code is shown on screen instead.
+      const code = String(Math.floor(100000 + Math.random() * 900000))
+      otps.set(phone, { code, purpose })
+      return { phone, debugCode: code }
+    },
+    async signUp({ phone: raw, code, name, password }) {
+      const phone = normalizePhone(raw)
+      checkOtp(phone, 'signup', code)
       if (password.length < 6) throw new Error('auth/weak-password')
-      const info = { uid: uid(), email: key }
-      creds[key] = { uid: info.uid, hash: await hash(password) }
+      const creds = read<Creds>(CRED_KEY, {})
+      if (creds[phone]) throw new Error('auth/phone-already-in-use')
+      const info = { uid: uid(), email: phone }
+      creds[phone] = { uid: info.uid, hash: await hash(password) }
       localStorage.setItem(CRED_KEY, JSON.stringify(creds))
       await backend.set('users', info.uid, {
-        ...profile, email: key, role: 'user', points: 0, totalOrders: 0, totalSpent: 0, createdAt: Date.now(),
+        name, email: '', phone: '+' + phone, login: phone, role: 'user', points: 0, totalOrders: 0, totalSpent: 0, createdAt: Date.now(),
       })
+      write(SESSION_KEY, info)
+      return info
+    },
+    async resetPassword({ phone: raw, code, password }) {
+      const phone = normalizePhone(raw)
+      checkOtp(phone, 'reset', code)
+      if (password.length < 6) throw new Error('auth/weak-password')
+      const creds = read<Creds>(CRED_KEY, {})
+      if (!creds[phone]) throw new Error('auth/phone-not-found')
+      creds[phone].hash = await hash(password)
+      localStorage.setItem(CRED_KEY, JSON.stringify(creds))
+      const info = { uid: creds[phone].uid, email: phone }
       write(SESSION_KEY, info)
       return info
     },
@@ -180,6 +213,9 @@ export async function createLocalBackend(): Promise<Backend> {
     async uploadImage(file) {
       return fileToDataUrl(file, 600)
     },
+    pushKey: async () => null,
+    pushSubscribe: async () => {},
+    pushUnsubscribe: async () => {},
   }
   return backend
 }

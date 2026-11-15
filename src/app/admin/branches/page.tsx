@@ -1,8 +1,10 @@
 'use client'
 
-import { MapPin, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
+import { Clock, MapPin, Navigation, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
 import { useState } from 'react'
+import { directionsLink } from '@/components/branch-card'
 import { ImageInput } from '@/components/image-input'
+import { LocationPicker } from '@/components/location-map'
 import { useToast } from '@/components/providers'
 import { Button, Empty, Field, PageTitle, Sheet, Thumb, Toggle } from '@/components/ui'
 import { byOrder, useCollection } from '@/lib/hooks'
@@ -37,7 +39,7 @@ export default function AdminBranchesPage() {
         title="الفروع"
         subtitle="الفروع التي يمكن للعملاء الطلب منها"
         action={
-          <Button onClick={() => setEdit({ name: '', address: '', phone: '', image: '', open: true, order: branches.length + 1 })}>
+          <Button onClick={() => setEdit({ name: '', address: '', phone: '', image: '', hours: '', location: null, open: true, order: branches.length + 1 })}>
             <Plus className="size-4" /> فرع جديد
           </Button>
         }
@@ -63,9 +65,24 @@ export default function AdminBranchesPage() {
                 <p className="flex items-center gap-1.5 text-sm text-ink-2">
                   <Phone className="size-4 text-sky" /> <span className="num">{b.phone}</span>
                 </p>
-                <Button size="sm" variant="outline" className="mt-2 w-full" onClick={() => setEdit(b)}>
-                  <Pencil className="size-4" /> تعديل
-                </Button>
+                {b.hours && (
+                  <p className="flex items-center gap-1.5 text-sm text-ink-2">
+                    <Clock className="size-4 text-sky" /> {b.hours}
+                  </p>
+                )}
+                <p className={b.location ? 'text-xs font-semibold text-emerald-600' : 'text-xs font-semibold text-amber-600'}>
+                  {b.location ? '✓ الموقع محدد على الخريطة' : '⚠ لم يُحدد الموقع على الخريطة بعد'}
+                </p>
+                <div className="mt-2 grid grid-cols-2 gap-2">
+                  <Button size="sm" variant="outline" onClick={() => setEdit(b)}>
+                    <Pencil className="size-4" /> تعديل
+                  </Button>
+                  <a href={directionsLink(b)} target="_blank" rel="noreferrer">
+                    <Button size="sm" variant="sky" className="w-full">
+                      <Navigation className="size-4" /> خرائط جوجل
+                    </Button>
+                  </a>
+                </div>
               </div>
             </div>
           ))}
@@ -87,8 +104,18 @@ export default function AdminBranchesPage() {
             <Field label="اسم الفرع">
               <input className="field" required value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} />
             </Field>
+            <Field label="موقع الفرع على الخريطة" hint="يستخدمه العملاء لفتح الاتجاهات في خرائط جوجل">
+              <LocationPicker
+                value={edit.location ?? null}
+                onChange={(location) => setEdit((cur) => (cur ? { ...cur, location } : cur))}
+                onAddress={(address) => setEdit((cur) => (cur && !cur.address ? { ...cur, address } : cur))}
+              />
+            </Field>
             <Field label="العنوان">
               <input className="field" required value={edit.address} onChange={(e) => setEdit({ ...edit, address: e.target.value })} />
+            </Field>
+            <Field label="أوقات العمل (اختياري)">
+              <input className="field" placeholder="مثال: يومياً 11 صباحاً – 12 ليلاً" value={edit.hours ?? ''} onChange={(e) => setEdit({ ...edit, hours: e.target.value })} />
             </Field>
             <div className="grid grid-cols-[1fr_90px] gap-2">
               <Field label="الهاتف">

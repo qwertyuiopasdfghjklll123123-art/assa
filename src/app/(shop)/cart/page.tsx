@@ -9,7 +9,7 @@ import { QtyStepper } from '@/components/product-card'
 import { useAuth, useBranch, useCart, useToast } from '@/components/providers'
 import { BranchPicker } from '@/components/shop-shell'
 import { Button, Empty, Field, PageTitle, Thumb, Toggle } from '@/components/ui'
-import { cx, money, num } from '@/lib/format'
+import { cx, money, num, phoneDisplay } from '@/lib/format'
 import { useSettings } from '@/lib/hooks'
 import type { GeoPoint } from '@/lib/models'
 import { errorMessage, placeOrder, quote } from '@/lib/services'
@@ -31,7 +31,7 @@ export default function CartPage() {
   const [busy, setBusy] = useState(false)
 
   const addr = address ?? user?.address ?? ''
-  const tel = phone ?? user?.phone ?? ''
+  const tel = phone ?? phoneDisplay(user?.phone)
   const loc = location ?? user?.location ?? null
   const q = quote(items, settings, type, user?.points ?? 0, usePoints)
   const belowMin = q.subtotal < settings.minOrder
@@ -125,16 +125,16 @@ export default function CartPage() {
                 </button>
               ))}
             </div>
-            <Field label="رقم الهاتف">
+            <Field label="رقم التواصل" hint="رقم حسابك — يمكنك تغييره لهذا الطلب">
               <input className="field num text-right" inputMode="tel" value={tel} onChange={(e) => setPhone(e.target.value)} placeholder="07xx xxx xxxx" />
             </Field>
             {type === 'delivery' && (
               <>
                 <Field label="موقع البيت على الخريطة">
-                  <LocationPicker value={loc} onChange={setLocation} />
+                  <LocationPicker value={loc} onChange={setLocation} onAddress={(t) => setAddress(t)} />
                 </Field>
                 <Field label="تفاصيل العنوان">
-                  <textarea className="field min-h-20" value={addr} onChange={(e) => setAddress(e.target.value)} placeholder="المنطقة، الشارع، رقم البيت، أقرب نقطة دالة" />
+                  <textarea className="field min-h-20" value={addr} onChange={(e) => setAddress(e.target.value)} placeholder="يُكتب تلقائياً عند تحديد الموقع — أضف رقم البيت وأقرب نقطة دالة" />
                 </Field>
               </>
             )}

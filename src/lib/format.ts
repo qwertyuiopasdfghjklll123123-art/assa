@@ -23,3 +23,11 @@ export function timeAgo(ts: number) {
 }
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
+
+/** 9647501234567 / +9647501234567 → +964 750 123 4567 */
+export function phoneDisplay(p?: string) {
+  if (!p) return ''
+  const d = p.replace(/\D/g, '')
+  const m = d.match(/^(964)(\d{3})(\d{3})(\d{4})$/)
+  return m ? `+${m[1]} ${m[2]} ${m[3]} ${m[4]}` : p
+}

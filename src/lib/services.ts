@@ -1,5 +1,5 @@
 import { getBackend } from './backend'
-import { STATUS_LABEL, type Branch, type Order, type OrderItem, type OrderStatus, type Settings, type UserProfile } from './models'
+import { STATUS_LABEL, type Branch, type NotifType, type Order, type OrderItem, type OrderStatus, type Settings, type UserProfile } from './models'
 
 const strip = <T extends { id?: string }>(o: T) => {
   const { id: _id, ...rest } = o
@@ -161,6 +161,7 @@ export async function setOrderStatus(order: Order, status: OrderStatus, opts: { 
     if (status === 'delivered' && order.pointsEarned) body += ` أُضيفت ${order.pointsEarned} نقطة إلى رصيدك.`
     await b.add('notifications', {
       userId: order.userId,
+      type: 'order',
       orderId: order.id,
       title: `طلب #${orderCode(order.id)} — ${STATUS_LABEL[status]}`,
       body,
@@ -190,8 +191,8 @@ export async function saveSettings(s: Settings) {
   await (await getBackend()).set('config', 'settings', { ...s })
 }
 
-export async function sendNotification(userId: string, title: string, body: string) {
-  await (await getBackend()).add('notifications', { userId, title, body, createdAt: Date.now() })
+export async function sendNotification(userId: string, title: string, body: string, type: NotifType = 'news', link = '') {
+  await (await getBackend()).add('notifications', { userId, type, title, body, link, createdAt: Date.now() })
 }
 
 export async function updateUserAdmin(id: string, patch: Partial<Pick<UserProfile, 'points' | 'role' | 'blocked' | 'name' | 'phone'>>) {
@@ -207,7 +208,17 @@ export async function uploadImage(file: File, folder: string) {
 export function errorMessage(e: unknown) {
   const code = e instanceof Error ? (e as Error & { code?: string }).code || e.message : String(e)
   const map: [string, string][] = [
-    ['invalid-credential', 'البريد الإلكتروني أو كلمة المرور غير صحيحة'],
+    ['invalid-credential', 'رقم الهاتف أو كلمة المرور غير صحيحة'],
+    ['invalid-phone', 'رقم الهاتف غير صحيح'],
+    ['phone-already-in-use', 'هذا الرقم مسجّل مسبقاً، سجّل الدخول بدلاً من ذلك'],
+    ['phone-not-found', 'لا يوجد حساب بهذا الرقم'],
+    ['name-required', 'أدخل اسمك'],
+    ['otp/invalid', 'رمز التحقق غير صحيح'],
+    ['otp/expired', 'انتهت صلاحية الرمز، اطلب رمزاً جديداً'],
+    ['otp/too-many', 'محاولات كثيرة، اطلب رمزاً جديداً'],
+    ['otp/too-soon', 'انتظر دقيقة قبل طلب رمز جديد'],
+    ['otp/not-configured', 'إرسال رموز واتساب غير مفعّل بعد، تواصل مع المطعم'],
+    ['otp/send-failed', 'تعذّر إرسال الرمز عبر واتساب، حاول لاحقاً'],
     ['wrong-password', 'كلمة المرور الحالية غير صحيحة'],
     ['email-already-in-use', 'هذا البريد مسجّل مسبقاً'],
     ['weak-password', 'كلمة المرور يجب أن تكون 6 أحرف على الأقل'],

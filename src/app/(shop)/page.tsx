@@ -1,14 +1,16 @@
 'use client'
 
-import { ArrowLeft, Clock, Gift, MapPin, Phone, Sparkles, Zap } from 'lucide-react'
+import { ArrowLeft, ChevronLeft, ReceiptText, Sparkles, Zap } from 'lucide-react'
 import Link from 'next/link'
+import { BranchCard } from '@/components/branch-card'
 import { ProductCard } from '@/components/product-card'
 import { useAuth, useBranch } from '@/components/providers'
 import { BranchPicker } from '@/components/shop-shell'
-import { Thumb } from '@/components/ui'
-import { cx, num } from '@/lib/format'
-import { byOrder, useCollection, useSettings } from '@/lib/hooks'
-import type { Product } from '@/lib/models'
+import { StatusBadge } from '@/components/ui'
+import { num } from '@/lib/format'
+import { byNewest, byOrder, useCollection, useSettings } from '@/lib/hooks'
+import type { Category, Order, Product } from '@/lib/models'
+import { orderCode } from '@/lib/services'
 
 function greeting() {
   const h = new Date().getHours()
@@ -22,10 +24,13 @@ export default function HomePage() {
   const settings = useSettings()
   const { branches, branch, setBranchId } = useBranch()
   const { items: products } = useCollection<Product>('products', undefined, byOrder)
+  const { items: categories } = useCollection<Category>('categories', undefined, byOrder)
+  const { items: orders } = useCollection<Order>(user ? 'orders' : null, user ? { field: 'userId', op: '==', value: user.id } : undefined, byNewest)
   const featured = products.filter((p) => p.featured).slice(0, 4)
+  const live = orders.find((o) => ['pending', 'confirmed', 'preparing', 'on_the_way'].includes(o.status))
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-7">
       <section className="flex items-center justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-ink-2">{greeting()} 👋</p>
@@ -33,6 +38,24 @@ export default function HomePage() {
         </div>
         <BranchPicker />
       </section>
+
+      {live && (
+        <Link href="/orders/" className="flex items-center gap-3 rounded-2xl border border-sky-100 bg-sky-50 p-3.5 transition hover:border-sky">
+          <span className="relative grid size-11 place-items-center rounded-xl bg-white text-sky">
+            <ReceiptText className="size-5" />
+            <span className="absolute -top-0.5 -left-0.5 size-3 animate-ping rounded-full bg-sky" />
+          </span>
+          <div className="flex-1">
+            <div className="flex items-center gap-2 text-sm font-bold">
+              طلبك الحالي <span className="num">#{orderCode(live.id)}</span>
+            </div>
+            <div className="mt-1">
+              <StatusBadge status={live.status} />
+            </div>
+          </div>
+          <ChevronLeft className="size-5 text-sky-700" />
+        </Link>
+      )}
 
       {/* Promo */}
       <section className="hero-grad relative overflow-hidden rounded-3xl p-5 text-white shadow-[0_14px_40px_rgba(249,115,22,0.3)] sm:p-7">
@@ -44,52 +67,56 @@ export default function HomePage() {
           </span>
           <h2 className="mt-3 font-display text-2xl font-black leading-tight sm:text-3xl">{settings.promoTitle}</h2>
           <p className="mt-2 text-sm leading-relaxed text-white/90">{settings.promoText}</p>
-          <Link
-            href="/menu/"
-            className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-brand-600 shadow-lg transition hover:gap-3"
-          >
+          <Link href="/menu/" className="mt-5 inline-flex h-11 items-center gap-2 rounded-xl bg-white px-5 text-sm font-bold text-brand-600 shadow-lg transition hover:gap-3">
             اطلب الآن <ArrowLeft className="size-4" />
           </Link>
         </div>
       </section>
 
-      {/* Points + quick links */}
-      <section className="grid gap-3 sm:grid-cols-2">
-        <Link href={user ? '/loyalty/' : '/login/'} className="navy-grad flex items-center gap-4 rounded-2xl p-4 text-white shadow-card transition hover:opacity-95">
-          <span className="grid size-12 place-items-center rounded-2xl bg-white/15 text-sky-300">
-            <Zap className="size-6" />
-          </span>
-          <div className="flex-1">
-            <h3 className="font-bold">نقاطك</h3>
-            <p className="text-xs text-sky-100/80">{user ? 'استخدم نقاطك كخصم على طلبك القادم' : 'سجّل الدخول لتبدأ بجمع النقاط'}</p>
-          </div>
-          <div className="text-left">
-            <div className="num font-display text-2xl font-black text-brand">{num(user?.points ?? 0)}</div>
-            <div className="text-[0.7rem] font-semibold text-sky-100/80">نقطة</div>
-          </div>
-        </Link>
-        <Link href="/orders/" className="card flex items-center gap-4 p-4 transition hover:border-brand">
-          <span className="grid size-12 place-items-center rounded-2xl bg-brand-50 text-brand">
-            <Gift className="size-6" />
-          </span>
-          <div className="flex-1">
-            <h3 className="font-bold">تتبّع طلباتك</h3>
-            <p className="text-xs text-ink-2">تابع حالة طلبك لحظة بلحظة</p>
-          </div>
-          <ArrowLeft className="size-5 text-ink-3" />
-        </Link>
-      </section>
+      {/* Points */}
+      <Link href={user ? '/loyalty/' : '/login/'} className="card flex items-center gap-4 p-4 transition hover:border-sky">
+        <span className="sky-grad grid size-12 place-items-center rounded-2xl text-white shadow-[0_6px_16px_rgba(14,165,233,0.3)]">
+          <Zap className="size-6" />
+        </span>
+        <div className="flex-1">
+          <h3 className="font-bold">رصيد نقاطك</h3>
+          <p className="text-xs text-ink-2">{user ? 'استخدمها كخصم على طلبك القادم' : 'سجّل الدخول لتبدأ بجمع النقاط'}</p>
+        </div>
+        <div className="text-left">
+          <div className="num font-display text-2xl font-black text-sky-600">{num(user?.points ?? 0)}</div>
+          <div className="text-[0.7rem] font-semibold text-ink-3">نقطة</div>
+        </div>
+      </Link>
 
-      {/* Featured */}
+      {/* Categories */}
+      {categories.length > 0 && (
+        <section>
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="font-display text-lg font-extrabold">الأقسام</h2>
+            <Link href="/menu/" className="text-sm font-semibold text-sky-600">
+              عرض الكل
+            </Link>
+          </div>
+          <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">
+            {categories.map((c) => (
+              <Link key={c.id} href="/menu/" className="flex w-20 shrink-0 flex-col items-center gap-1.5">
+                <span className="grid size-16 place-items-center rounded-2xl border border-line bg-white text-3xl shadow-card">{c.icon}</span>
+                <span className="line-clamp-1 text-center text-xs font-semibold text-ink-2">{c.name}</span>
+              </Link>
+            ))}
+          </div>
+        </section>
+      )}
+
       {featured.length > 0 && (
         <section>
           <div className="mb-3 flex items-center justify-between">
-            <h2 className="font-display text-lg font-extrabold">الأكثر طلباً</h2>
+            <h2 className="font-display text-lg font-extrabold">الأكثر طلباً 🔥</h2>
             <Link href="/menu/" className="text-sm font-semibold text-sky-600">
-              عرض المنيو
+              المنيو كاملاً
             </Link>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {featured.map((p) => (
               <ProductCard key={p.id} product={p} currency={settings.currency} />
             ))}
@@ -97,32 +124,11 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Branches */}
       <section>
         <h2 className="mb-3 font-display text-lg font-extrabold">فروعنا</h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {branches.map((b) => (
-            <button
-              key={b.id}
-              onClick={() => setBranchId(b.id)}
-              className={cx('card overflow-hidden text-right transition', b.id === branch?.id ? 'ring-2 ring-brand' : 'hover:border-sky')}
-            >
-              <Thumb image={b.image} emoji="🏪" alt={b.name} className="h-32" />
-              <div className="p-4">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-bold">{b.name}</h3>
-                  <span className={cx('inline-flex items-center gap-1 text-xs font-semibold', b.open ? 'text-emerald-600' : 'text-red-600')}>
-                    <Clock className="size-3.5" /> {b.open ? 'مفتوح الآن' : 'مغلق'}
-                  </span>
-                </div>
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-2">
-                  <MapPin className="size-4 shrink-0 text-sky" /> {b.address}
-                </p>
-                <p className="mt-1 flex items-center gap-1.5 text-sm text-ink-2">
-                  <Phone className="size-4 shrink-0 text-sky" /> <span className="num">{b.phone}</span>
-                </p>
-              </div>
-            </button>
+            <BranchCard key={b.id} branch={b} selected={b.id === branch?.id} onSelect={() => setBranchId(b.id)} />
           ))}
         </div>
       </section>

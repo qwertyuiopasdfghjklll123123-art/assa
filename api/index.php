@@ -12,6 +12,8 @@
 declare(strict_types=1);
 
 require __DIR__ . '/db.php';
+require __DIR__ . '/whatsapp.php';
+require __DIR__ . '/webpush.php';
 $CFG = require __DIR__ . '/config.php';
 
 header('Content-Type: application/json; charset=utf-8');
@@ -55,7 +57,7 @@ if (!$db->exists('users')) {
     $adminId = 'admin';
     $email = strtolower($CFG['admin_email']);
     $db->merge('users', $adminId, [
-        'name' => $CFG['admin_name'], 'email' => $email, 'phone' => '', 'role' => 'admin',
+        'name' => $CFG['admin_name'], 'email' => $email, 'login' => $email, 'phone' => '', 'role' => 'admin',
         'points' => 0, 'totalOrders' => 0, 'totalSpent' => 0, 'createdAt' => $now,
     ]);
     $db->merge('credentials', $email, ['uid' => $adminId, 'hash' => password_hash($CFG['admin_password'], PASSWORD_DEFAULT)]);
@@ -86,7 +88,7 @@ if ($token) {
     if ($s && $s['expires'] > now_ms()) {
         $profile = $db->get('users', $s['uid']);
         if ($profile && empty($profile['deleted']) && empty($profile['blocked'])) {
-            $me = ['uid' => $s['uid'], 'email' => $profile['email'], 'profile' => $profile];
+            $me = ['uid' => $s['uid'], 'email' => ($profile['email'] ?? '') ?: ($profile['phone'] ?? ''), 'profile' => $profile];
         }
     }
 }
@@ -117,6 +119,52 @@ function clean_email(mixed $e): string
     $e = strtolower(trim((string) $e));
     if (!filter_var($e, FILTER_VALIDATE_EMAIL)) throw new ApiError('auth/invalid-email');
     return $e;
+}
+
+/** The credentials key of a profile: the phone (customers) or the e-mail (admin). */
+function login_key(array $profile): string
+{
+    return (string) ($profile['login'] ?? $profile['email'] ?? '');
+}
+
+function verify_otp(JsonDB $db, string $phone, string $purpose, string $code): void
+{
+    $row = $db->get('otps', $phone);
+    if (!$row || $row['purpose'] !== $purpose || $row['expires'] < now_ms()) throw new ApiError('otp/expired');
+    if ($row['attempts'] >= 5) {
+        $db->delete('otps', $phone);
+        throw new ApiError('otp/too-many-attempts');
+    }
+    if (!password_verify(trim($code), $row['hash'])) {
+        $db->merge('otps', $phone, ['attempts' => $row['attempts'] + 1]);
+        throw new ApiError('otp/invalid');
+    }
+    $db->delete('otps', $phone);
+}
+
+/** Sends the response now, then keeps running (used to deliver push notifications). */
+function ok_then(mixed $data, callable $after): never
+{
+    ignore_user_abort(true);
+    $json = json_encode(['ok' => true, 'data' => $data], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    header('Content-Length: ' . strlen($json));
+    header('Connection: close');
+    echo $json;
+    if (function_exists('fastcgi_finish_request')) fastcgi_finish_request();
+    else { @ob_end_flush(); flush(); }
+    try { $after(); } catch (Throwable $e) { error_log('[sufra] ' . $e); }
+    exit;
+}
+
+function push_notification(JsonDB $db, array $cfg, array $n): void
+{
+    $subs = array_values(array_filter($db->all('push_subs'), fn($s) => ($n['userId'] ?? '') === 'all' || $s['uid'] === ($n['userId'] ?? '')));
+    if (!$subs) return;
+    $msg = ['title' => (string) ($n['title'] ?? ''), 'body' => (string) ($n['body'] ?? ''),
+        'url' => !empty($n['orderId']) ? 'orders/' : (!empty($n['link']) ? ltrim((string) $n['link'], '/') : 'notifications/'),
+        'tag' => !empty($n['orderId']) ? 'order-' . $n['orderId'] : 'n-' . ($n['type'] ?? 'general')];
+    $gone = webpush_send_many($db, $subs, $msg, 'mailto:' . $cfg['admin_email']);
+    foreach ($gone as $endpoint) $db->delete('push_subs', sha1($endpoint));
 }
 
 function str_field(mixed $v, int $max = 500): string
@@ -212,30 +260,69 @@ function build_order(JsonDB $db, array $me, array $in): array
 /* ------------------------------------------------------------------ actions */
 
 switch ($action) {
-    /* ---------- auth */
+    /* ---------- auth: customers sign up with their phone + a WhatsApp code */
+    case 'otp.send': {
+        $phone = normalize_phone((string) ($in['phone'] ?? ''), $CFG['default_country_code']);
+        if (strlen($phone) < 10 || strlen($phone) > 15) throw new ApiError('auth/invalid-phone');
+        $purpose = ($in['purpose'] ?? '') === 'reset' ? 'reset' : 'signup';
+        $exists = (bool) $db->get('credentials', $phone);
+        if ($purpose === 'signup' && $exists) throw new ApiError('auth/phone-already-in-use');
+        if ($purpose === 'reset' && !$exists) throw new ApiError('auth/phone-not-found');
+        $prev = $db->get('otps', $phone);
+        if ($prev && now_ms() - $prev['sentAt'] < 60000) throw new ApiError('otp/too-soon', 429);
+
+        $code = (string) random_int(100000, 999999);
+        $db->merge('otps', $phone, ['hash' => password_hash($code, PASSWORD_DEFAULT), 'purpose' => $purpose,
+            'expires' => now_ms() + 10 * 60000, 'attempts' => 0, 'sentAt' => now_ms()]);
+        $settings = $db->get('config', 'settings') ?? [];
+        $sent = whatsapp_send_code($CFG, $phone, $code, (string) ($settings['restaurantName'] ?? 'التطبيق'));
+        if (!$sent) {
+            if (!empty($CFG['otp_debug'])) ok(['phone' => $phone, 'debugCode' => $code]);
+            $db->delete('otps', $phone);
+            throw new ApiError(($CFG['whatsapp']['provider'] ?? 'none') === 'none' ? 'otp/not-configured' : 'otp/send-failed', 503);
+        }
+        ok(['phone' => $phone]);
+    }
+
     case 'auth.signup': {
-        $email = clean_email($in['email'] ?? '');
+        $phone = normalize_phone((string) ($in['phone'] ?? ''), $CFG['default_country_code']);
         $password = (string) ($in['password'] ?? '');
+        $name = str_field($in['name'] ?? '', 80);
+        if ($name === '') throw new ApiError('auth/name-required');
         if (mb_strlen($password) < 6) throw new ApiError('auth/weak-password');
+        verify_otp($db, $phone, 'signup', (string) ($in['code'] ?? ''));
         $uid = new_id();
-        $created = $db->mutate('credentials', function (array $rows, &$res) use ($email, $password, $uid) {
-            if (isset($rows[$email])) { $res = false; return $rows; }
-            $rows[$email] = ['uid' => $uid, 'hash' => password_hash($password, PASSWORD_DEFAULT)];
+        $created = $db->mutate('credentials', function (array $rows, &$res) use ($phone, $password, $uid) {
+            if (isset($rows[$phone])) { $res = false; return $rows; }
+            $rows[$phone] = ['uid' => $uid, 'hash' => password_hash($password, PASSWORD_DEFAULT)];
             $res = true;
             return $rows;
         });
-        if (!$created) throw new ApiError('auth/email-already-in-use');
+        if (!$created) throw new ApiError('auth/phone-already-in-use');
         $db->merge('users', $uid, [
-            'name' => str_field($in['name'] ?? '', 80) ?: explode('@', $email)[0], 'email' => $email,
-            'phone' => str_field($in['phone'] ?? '', 30), 'role' => 'user', 'points' => 0,
-            'totalOrders' => 0, 'totalSpent' => 0, 'createdAt' => now_ms(),
+            'name' => $name, 'email' => '', 'phone' => '+' . $phone, 'login' => $phone, 'role' => 'user',
+            'points' => 0, 'totalOrders' => 0, 'totalSpent' => 0, 'createdAt' => now_ms(),
         ]);
-        ok(['token' => start_session($db, $uid, $CFG['session_days']), 'uid' => $uid, 'email' => $email]);
+        ok(['token' => start_session($db, $uid, $CFG['session_days']), 'uid' => $uid, 'email' => '+' . $phone]);
+    }
+
+    case 'auth.resetPassword': {
+        $phone = normalize_phone((string) ($in['phone'] ?? ''), $CFG['default_country_code']);
+        $password = (string) ($in['password'] ?? '');
+        if (mb_strlen($password) < 6) throw new ApiError('auth/weak-password');
+        $cred = $db->get('credentials', $phone);
+        if (!$cred) throw new ApiError('auth/phone-not-found');
+        verify_otp($db, $phone, 'reset', (string) ($in['code'] ?? ''));
+        $db->merge('credentials', $phone, ['hash' => password_hash($password, PASSWORD_DEFAULT)]);
+        $profile = $db->get('users', $cred['uid']);
+        if (!$profile || !empty($profile['deleted']) || !empty($profile['blocked'])) throw new ApiError('auth/user-blocked', 403);
+        ok(['token' => start_session($db, $cred['uid'], $CFG['session_days']), 'uid' => $cred['uid'], 'email' => '+' . $phone]);
     }
 
     case 'auth.signin': {
-        $email = clean_email($in['email'] ?? '');
-        $cred = $db->get('credentials', $email);
+        $login = trim((string) ($in['login'] ?? $in['email'] ?? ''));
+        $key = str_contains($login, '@') ? strtolower($login) : normalize_phone($login, $CFG['default_country_code']);
+        $cred = $key !== '' ? $db->get('credentials', $key) : null;
         if (!$cred || !password_verify((string) ($in['password'] ?? ''), $cred['hash'])) {
             usleep(400000); // slow down guessing
             throw new ApiError('auth/invalid-credential', 401);
@@ -243,7 +330,7 @@ switch ($action) {
         $profile = $db->get('users', $cred['uid']);
         if (!$profile || !empty($profile['deleted'])) throw new ApiError('auth/invalid-credential', 401);
         if (!empty($profile['blocked'])) throw new ApiError('auth/user-blocked', 403);
-        ok(['token' => start_session($db, $cred['uid'], $CFG['session_days']), 'uid' => $cred['uid'], 'email' => $email]);
+        ok(['token' => start_session($db, $cred['uid'], $CFG['session_days']), 'uid' => $cred['uid'], 'email' => $profile['email'] ?: $profile['phone']]);
     }
 
     case 'auth.me':
@@ -256,30 +343,51 @@ switch ($action) {
     case 'auth.delete': {
         $u = require_user();
         $db->merge('users', $u['uid'], ['deleted' => true, 'deletedAt' => now_ms()]);
-        $db->delete('credentials', $u['email']);
+        $db->delete('credentials', login_key($u['profile']));
         $db->mutate('sessions', fn($rows) => array_filter($rows, fn($s) => $s['uid'] !== $u['uid']));
+        $db->mutate('push_subs', fn($rows) => array_filter($rows, fn($s) => $s['uid'] !== $u['uid']));
         ok();
     }
 
     case 'auth.setPassword': { // admin resets a customer's password
         require_admin();
-        $user = $db->get('users', (string) ($in['uid'] ?? ''));
+        $uid = (string) ($in['uid'] ?? '');
+        $user = $db->get('users', $uid);
         $password = (string) ($in['password'] ?? '');
         if (!$user || !empty($user['deleted'])) throw new ApiError('not-found', 404);
         if (mb_strlen($password) < 6) throw new ApiError('auth/weak-password');
-        $db->merge('credentials', $user['email'], ['uid' => (string) $in['uid'], 'hash' => password_hash($password, PASSWORD_DEFAULT)]);
-        $db->mutate('sessions', fn($rows) => array_filter($rows, fn($s) => $s['uid'] !== $in['uid']));
+        $db->merge('credentials', login_key($user), ['uid' => $uid, 'hash' => password_hash($password, PASSWORD_DEFAULT)]);
+        $db->mutate('sessions', fn($rows) => array_filter($rows, fn($s) => $s['uid'] !== $uid));
         ok();
     }
 
     case 'auth.changePassword': {
         $u = require_user();
-        $cred = $db->get('credentials', $u['email']);
+        $key = login_key($u['profile']);
+        $cred = $db->get('credentials', $key);
         if (!$cred || !password_verify((string) ($in['current'] ?? ''), $cred['hash'])) throw new ApiError('auth/wrong-password');
         if (mb_strlen((string) ($in['password'] ?? '')) < 6) throw new ApiError('auth/weak-password');
-        $db->merge('credentials', $u['email'], ['hash' => password_hash((string) $in['password'], PASSWORD_DEFAULT)]);
+        $db->merge('credentials', $key, ['hash' => password_hash((string) $in['password'], PASSWORD_DEFAULT)]);
         ok();
     }
+
+    /* ---------- push notifications to the phone */
+    case 'push.key':
+        ok(vapid_keys($db)['public']);
+
+    case 'push.subscribe': {
+        $u = require_user();
+        $sub = $in['subscription'] ?? null;
+        $endpoint = (string) ($sub['endpoint'] ?? '');
+        if (!preg_match('#^https://#', $endpoint) || empty($sub['keys']['p256dh']) || empty($sub['keys']['auth'])) throw new ApiError('bad-subscription');
+        $db->merge('push_subs', sha1($endpoint), ['uid' => $u['uid'], 'endpoint' => $endpoint,
+            'p256dh' => (string) $sub['keys']['p256dh'], 'auth' => (string) $sub['keys']['auth'], 'createdAt' => now_ms()]);
+        ok();
+    }
+
+    case 'push.unsubscribe':
+        $db->delete('push_subs', sha1((string) ($in['endpoint'] ?? '')));
+        ok();
 
     /* ---------- reads */
     case 'db.list': {
@@ -327,6 +435,7 @@ switch ($action) {
 
         if ($isAdmin) {
             $db->merge($col, $id, $data);
+            if ($col === 'notifications' && $action === 'db.add') ok_then($id, fn() => push_notification($db, $CFG, $data));
             ok($id);
         }
         $u = require_user();

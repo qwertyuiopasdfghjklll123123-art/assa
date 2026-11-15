@@ -15,6 +15,27 @@ const PIN_HTML = `<svg width="34" height="44" viewBox="0 0 34 44" xmlns="http://
 
 export const mapsLink = (p: GeoPoint) => `https://www.google.com/maps?q=${p.lat},${p.lng}`
 
+/** Turns coordinates into a readable Arabic address (OpenStreetMap Nominatim, free). */
+export async function reverseGeocode(p: GeoPoint): Promise<string | null> {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=18&addressdetails=1&accept-language=ar&lat=${p.lat}&lon=${p.lng}`,
+    )
+    if (!res.ok) return null
+    const j = (await res.json()) as { display_name?: string; address?: Record<string, string> }
+    const a = j.address ?? {}
+    const parts = [
+      a.house_number && a.road ? `${a.road} ${a.house_number}` : a.road,
+      a.neighbourhood || a.quarter || a.suburb || a.residential,
+      a.city_district,
+      a.city || a.town || a.village || a.county,
+    ].filter((x, i, arr) => x && arr.indexOf(x) === i)
+    return parts.length ? parts.join('، ') : (j.display_name ?? null)
+  } catch {
+    return null
+  }
+}
+
 function useLeafletMap(
   ref: React.RefObject<HTMLDivElement | null>,
   value: GeoPoint | null | undefined,
@@ -86,18 +107,36 @@ function useLeafletMap(
   }, [value, ready])
 }
 
-export function LocationPicker({ value, onChange }: { value: GeoPoint | null; onChange: (p: GeoPoint) => void }) {
+export function LocationPicker({ value, onChange, onAddress }: {
+  value: GeoPoint | null
+  onChange: (p: GeoPoint) => void
+  /** Receives a readable address each time the pin moves. */
+  onAddress?: (text: string) => void
+}) {
   const ref = useRef<HTMLDivElement>(null)
   const toast = useToast()
   const [locating, setLocating] = useState(false)
-  useLeafletMap(ref, value, { editable: true, onPick: onChange })
+  const [resolving, setResolving] = useState(false)
+  const reqRef = useRef(0)
+  const pick = (p: GeoPoint) => {
+    onChange(p)
+    if (!onAddress) return
+    const id = ++reqRef.current
+    setResolving(true)
+    reverseGeocode(p).then((text) => {
+      if (id !== reqRef.current) return
+      setResolving(false)
+      if (text) onAddress(text)
+    })
+  }
+  useLeafletMap(ref, value, { editable: true, onPick: pick })
 
   function locate() {
     if (!navigator.geolocation) return toast('المتصفح لا يدعم تحديد الموقع', 'err')
     setLocating(true)
     navigator.geolocation.getCurrentPosition(
       (pos) => {
-        onChange({ lat: pos.coords.latitude, lng: pos.coords.longitude })
+        pick({ lat: pos.coords.latitude, lng: pos.coords.longitude })
         setLocating(false)
       },
       () => {
@@ -122,7 +161,11 @@ export function LocationPicker({ value, onChange }: { value: GeoPoint | null; on
         </button>
       </div>
       <p className="bg-bg px-3 py-2 text-xs text-ink-2">
-        {value ? '✓ تم تحديد موقع البيت — يمكنك سحب الدبوس لتعديله' : 'اضغط على الخريطة لوضع دبوس على موقع بيتك'}
+        {resolving
+          ? 'جارٍ كتابة العنوان تلقائياً…'
+          : value
+            ? '✓ تم تحديد موقع البيت — يمكنك سحب الدبوس لتعديله'
+            : 'اضغط «موقعي الحالي» أو اضغط على الخريطة لتحديد بيتك'}
       </p>
     </div>
   )

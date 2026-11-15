@@ -27,14 +27,31 @@ export interface Backend {
   subscribeDoc<T>(col: string, id: string, cb: (item: T | null) => void): () => void
 
   onAuth(cb: (info: AuthInfo | null) => void): () => void
-  signIn(email: string, password: string): Promise<AuthInfo>
-  signUp(email: string, password: string, profile: { name: string; phone: string }): Promise<AuthInfo>
+  /** `login` is a phone number (customers) or an e-mail (admin). */
+  signIn(login: string, password: string): Promise<AuthInfo>
+  /** Sends a 6-digit code over WhatsApp. `debugCode` is only returned in test mode. */
+  sendOtp(phone: string, purpose: 'signup' | 'reset'): Promise<{ phone: string; debugCode?: string }>
+  signUp(input: { phone: string; code: string; name: string; password: string }): Promise<AuthInfo>
+  resetPassword(input: { phone: string; code: string; password: string }): Promise<AuthInfo>
   signOut(): Promise<void>
   deleteAuthUser(): Promise<void>
   changePassword(current: string, next: string): Promise<void>
   /** Admin only: sets a new password for a customer. */
   setUserPassword(uid: string, password: string): Promise<void>
   uploadImage(file: File, folder: string): Promise<string>
+  /** Web Push: the server's public key, or null when push is unavailable (demo mode). */
+  pushKey(): Promise<string | null>
+  pushSubscribe(subscription: PushSubscriptionJSON): Promise<void>
+  pushUnsubscribe(endpoint: string): Promise<void>
+}
+
+/** 07xx… / +964 7xx… / 00964… → 9647xx… */
+export function normalizePhone(raw: string, country = '964') {
+  let d = raw.replace(/\D+/g, '')
+  if (d.startsWith('00')) d = d.slice(2)
+  if (d.startsWith('0')) d = country + d.slice(1)
+  else if (d.length <= 10 && !d.startsWith(country)) d = country + d
+  return d
 }
 
 export function matches(doc: Record<string, unknown>, filter?: Filter) {

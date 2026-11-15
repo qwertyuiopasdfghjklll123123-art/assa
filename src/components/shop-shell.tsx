@@ -6,7 +6,9 @@ import { usePathname } from 'next/navigation'
 import { useState, type ReactNode } from 'react'
 import { cx } from '@/lib/format'
 import { useCollection, useSettings } from '@/lib/hooks'
-import type { AppNotification } from '@/lib/models'
+import type { AppNotification, Order } from '@/lib/models'
+import { NotifyPrompt } from './notify-prompt'
+import { ProductSheetProvider } from './product-card'
 import { useAuth, useBranch, useCart } from './providers'
 import { Logo, Sheet } from './ui'
 
@@ -97,12 +99,14 @@ export function IconLink({ href, label, children, badge }: { href: string; label
 export function ShopShell({ children }: { children: ReactNode }) {
   const path = usePathname()
   const settings = useSettings()
-  const { isAdmin } = useAuth()
+  const { isAdmin, user } = useAuth()
   const { count } = useCart()
   const unread = useUnreadCount()
+  const { items: myOrders } = useCollection<Order>(user ? 'orders' : null, user ? { field: 'userId', op: '==', value: user.id } : undefined)
+  const activeOrders = myOrders.filter((o) => ['pending', 'confirmed', 'preparing', 'on_the_way'].includes(o.status)).length
 
   return (
-    <div className="min-h-dvh pb-28 md:pb-10">
+    <div className="min-h-dvh pb-24 md:pb-10">
       <header className="sticky top-0 z-30 border-b border-line bg-white/85 backdrop-blur-md">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between gap-3 px-4">
           <Logo name={settings.restaurantName} />
@@ -136,11 +140,13 @@ export function ShopShell({ children }: { children: ReactNode }) {
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 pt-5">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 pt-5">
+        <ProductSheetProvider>{children}</ProductSheetProvider>
+        <NotifyPrompt />
+      </main>
 
       <nav
-        className="navy-grad fixed inset-x-3 bottom-3 z-40 rounded-2xl p-1.5 shadow-pop md:hidden"
-        style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-white/95 px-2 pt-1.5 pb-[max(0.5rem,env(safe-area-inset-bottom))] shadow-[0_-6px_24px_rgba(11,42,74,0.06)] backdrop-blur md:hidden"
       >
         <ul className="grid grid-cols-5">
           {NAV.map(({ href, label, icon: Icon }) => {
@@ -149,13 +155,17 @@ export function ShopShell({ children }: { children: ReactNode }) {
               <li key={href}>
                 <Link
                   href={href}
-                  className={cx(
-                    'flex flex-col items-center gap-0.5 rounded-xl py-2 text-[0.7rem] font-semibold transition',
-                    active ? 'bg-brand text-white shadow-[0_6px_14px_rgba(249,115,22,0.45)]' : 'text-sky-100/70 hover:text-white',
-                  )}
+                  className={cx('relative flex flex-col items-center gap-1 py-1.5 text-[0.7rem] font-semibold transition', active ? 'text-brand-600' : 'text-ink-3 hover:text-ink')}
                 >
-                  <Icon className="size-5" strokeWidth={active ? 2.4 : 2} />
+                  <span className={cx('grid h-8 w-12 place-items-center rounded-full transition', active && 'bg-brand-50')}>
+                    <Icon className="size-[1.35rem]" strokeWidth={active ? 2.4 : 1.9} />
+                  </span>
                   {label}
+                  {href === '/orders/' && activeOrders > 0 && (
+                    <span className="num absolute top-0 right-[calc(50%-1.4rem)] grid size-4 place-items-center rounded-full bg-sky text-[0.6rem] font-bold text-white ring-2 ring-white">
+                      {activeOrders}
+                    </span>
+                  )}
                 </Link>
               </li>
             )

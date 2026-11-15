@@ -3,7 +3,10 @@
 import { Check, MapPin, Phone, Store } from 'lucide-react'
 import { cx, dateTime, money, num } from '@/lib/format'
 import { STATUS_LABEL, type Order, type OrderStatus } from '@/lib/models'
+import { Navigation } from 'lucide-react'
+import { directionsLink } from './branch-card'
 import { LocationPreview } from './location-map'
+import { useBranch } from './providers'
 import { Thumb } from './ui'
 
 const FLOW: OrderStatus[] = ['pending', 'confirmed', 'preparing', 'on_the_way', 'delivered']
@@ -36,6 +39,8 @@ export function OrderTimeline({ order }: { order: Order }) {
 }
 
 export function OrderDetails({ order, currency }: { order: Order; currency: string }) {
+  const { branches } = useBranch()
+  const branch = branches.find((b) => b.id === order.branchId)
   return (
     <div className="space-y-4">
       <OrderTimeline order={order} />
@@ -92,6 +97,16 @@ export function OrderDetails({ order, currency }: { order: Order; currency: stri
           <Phone className="size-4 text-sky" /> <span className="num">{order.userPhone}</span>
         </p>
         {order.location && <LocationPreview value={order.location} />}
+        {order.type === 'pickup' && branch && (
+          <a
+            href={directionsLink(branch)}
+            target="_blank"
+            rel="noreferrer"
+            className="flex h-11 items-center justify-center gap-2 rounded-xl bg-sky font-bold text-white"
+          >
+            <Navigation className="size-4" /> الاتجاهات إلى {branch.name}
+          </a>
+        )}
         {order.notes && <p className="rounded-lg bg-warn-50 p-2 text-amber-800">ملاحظة: {order.notes}</p>}
         <p className="text-xs text-ink-3">{dateTime(order.createdAt)}</p>
       </div>

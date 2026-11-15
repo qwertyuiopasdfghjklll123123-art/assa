@@ -120,7 +120,7 @@ export function Thumb({ image, emoji, alt, className }: { image?: string; emoji?
   )
 }
 
-export function Sheet({ open, onClose, title, children }: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+export function Sheet({ open, onClose, title, children, hideTitle }: { open: boolean; onClose: () => void; title: string; children: ReactNode; hideTitle?: boolean }) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
@@ -136,12 +136,22 @@ export function Sheet({ open, onClose, title, children }: { open: boolean; onClo
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center" role="dialog" aria-modal aria-label={title}>
       <button className="absolute inset-0 bg-ink/40 backdrop-blur-[2px]" onClick={onClose} aria-label="إغلاق" />
       <div className="sheet-in relative max-h-[92dvh] w-full overflow-y-auto rounded-t-3xl bg-card p-5 shadow-pop sm:max-w-lg sm:rounded-3xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="font-display text-lg font-extrabold">{title}</h2>
-          <button onClick={onClose} className="grid size-9 place-items-center rounded-xl bg-bg text-ink-2 hover:text-ink" aria-label="إغلاق">
+        {hideTitle ? (
+          <button
+            onClick={onClose}
+            className="absolute top-4 left-4 z-10 grid size-10 place-items-center rounded-full bg-white/95 text-ink shadow-pop"
+            aria-label="إغلاق"
+          >
             <X className="size-5" />
           </button>
-        </div>
+        ) : (
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="font-display text-lg font-extrabold">{title}</h2>
+            <button onClick={onClose} className="grid size-9 place-items-center rounded-xl bg-bg text-ink-2 hover:text-ink" aria-label="إغلاق">
+              <X className="size-5" />
+            </button>
+          </div>
+        )}
         {children}
       </div>
     </div>
