@@ -178,6 +178,23 @@ export async function createLocalBackend(): Promise<Backend> {
       write(SESSION_KEY, info)
       return info
     },
+    async signUpEmail({ name, email, password }) {
+      const key = email.trim().toLowerCase()
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(key)) throw new Error('auth/invalid-email')
+      if (!name.trim()) throw new Error('auth/name-required')
+      if (password.length < 6) throw new Error('auth/weak-password')
+      const creds = read<Creds>(CRED_KEY, {})
+      if (creds[key]) throw new Error('auth/email-already-in-use')
+      const info = { uid: uid(), email: key }
+      creds[key] = { uid: info.uid, hash: await hash(password) }
+      localStorage.setItem(CRED_KEY, JSON.stringify(creds))
+      await backend.set('users', info.uid, {
+        name: name.trim(), email: key, phone: '', login: key, loginMethod: 'email', role: 'user',
+        points: 0, totalOrders: 0, totalSpent: 0, createdAt: Date.now(),
+      })
+      write(SESSION_KEY, info)
+      return info
+    },
     async signInGoogle() {
       throw new Error('auth/google-not-configured')
     },

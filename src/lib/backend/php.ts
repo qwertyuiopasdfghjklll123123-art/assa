@@ -163,6 +163,9 @@ export async function createPhpBackend(): Promise<Backend> {
     async signInWhatsApp(input) {
       return session(await call('auth.whatsapp', input))
     },
+    async signUpEmail(input) {
+      return session(await call('auth.signupEmail', input))
+    },
     async signInGoogle(accessToken) {
       return session(await call('auth.google', { accessToken }))
     },

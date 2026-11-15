@@ -121,7 +121,7 @@ function Account() {
 
       <Group title="الحساب والإعدادات">
         <Row onClick={() => setSheet('edit')} icon={<UserRound />} tone="bg-bg text-ink-2" title="البيانات الشخصية" sub="الاسم، رقم التواصل، العنوان" />
-        {user!.loginMethod ? (
+        {user!.loginMethod && user!.loginMethod !== 'email' ? (
           <div className="flex items-center gap-3 p-4">
             <span className="grid size-10 place-items-center rounded-xl bg-bg text-ink-2 [&>svg]:size-5">
               {user!.loginMethod === 'google' ? <GoogleLogo /> : <span className="text-[#25D366]"><WhatsAppBadge /></span>}

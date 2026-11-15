@@ -35,6 +35,8 @@ export interface Backend {
   sendOtp(phone: string): Promise<{ phone: string; exists: boolean; debugCode?: string }>
   /** Signs in with the WhatsApp code, creating the account (with `name`) if the number is new. */
   signInWhatsApp(input: { phone: string; code: string; name?: string }): Promise<AuthInfo>
+  /** Creates a site account with e-mail + password (sign in later with signIn). */
+  signUpEmail(input: { name: string; email: string; password: string }): Promise<AuthInfo>
   /** Signs in with a Google OAuth access token, creating the account on first use. */
   signInGoogle(accessToken: string): Promise<AuthInfo>
   signOut(): Promise<void>

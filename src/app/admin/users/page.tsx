@@ -115,7 +115,7 @@ export default function AdminUsersPage() {
               ))}
             </div>
             <div className="text-xs text-ink-3">
-              <span className="num">{phoneDisplay(open.phone) || open.email}</span> · {open.loginMethod === 'google' ? 'Google' : open.loginMethod === 'whatsapp' ? 'واتساب' : 'كلمة مرور'} · انضم {dateTime(open.createdAt)}
+              <span className="num">{phoneDisplay(open.phone) || open.email}</span> · {open.loginMethod === 'google' ? 'Google' : open.loginMethod === 'whatsapp' ? 'واتساب' : 'بريد وكلمة مرور'} · انضم {dateTime(open.createdAt)}
             </div>
 
             <div className="rounded-2xl border border-line p-3">
@@ -170,7 +170,7 @@ export default function AdminUsersPage() {
               </div>
             </div>
 
-            {!open.deleted && !open.loginMethod && (
+            {!open.deleted && (!open.loginMethod || open.loginMethod === 'email') && (
               <div className="rounded-2xl border border-line p-3">
                 <div className="mb-2 text-sm font-bold">إعادة تعيين كلمة المرور</div>
                 <div className="flex gap-2">

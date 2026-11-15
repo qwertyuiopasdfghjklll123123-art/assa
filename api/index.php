@@ -312,6 +312,28 @@ switch ($action) {
         ok(['token' => start_session($db, $uid, $CFG['session_days']), 'uid' => $uid, 'email' => '+' . $phone, 'isNew' => true]);
     }
 
+    /** Creates an account on the site with e-mail + password. */
+    case 'auth.signupEmail': {
+        $email = clean_email($in['email'] ?? '');
+        $password = (string) ($in['password'] ?? '');
+        $name = str_field($in['name'] ?? '', 80);
+        if ($name === '') throw new ApiError('auth/name-required');
+        if (mb_strlen($password) < 6) throw new ApiError('auth/weak-password');
+        $uid = new_id();
+        $created = $db->mutate('credentials', function (array $rows, &$res) use ($email, $password, $uid) {
+            if (isset($rows[$email])) { $res = false; return $rows; }
+            $rows[$email] = ['uid' => $uid, 'hash' => password_hash($password, PASSWORD_DEFAULT), 'method' => 'email'];
+            $res = true;
+            return $rows;
+        });
+        if (!$created) throw new ApiError('auth/email-already-in-use');
+        $db->merge('users', $uid, [
+            'name' => $name, 'email' => $email, 'phone' => '', 'login' => $email, 'loginMethod' => 'email', 'role' => 'user',
+            'points' => 0, 'totalOrders' => 0, 'totalSpent' => 0, 'createdAt' => now_ms(),
+        ]);
+        ok(['token' => start_session($db, $uid, $CFG['session_days']), 'uid' => $uid, 'email' => $email]);
+    }
+
     /** Signs in with a Google access token; creates the account on first use. */
     case 'auth.google': {
         $clientId = (string) ($CFG['google_client_id'] ?? '');

@@ -1,50 +1,18 @@
 'use client'
 
-import { ArrowRight, Loader2, LogIn, ShieldCheck, Sparkles, User, UserPlus } from 'lucide-react'
+import { ArrowRight, LogIn, Mail, ShieldCheck, Sparkles, User, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { useEffect, useState } from 'react'
 import { getBackend } from '@/lib/backend'
 import { cx, phoneDisplay } from '@/lib/format'
 import { useSettings } from '@/lib/hooks'
 import { errorMessage } from '@/lib/services'
-import { AuthLayout, OtpInput, PhoneInput, WhatsAppBadge, useAfterAuth } from './auth-layout'
+import { AuthLayout, OtpInput, PasswordInput, PhoneInput, WhatsAppBadge, useAfterAuth } from './auth-layout'
 import { useToast } from './providers'
 import { Button, Field } from './ui'
 
 type Mode = 'login' | 'signup'
-type Step = 'choose' | 'phone' | 'code'
-
-interface GoogleTokenClient {
-  requestAccessToken: () => void
-}
-declare global {
-  interface Window {
-    google?: {
-      accounts: {
-        oauth2: {
-          initTokenClient: (cfg: {
-            client_id: string
-            scope: string
-            callback: (r: { access_token?: string; error?: string }) => void
-            error_callback?: (e: { type: string }) => void
-          }) => GoogleTokenClient
-        }
-      }
-    }
-  }
-}
-
-function loadGoogle(): Promise<void> {
-  if (window.google?.accounts) return Promise.resolve()
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script')
-    s.src = 'https://accounts.google.com/gsi/client'
-    s.async = true
-    s.onload = () => resolve()
-    s.onerror = reject
-    document.head.appendChild(s)
-  })
-}
+type Step = 'choose' | 'phone' | 'code' | 'email'
 
 export function GoogleLogo() {
   return (
@@ -57,7 +25,7 @@ export function GoogleLogo() {
   )
 }
 
-/** One card for both signing in and creating an account, with WhatsApp or Google. */
+/** One card for both signing in and creating an account: WhatsApp code or e-mail + password. */
 export function AuthCard({ initialMode = 'login' }: { initialMode?: Mode }) {
   useAfterAuth()
   const toast = useToast()
@@ -71,18 +39,10 @@ export function AuthCard({ initialMode = 'login' }: { initialMode?: Mode }) {
   const [debugCode, setDebugCode] = useState<string | null>(null)
   const [sentTo, setSentTo] = useState('')
   const [cooldown, setCooldown] = useState(0)
-  const [busy, setBusy] = useState<null | 'send' | 'verify' | 'google'>(null)
-  const [googleId, setGoogleId] = useState('')
-
-  useEffect(() => {
-    getBackend()
-      .then((b) => b.authConfig())
-      .then((c) => {
-        setGoogleId(c.googleClientId)
-        if (c.googleClientId) loadGoogle().catch(() => {})
-      })
-      .catch(() => {})
-  }, [])
+  const [busy, setBusy] = useState<null | 'send' | 'verify' | 'email'>(null)
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [confirm, setConfirm] = useState('')
 
   useEffect(() => {
     if (cooldown <= 0) return
@@ -120,36 +80,21 @@ export function AuthCard({ initialMode = 'login' }: { initialMode?: Mode }) {
     }
   }
 
-  async function google() {
-    if (!googleId) return toast(errorMessage(new Error('google-not-configured')), 'err')
-    setBusy('google')
+  async function emailSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (mode === 'signup' && password !== confirm) return toast('كلمتا المرور غير متطابقتين', 'err')
+    setBusy('email')
     try {
-      await loadGoogle()
-      const client = window.google!.accounts.oauth2.initTokenClient({
-        client_id: googleId,
-        scope: 'openid email profile',
-        callback: async (r) => {
-          if (!r.access_token) {
-            toast(errorMessage(new Error('google-cancelled')), 'err')
-            setBusy(null)
-            return
-          }
-          try {
-            await (await getBackend()).signInGoogle(r.access_token)
-            toast('تم تسجيل الدخول بحساب Google')
-          } catch (err) {
-            toast(errorMessage(err), 'err')
-            setBusy(null)
-          }
-        },
-        error_callback: () => {
-          toast(errorMessage(new Error('google-cancelled')), 'err')
-          setBusy(null)
-        },
-      })
-      client.requestAccessToken()
-    } catch {
-      toast('تعذّر فتح نافذة Google، تحقق من الإنترنت', 'err')
+      const b = await getBackend()
+      if (mode === 'signup') {
+        await b.signUpEmail({ name: name.trim(), email: email.trim(), password })
+        toast('تم إنشاء حسابك بنجاح 🎉')
+      } else {
+        await b.signIn(email.trim(), password)
+        toast('أهلاً بعودتك 👋')
+      }
+    } catch (err) {
+      toast(errorMessage(err), 'err')
       setBusy(null)
     }
   }
@@ -159,7 +104,11 @@ export function AuthCard({ initialMode = 'login' }: { initialMode?: Mode }) {
       ? mode === 'login'
         ? ['أهلاً بعودتك 👋', 'سجّل الدخول لمتابعة طلباتك ونقاطك']
         : ['أنشئ حسابك مجاناً ✨', `واحصل على ${s.loyaltyPercent}% كاش باك مع كل طلب`]
-      : step === 'phone'
+      : step === 'email'
+        ? mode === 'login'
+          ? ['الدخول بالبريد الإلكتروني', 'أدخل بريدك (Gmail أو غيره) وكلمة المرور']
+          : ['إنشاء حساب بالبريد', 'أنشئ حسابك في الموقع ببريدك الإلكتروني وكلمة مرور']
+        : step === 'phone'
         ? ['المتابعة عبر واتساب', 'أدخل رقمك وسنرسل لك رمز تحقق على واتساب']
         : exists
           ? ['أدخل رمز التحقق', `أرسلنا رمزاً من 6 أرقام إلى واتساب على الرقم ${sentTo}`]
@@ -209,31 +158,92 @@ export function AuthCard({ initialMode = 'login' }: { initialMode?: Mode }) {
               <span className="w-9" />
             </button>
             <button
-              onClick={google}
-              disabled={busy === 'google'}
-              className="flex h-14 w-full items-center gap-3 rounded-2xl border-2 border-line bg-white px-4 font-bold text-ink transition hover:border-sky active:scale-[0.99] disabled:opacity-60"
+              onClick={() => setStep('email')}
+              className="flex h-14 w-full items-center gap-3 rounded-2xl border-2 border-line bg-white px-4 font-bold text-ink transition hover:border-sky active:scale-[0.99]"
             >
-              <span className="grid size-9 place-items-center rounded-xl bg-bg">{busy === 'google' ? <Loader2 className="size-5 animate-spin" /> : <GoogleLogo />}</span>
-              <span className="flex-1 text-center">{mode === 'login' ? 'الدخول بحساب Google' : 'إنشاء حساب بـ Google'}</span>
+              <span className="grid size-9 place-items-center rounded-xl bg-bg">
+                <GoogleLogo />
+              </span>
+              <span className="flex-1 text-center">{mode === 'login' ? 'الدخول بالبريد (Gmail)' : 'إنشاء حساب بالبريد (Gmail)'}</span>
               <span className="w-9" />
             </button>
           </div>
 
           <p className="mt-5 text-center text-xs leading-relaxed text-ink-3">
-            {mode === 'login' ? 'ليس لديك حساب؟ لا مشكلة — سننشئه لك تلقائياً عند أول دخول.' : 'لديك حساب؟ اختر نفس الطريقة وسندخلك إليه مباشرة.'}
+            {mode === 'login' ? 'عبر واتساب ننشئ حسابك تلقائياً عند أول دخول، أو أنشئ حساباً بالبريد.' : 'لديك حساب؟ اختر «تسجيل الدخول» بنفس الطريقة التي سجّلت بها.'}
           </p>
           <ul className="mt-4 grid grid-cols-3 gap-2 border-t border-line pt-4 text-center text-[0.7rem] font-semibold text-ink-2">
             <li>
               <Sparkles className="mx-auto mb-1 size-5 text-brand" /> {s.loyaltyPercent}% كاش باك
             </li>
             <li>
-              <ShieldCheck className="mx-auto mb-1 size-5 text-ok" /> بدون كلمة مرور
+              <ShieldCheck className="mx-auto mb-1 size-5 text-ok" /> حساب آمن
             </li>
             <li>
               <WhatsAppBadge /> <span className="mt-1 block">تحديثات طلبك</span>
             </li>
           </ul>
         </>
+      )}
+
+      {step === 'email' && (
+        <form className="space-y-4" onSubmit={emailSubmit}>
+          <div className="grid grid-cols-2 gap-1 rounded-2xl bg-bg p-1">
+            {(
+              [
+                ['login', 'لدي حساب'],
+                ['signup', 'حساب جديد'],
+              ] as const
+            ).map(([k, label]) => (
+              <button
+                key={k}
+                type="button"
+                onClick={() => setMode(k)}
+                className={cx('h-9 rounded-xl text-sm font-bold transition', mode === k ? 'bg-white text-brand-600 shadow-card' : 'text-ink-3')}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          {mode === 'signup' && (
+            <Field label="الاسم الكامل">
+              <div className="relative">
+                <User className="pointer-events-none absolute top-1/2 right-3.5 size-5 -translate-y-1/2 text-ink-3" />
+                <input className="field pr-11" required autoComplete="name" placeholder="مثال: علي حسن" value={name} onChange={(e) => setName(e.target.value)} />
+              </div>
+            </Field>
+          )}
+          <Field label="البريد الإلكتروني">
+            <div className="relative">
+              <Mail className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-ink-3" />
+              <input className="field pl-11" type="email" dir="ltr" required autoComplete="email" placeholder="name@gmail.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+          </Field>
+          <Field label="كلمة المرور" hint={mode === 'signup' ? '6 أحرف على الأقل' : undefined}>
+            <PasswordInput value={password} onChange={setPassword} autoComplete={mode === 'signup' ? 'new-password' : 'current-password'} />
+          </Field>
+          {mode === 'signup' && (
+            <Field label="تأكيد كلمة المرور">
+              <PasswordInput value={confirm} onChange={setConfirm} autoComplete="new-password" />
+            </Field>
+          )}
+          {mode === 'login' && (
+            <div className="flex justify-end">
+              <a
+                href={`https://wa.me/${s.whatsapp.replace(/\D/g, '')}?text=${encodeURIComponent('مرحباً، نسيت كلمة المرور لحسابي في التطبيق. بريدي: ')}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm font-semibold text-sky-600"
+              >
+                نسيت كلمة المرور؟
+              </a>
+            </div>
+          )}
+          <Button type="submit" size="lg" className="w-full" loading={busy === 'email'}>
+            {mode === 'signup' ? 'إنشاء الحساب' : 'تسجيل الدخول'}
+          </Button>
+          <BackLink onClick={() => setStep('choose')} label="طرق أخرى للدخول" />
+        </form>
       )}
 
       {step === 'phone' && (

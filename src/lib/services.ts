@@ -208,7 +208,7 @@ export async function uploadImage(file: File, folder: string) {
 export function errorMessage(e: unknown) {
   const code = e instanceof Error ? (e as Error & { code?: string }).code || e.message : String(e)
   const map: [string, string][] = [
-    ['invalid-credential', 'رقم الهاتف أو كلمة المرور غير صحيحة'],
+    ['invalid-credential', 'البريد الإلكتروني أو كلمة المرور غير صحيحة'],
     ['invalid-phone', 'رقم الهاتف غير صحيح'],
     ['phone-already-in-use', 'هذا الرقم مسجّل مسبقاً، سجّل الدخول بدلاً من ذلك'],
     ['phone-not-found', 'لا يوجد حساب بهذا الرقم'],
