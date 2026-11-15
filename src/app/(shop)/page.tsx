@@ -55,17 +55,17 @@ export default function HomePage() {
 
       {/* Points + quick links */}
       <section className="grid gap-3 sm:grid-cols-2">
-        <Link href={user ? '/loyalty/' : '/login/'} className="card flex items-center gap-4 p-4 transition hover:border-sky">
-          <span className="grid size-12 place-items-center rounded-2xl bg-sky-50 text-sky">
+        <Link href={user ? '/loyalty/' : '/login/'} className="navy-grad flex items-center gap-4 rounded-2xl p-4 text-white shadow-card transition hover:opacity-95">
+          <span className="grid size-12 place-items-center rounded-2xl bg-white/15 text-sky-300">
             <Zap className="size-6" />
           </span>
           <div className="flex-1">
             <h3 className="font-bold">نقاطك</h3>
-            <p className="text-xs text-ink-2">{user ? 'استخدم نقاطك كخصم على طلبك القادم' : 'سجّل الدخول لتبدأ بجمع النقاط'}</p>
+            <p className="text-xs text-sky-100/80">{user ? 'استخدم نقاطك كخصم على طلبك القادم' : 'سجّل الدخول لتبدأ بجمع النقاط'}</p>
           </div>
           <div className="text-left">
-            <div className="num font-display text-2xl font-black text-sky-600">{num(user?.points ?? 0)}</div>
-            <div className="text-[0.7rem] font-semibold text-ink-3">نقطة</div>
+            <div className="num font-display text-2xl font-black text-brand">{num(user?.points ?? 0)}</div>
+            <div className="text-[0.7rem] font-semibold text-sky-100/80">نقطة</div>
           </div>
         </Link>
         <Link href="/orders/" className="card flex items-center gap-4 p-4 transition hover:border-brand">

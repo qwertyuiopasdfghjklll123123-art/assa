@@ -4,11 +4,11 @@
   --font-sans: var(--font-plex), 'Tajawal', system-ui, sans-serif;
   --font-display: var(--font-tajawal), var(--font-plex), sans-serif;
 
-  --color-bg: #f6f8fb;
+  --color-bg: #f4f8fc;
   --color-card: #ffffff;
-  --color-line: #e7ecf3;
-  --color-ink: #13233a;
-  --color-ink-2: #51607a;
+  --color-line: #e3ebf4;
+  --color-ink: #0b2a4a;
+  --color-ink-2: #4b6283;
   --color-ink-3: #8b97ab;
 
   --color-brand: #f97316;
@@ -89,6 +89,9 @@ body {
 }
 .sky-grad {
   background: linear-gradient(135deg, #38bdf8 0%, #0ea5e9 55%, #0284c7 100%);
+}
+.navy-grad {
+  background: linear-gradient(135deg, #0b2a4a 0%, #0c3a66 60%, #0369a1 100%);
 }
 .dots {
   background-image: radial-gradient(rgba(255, 255, 255, 0.22) 1px, transparent 1px);

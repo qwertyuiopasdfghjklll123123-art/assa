@@ -139,7 +139,7 @@ export function ShopShell({ children }: { children: ReactNode }) {
       <main className="mx-auto max-w-5xl px-4 pt-5">{children}</main>
 
       <nav
-        className="fixed inset-x-3 bottom-3 z-40 rounded-2xl border border-line bg-white/95 p-1.5 shadow-pop backdrop-blur md:hidden"
+        className="navy-grad fixed inset-x-3 bottom-3 z-40 rounded-2xl p-1.5 shadow-pop md:hidden"
         style={{ marginBottom: 'env(safe-area-inset-bottom)' }}
       >
         <ul className="grid grid-cols-5">
@@ -151,7 +151,7 @@ export function ShopShell({ children }: { children: ReactNode }) {
                   href={href}
                   className={cx(
                     'flex flex-col items-center gap-0.5 rounded-xl py-2 text-[0.7rem] font-semibold transition',
-                    active ? 'bg-brand text-white shadow-[0_6px_14px_rgba(249,115,22,0.3)]' : 'text-ink-3 hover:text-ink',
+                    active ? 'bg-brand text-white shadow-[0_6px_14px_rgba(249,115,22,0.45)]' : 'text-sky-100/70 hover:text-white',
                   )}
                 >
                   <Icon className="size-5" strokeWidth={active ? 2.4 : 2} />
