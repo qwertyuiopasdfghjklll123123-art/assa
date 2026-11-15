@@ -1,0 +1,14 @@
+{
+  "name": "wasel-engine",
+  "version": "1.0.0",
+  "private": true,
+  "description": "محرك واتساب لمنصة واصل (Baileys) - يتكلم معه موقع PHP",
+  "main": "app.js",
+  "scripts": { "start": "node app.js" },
+  "engines": { "node": ">=20" },
+  "dependencies": {
+    "@whiskeysockets/baileys": "7.0.0-rc14",
+    "pino": "^9.6.0",
+    "qrcode": "^1.5.4"
+  }
+}

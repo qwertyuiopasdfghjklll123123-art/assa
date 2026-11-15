@@ -1,0 +1,5 @@
+{
+  "ENGINE_SECRET": "ضع_هنا_نفس_المفتاح_السري_الموجود_في_config.php",
+  "PHP_HOOK_URL": "https://example.com/engine_hook",
+  "TIMEZONE": "Asia/Baghdad"
+}
