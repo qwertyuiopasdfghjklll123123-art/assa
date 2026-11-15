@@ -71,8 +71,18 @@ $routes = [
             $_SESSION = [];
             redirect_to('/');
         }
-        // المستخدم العادي يشوف /app فقط - روابط الأقسام للأدمن
-        if ($section !== '' && empty($_SESSION['is_admin'])) {
+        // المستخدم العادي يشوف /app فقط - الأدمن كل صفحة برابطها المباشر (/users، /settings...)
+        if ($section !== '') {
+            redirect_to(empty($_SESSION['is_admin']) ? '/app' : '/' . $section);
+        }
+        echo render_app_page('');
+    }],
+    ['GET', '#^/(' . implode('|', APP_SLUGS) . ')$#', function ($section) {
+        if (!uid() || !user_by_id(uid())) {
+            $_SESSION = [];
+            redirect_to('/');
+        }
+        if (empty($_SESSION['is_admin'])) {
             redirect_to('/app');
         }
         echo render_app_page($section);
@@ -88,7 +98,7 @@ $routes = [
         header('Content-Type: application/manifest+json; charset=utf-8');
         echo json_encode([
             'name' => $name, 'short_name' => $name, 'id' => '/app', 'start_url' => '/app', 'scope' => '/',
-            'display' => 'standalone', 'background_color' => '#f7f4f0', 'theme_color' => '#f7f4f0',
+            'display' => 'standalone', 'background_color' => '#eef4f5', 'theme_color' => '#034f5c',
             'dir' => 'rtl', 'lang' => 'ar', 'description' => 'حملات واتساب، رد آلي، ورسائل اشتراكات',
             'icons' => [
                 ['src' => '/pwa-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
@@ -98,8 +108,9 @@ $routes = [
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }],
     ['GET', '#^/pwa-(192|512)\.png$#', 'serve_pwa_icon'],
-    ['GET', '#^/assets/(ui\.css|app\.js)$#', function ($f) {
-        header('Content-Type: ' . (str_ends_with($f, '.css') ? 'text/css' : 'application/javascript') . '; charset=utf-8');
+    ['GET', '#^/assets/(ui\.css|app\.js|logo\.png)$#', function ($f) {
+        $types = ['css' => 'text/css; charset=utf-8', 'js' => 'application/javascript; charset=utf-8', 'png' => 'image/png'];
+        header('Content-Type: ' . $types[pathinfo($f, PATHINFO_EXTENSION)]);
         header('Cache-Control: public, max-age=600');
         readfile(__DIR__ . '/views/' . $f);
     }],

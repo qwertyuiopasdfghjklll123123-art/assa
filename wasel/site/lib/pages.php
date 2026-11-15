@@ -61,6 +61,10 @@ function logo_svg(int $size = 32): string
     </svg>';
 }
 
+/** روابط صفحات التطبيق (للأدمن): لازم تطابق PAGES بملف app.js */
+const APP_SLUGS = ['campaign', 'numbers', 'number', 'packages', 'pay', 'me', 'notifications', 'clients', 'api', 'transactions',
+    'profile', 'dashboard', 'users', 'recharges', 'payments', 'plans', 'settings', 'security', 'backup', 'announce'];
+
 function view_file(string $name): string
 {
     return (string)file_get_contents(__DIR__ . '/../views/' . $name);
@@ -72,7 +76,7 @@ function logo_html(int $size, string $class = ''): string
     if ($hasLogo) {
         return '<img src="/branding/logo?v=' . (int)@filemtime(logo_path()) . '" alt="' . $siteName . '" class="' . $class . '" style="width:' . $size . 'px;height:' . $size . 'px;object-fit:contain">';
     }
-    return '<span class="' . $class . ' logo-default" style="width:' . $size . 'px;height:' . $size . 'px">' . logo_svg((int)round($size * .62)) . '</span>';
+    return '<img src="/assets/logo.png" alt="' . $siteName . '" class="' . $class . '" style="width:' . $size . 'px;height:' . $size . 'px;object-fit:contain">';
 }
 
 function js_json($v): string

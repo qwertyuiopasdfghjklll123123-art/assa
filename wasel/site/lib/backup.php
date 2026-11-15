@@ -5,7 +5,7 @@
  */
 
 const BACKUP_TABLES = ['users', 'wa_accounts', 'subscribers', 'payments', 'api_keys', 'history', 'events',
-    'wallet_tx', 'recharges', 'payment_methods'];
+    'wallet_tx', 'recharges', 'payment_methods', 'plans'];
 const BACKUP_DOCS = ['settings', 'subscription_settings'];
 
 function backup_export(): array

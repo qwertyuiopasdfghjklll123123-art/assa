@@ -92,20 +92,65 @@ function no_balance_error(): string
     return 'رصيدك ما يكفي - اشحن رصيدك أو فعّل اشتراك من قسم الشحن';
 }
 
-/** شراء/تجديد الاشتراك من الرصيد */
-function buy_plan(int $userId): array
+// ================================================================ الباقات
+
+const PLAN_COLORS = ['teal', 'amber', 'violet', 'coral', 'emerald', 'sky'];
+
+function ensure_default_plans(): void
 {
-    $price = plan_price();
-    $days = plan_days();
-    $bal = wallet_add($userId, -$price, 'plan', PLAN_NAME . " ({$days} يوم)");
+    if (store_all('plans')) {
+        return;
+    }
+    $defaults = [
+        ['name' => 'الباقة الشهرية', 'price' => plan_price(), 'days' => plan_days(), 'color' => 'teal', 'popular' => false,
+            'features' => "إرسال غير محدود\nرقم واتساب واحد أو أكثر\nرد آلي بالكلمات المفتاحية"],
+        ['name' => 'باقة 3 أشهر', 'price' => (int)round(plan_price() * 2.6), 'days' => 90, 'color' => 'amber', 'popular' => true,
+            'features' => "كل مزايا الشهرية\nتوفير 13%\nرد آلي بالذكاء الاصطناعي"],
+        ['name' => 'الباقة السنوية', 'price' => plan_price() * 9, 'days' => 365, 'color' => 'violet', 'popular' => false,
+            'features' => "كل المزايا\nتوفير 25%\nأولوية بالدعم"],
+    ];
+    foreach ($defaults as $i => $d) {
+        store_insert('plans', $d + ['active' => true, 'sort' => $i + 1, 'created_at' => now_str()]);
+    }
+}
+
+function plans(bool $activeOnly): array
+{
+    ensure_default_plans();
+    $rows = store_all('plans');
+    if ($activeOnly) {
+        $rows = array_values(array_filter($rows, fn($p) => !empty($p['active'])));
+    }
+    usort($rows, fn($a, $b) => ($a['sort'] ?? 0) <=> ($b['sort'] ?? 0) ?: $a['id'] <=> $b['id']);
+    return array_map(fn($p) => $p + ['features_list' => array_values(array_filter(array_map('trim', explode("\n", (string)($p['features'] ?? '')))))], $rows);
+}
+
+/** شراء/تجديد باقة من الرصيد (لو عنده نفس الباقة فعّالة تنضاف المدة فوقها) */
+function buy_plan(int $userId, ?int $planId = null): array
+{
+    $plan = $planId ? store_find('plans', $planId) : (plans(true)[0] ?? null);
+    if (!$plan || empty($plan['active'])) {
+        return [false, 'الباقة غير متاحة'];
+    }
+    $price = (int)$plan['price'];
+    $days = max(1, (int)$plan['days']);
+    $bal = wallet_add($userId, -$price, 'plan', $plan['name'] . " ({$days} يوم)");
     if ($bal === null) {
-        return [false, 'رصيدك ما يكفي لشراء الاشتراك (' . number_format($price) . ' د.ع)'];
+        return [false, 'رصيدك ما يكفي لهذي الباقة (' . number_format($price) . ' د.ع)'];
     }
     $u = user_by_id($userId);
     $from = effective_plan_active($u) && ($e = parse_dt($u['plan_ends_at'] ?? null)) ? $e : time();
-    update_user($userId, ['plan_active' => true, 'plan_ends_at' => date('Y-m-d H:i', $from + $days * 86400)]);
-    add_event($userId, null, 'تم تفعيل الاشتراك', PLAN_NAME . " لمدة {$days} يوم", 'success');
+    update_user($userId, ['plan_active' => true, 'plan_ends_at' => date('Y-m-d H:i', $from + $days * 86400), 'plan_name' => $plan['name']]);
+    add_event($userId, null, 'تم تفعيل باقتك', $plan['name'] . " لمدة {$days} يوم", 'success');
     return [true, null];
+}
+
+/** بعد شحن مرتبط بباقة: نفعّلها تلقائياً لو الرصيد صار يكفي */
+function apply_recharge_plan(int $userId, $planId): void
+{
+    if ($planId) {
+        buy_plan($userId, (int)$planId);
+    }
 }
 
 // ================================================================ طرق الدفع

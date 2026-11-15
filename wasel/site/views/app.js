@@ -68,12 +68,12 @@ async function refreshMe() {
 
 // ================================================================ التنقل
 const PAGES = {
-  home: { nav: 'home', slug: '' }, campaign: { nav: 'campaign' }, accounts: { nav: 'accounts' }, acc: { nav: 'accounts', slug: 'account-wa' },
-  wallet: { nav: 'wallet' }, pay: { nav: 'wallet' }, account: { nav: 'account', slug: 'me' }, notifications: { nav: 'account' },
-  subscribers: { nav: 'account' }, apikeys: { nav: 'account', slug: 'api' }, tx: { nav: 'wallet', slug: 'transactions' }, profile: { nav: 'account' },
-  admin: { nav: 'account', admin: true }, users: { nav: 'account', admin: true }, recharges: { nav: 'account', admin: true },
-  payments: { nav: 'account', admin: true }, settings: { nav: 'account', admin: true }, security: { nav: 'account', admin: true },
-  backup: { nav: 'account', admin: true }, announce: { nav: 'account', admin: true },
+  home: { nav: 'home', slug: '' }, campaign: { nav: 'campaign', slug: 'campaign' }, accounts: { nav: 'accounts', slug: 'numbers' }, acc: { nav: 'accounts', slug: 'number' },
+  wallet: { nav: 'wallet', slug: 'packages' }, pay: { nav: 'wallet', slug: 'pay' }, account: { nav: 'account', slug: 'me' }, notifications: { nav: 'account', slug: 'notifications' },
+  subscribers: { nav: 'account', slug: 'clients' }, apikeys: { nav: 'account', slug: 'api' }, tx: { nav: 'wallet', slug: 'transactions' }, profile: { nav: 'account', slug: 'profile' },
+  admin: { nav: 'account', admin: true, slug: 'dashboard' }, users: { nav: 'account', admin: true, slug: 'users' }, recharges: { nav: 'account', admin: true, slug: 'recharges' },
+  payments: { nav: 'account', admin: true, slug: 'payments' }, plansAdmin: { nav: 'account', admin: true, slug: 'plans' }, settings: { nav: 'account', admin: true, slug: 'settings' },
+  security: { nav: 'account', admin: true, slug: 'security' }, backup: { nav: 'account', admin: true, slug: 'backup' }, announce: { nav: 'account', admin: true, slug: 'announce' },
 };
 const SLUG2PAGE = Object.fromEntries(Object.entries(PAGES).map(([k, v]) => [v.slug ?? k, k]));
 
@@ -81,12 +81,12 @@ function go(page, params = {}, push = true) {
   if (!PAGES[page] || (PAGES[page].admin && !ADMIN)) page = 'home';
   S.timers.forEach(clearInterval); S.timers = [];
   S.page = page; S.params = params;
-  document.querySelectorAll('.bnav-it').forEach(b => b.classList.toggle('on', b.dataset.p === PAGES[page].nav));
+  document.querySelectorAll('#bnav [data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === PAGES[page].nav));
   if (push) {
     const slug = PAGES[page].slug ?? page;
     const qs = params.id ? '?id=' + encodeURIComponent(params.id) : '';
-    // المستخدم العادي: الرابط يبقى /app دائماً
-    const url = ADMIN ? '/app' + (slug ? '/' + slug : '') + qs : '/app';
+    // المستخدم العادي: الرابط يبقى /app دائماً. الأدمن: كل صفحة برابطها (/users، /settings...)
+    const url = ADMIN ? (slug ? '/' + slug : '/app') + qs : '/app';
     history.pushState({ page, params }, '', url);
   }
   view.innerHTML = '';
@@ -98,13 +98,29 @@ function go(page, params = {}, push = true) {
 }
 function goBack() { if (history.state && history.length > 1) history.back(); else go('home'); }
 window.addEventListener('popstate', e => { const st = e.state || { page: 'home', params: {} }; go(st.page, st.params || {}, false); });
-document.getElementById('bnav').addEventListener('click', e => { const b = e.target.closest('.bnav-it'); if (b) go(b.dataset.p); });
+document.getElementById('bnav').addEventListener('click', e => { const b = e.target.closest('[data-p]'); if (b) go(b.dataset.p); });
 window.addEventListener('scroll', () => document.getElementById('topbar').classList.toggle('scrolled', scrollY > 4), { passive: true });
-window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.installPrompt = e; });
-async function installApp() {
-  if (S.installPrompt) { S.installPrompt.prompt(); await S.installPrompt.userChoice; S.installPrompt = null; return; }
-  toast(/iphone|ipad/i.test(navigator.userAgent) ? 'من سفاري: زر المشاركة ← إضافة إلى الشاشة الرئيسية' : 'من قائمة المتصفح ⋮ اختر «تثبيت التطبيق»');
+const isStandalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+function openInstall(force = false) {
+  if (isStandalone()) { toast('التطبيق مثبّت أصلاً', 'ok'); return; }
+  if (!force) { try { if (Date.now() - (+localStorage.getItem('pwaLater') || 0) < 3 * 86400000) return; } catch (e) {} }
+  document.getElementById('pwaText').textContent = isIOS ? 'من سفاري: اضغط زر المشاركة ⬆️ ثم «إضافة إلى الشاشة الرئيسية»' : (S.installPrompt ? 'افتحه بلمسة من شاشتك الرئيسية مثل أي تطبيق' : 'من قائمة المتصفح ⋮ اختر «تثبيت التطبيق» أو «إضافة للشاشة الرئيسية»');
+  document.getElementById('pwaInstall').classList.toggle('hidden', !S.installPrompt);
+  document.getElementById('pwaBg').classList.add('show'); document.getElementById('pwaSheet').classList.add('show');
 }
+function closeInstall(later) {
+  document.getElementById('pwaBg').classList.remove('show'); document.getElementById('pwaSheet').classList.remove('show');
+  if (later) { try { localStorage.setItem('pwaLater', Date.now()); } catch (e) {} }
+}
+async function installApp() { if (S.installPrompt) { S.installPrompt.prompt(); const c = await S.installPrompt.userChoice; S.installPrompt = null; closeInstall(c.outcome !== 'accepted'); if (c.outcome === 'accepted') toast('تم تثبيت التطبيق', 'ok'); } else openInstall(true); }
+document.getElementById('pwaInstall').onclick = installApp;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); S.installPrompt = e; setTimeout(() => openInstall(), 2500); });
+if (isIOS && !isStandalone()) setTimeout(() => openInstall(), 4000);
+// سحب النافذة للأسفل يغلقها
+(() => { const sh = document.getElementById('pwaSheet'); let y0 = null;
+  sh.addEventListener('touchstart', e => { y0 = e.touches[0].clientY; }, { passive: true });
+  sh.addEventListener('touchend', e => { if (y0 !== null && e.changedTouches[0].clientY - y0 > 70) closeInstall(true); y0 = null; }, { passive: true }); })();
 
 // ================================================================ الصفحات
 const R = {};
@@ -112,37 +128,36 @@ const R = {};
 // ---------------------------------------------------------------- الرئيسية
 R.home = async (el) => {
   const first = (ME.name || '؟').trim()[0] || '؟';
+  const planLine = ME.plan_active ? `<i class="fa-solid fa-gem"></i> ${esc(ME.plan_name || 'مشترك')} · ${ME.plan_days_left === null ? 'دائم' : ME.plan_days_left + ' يوم'}`
+    : ME.trial_active ? `<i class="fa-solid fa-gift"></i> تجربة مجانية · ${ME.trial_days_left} يوم` : SET.message_price > 0 ? '<i class="fa-solid fa-coins"></i> الدفع حسب الرسائل' : '<i class="fa-solid fa-lock"></i> بدون باقة';
   el.innerHTML = `
-    <div class="hero stagger">
-      <div class="welcome-hero">
+    <div class="hero fade-in">
+      <div class="greet">
         <div class="avatar">${esc(first)}</div>
         <div style="flex:1;min-width:0">
-          <div style="font-weight:800;font-size:17px">مرحباً، ${esc(ME.name || 'صديقنا')} <i class="fa-solid fa-hand-sparkles" style="color:#fde68a"></i></div>
-          <div style="margin-top:4px">${planText().replace(/pill-(green|orange|blue|red)/, 'pill-white')}</div>
+          <div style="font-size:12.5px;opacity:.85">أهلاً بعودتك 👋</div>
+          <div style="font-weight:800;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ME.name || 'صديقنا')}</div>
         </div>
-        <button class="hero-icon" onclick="go('wallet')" aria-label="شحن"><i class="fa-solid fa-plus"></i></button>
+        <span class="pill pill-white" onclick="go('wallet')" style="cursor:pointer">${planLine}</span>
       </div>
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:14px">
-        <div><div class="hero-label">رصيدك</div><div class="hero-amount"><span class="num">${fmt(ME.balance)}</span> <span style="font-size:15px">د.ع</span></div></div>
-        ${SET.message_price > 0 ? `<div class="hero-sub">سعر الرسالة ${fmt(SET.message_price)} د.ع</div>` : ''}
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:18px">
+        <div><div class="hero-label">رصيدك</div><div class="hero-amount"><span class="num">${fmt(ME.balance)}</span> <span style="font-size:15px;font-weight:600">د.ع</span></div></div>
+        <button class="btn btn-white btn-sm" onclick="go('wallet')"><i class="fa-solid fa-plus"></i> شحن</button>
       </div>
       <div class="hero-stats" id="heroStats"><div><b>—</b><span>أرقام متصلة</span></div><div><b>—</b><span>رسائل مرسلة</span></div><div><b>—</b><span>نسبة النجاح</span></div></div>
     </div>
-    <div class="qa stagger" style="margin-top:14px">
-      <button class="qa-item" onclick="go('campaign')"><span class="row-ic ic-blue"><i class="fa-solid fa-paper-plane"></i></span>حملة جديدة</button>
-      <button class="qa-item" onclick="go('accounts')"><span class="row-ic ic-wa"><i class="fa-brands fa-whatsapp"></i></span>ربط رقم</button>
-      <button class="qa-item" onclick="go('subscribers')"><span class="row-ic ic-purple"><i class="fa-solid fa-user-clock"></i></span>المشتركين</button>
-      <button class="qa-item" onclick="go('apikeys')"><span class="row-ic ic-orange"><i class="fa-solid fa-code"></i></span>API</button>
+    <div class="section-head">ابدأ من هنا</div>
+    <div class="bento stagger">
+      <div class="tile tile-teal wide" onclick="go('campaign')"><span class="t-ic"><i class="fa-solid fa-paper-plane"></i></span><div style="flex:1"><b style="margin:0">حملة جديدة</b><small>أرسل رسالتك لآلاف الأرقام بضغطة</small></div><i class="fa-solid fa-arrow-left"></i><i class="fa-solid fa-paper-plane big-ic"></i></div>
+      <div class="tile tile-emerald" onclick="go('accounts')"><span class="t-ic"><i class="fa-brands fa-whatsapp"></i></span><div><b>أرقامي</b><small>ربط بالباركود أو الرمز</small></div><i class="fa-brands fa-whatsapp big-ic"></i></div>
+      <div class="tile tile-amber" onclick="go('wallet')"><span class="t-ic"><i class="fa-solid fa-gem"></i></span><div><b>الباقات</b><small>اشترك أو اشحن رصيد</small></div><i class="fa-solid fa-gem big-ic"></i></div>
+      <div class="tile tile-violet" onclick="go('subscribers')"><span class="t-ic"><i class="fa-solid fa-user-clock"></i></span><div><b>مشتركيني</b><small>تذكير تلقائي بالانتهاء</small></div><i class="fa-solid fa-user-clock big-ic"></i></div>
+      <div class="tile tile-sky" onclick="go('apikeys')"><span class="t-ic"><i class="fa-solid fa-code"></i></span><div><b>ربط API</b><small>رسائل من موقعك</small></div><i class="fa-solid fa-code big-ic"></i></div>
+      ${ADMIN ? `<div class="tile tile-coral wide" onclick="go('admin')"><span class="t-ic"><i class="fa-solid fa-gauge-high"></i></span><div style="flex:1"><b style="margin:0">لوحة الإدارة</b><small>المستخدمين، الشحن، الباقات والأمان</small></div><i class="fa-solid fa-arrow-left"></i><i class="fa-solid fa-shield-halved big-ic"></i></div>` : ''}
     </div>
-    ${ADMIN ? `<div class="list" style="margin-top:14px">${rowItem({ icon: 'fa-solid fa-gauge-high', ic: 'ic-pink', title: 'لوحة الإدارة', sub: 'المستخدمين، الشحن، الإعدادات والأمان', onclick: "go('admin')" })}</div>` : ''}
     <div id="running"></div>
     <div class="section-head">آخر الحملات</div>
-    <div class="list mini-list" id="recent"><div style="padding:14px"><div class="skel" style="height:44px"></div></div></div>
-    <div class="card install-card" style="margin-top:14px" onclick="installApp()">
-      <span class="row-ic"><i class="fa-solid fa-mobile-screen-button"></i></span>
-      <div style="flex:1"><b>ثبّت ${esc(B.site)} كتطبيق</b><div style="font-size:12px;opacity:.75">فتح أسرع وإشعارات فورية</div></div>
-      <span class="btn btn-sm" style="background:#fff;color:#0f172a">تثبيت</span>
-    </div>`;
+    <div class="list mini-list" id="recent"><div style="padding:14px"><div class="skel" style="height:44px"></div></div></div>`;
   const [st, run, recent] = await Promise.all([api('/dashboard/stats'), api('/dashboard/running_campaigns'), api('/dashboard/campaigns')]);
   if (st.accounts_total !== undefined) {
     el.querySelector('#heroStats').innerHTML = `<div><b class="num">${st.accounts_connected}/${st.accounts_total}</b><span>أرقام متصلة</span></div>
@@ -152,13 +167,12 @@ R.home = async (el) => {
     el.querySelector('#running').innerHTML = `<div class="section-head">حملات جارية <span class="pill pill-green">${run.length}</span></div>` + run.map(c => {
       const done = c.sent + c.failed, pct = c.total ? Math.round(done / c.total * 100) : 0;
       return `<div class="card" onclick="go('campaign',{acc:'${esc(c.account_id)}'})" style="cursor:pointer">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><b>${esc(c.account_name)}</b>${c.paused ? '<span class="pill pill-orange">موقوفة</span>' : '<span class="pill pill-green">جارية</span>'}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>${esc(c.account_name)}</b>${c.paused ? '<span class="pill pill-orange">موقوفة</span>' : '<span class="pill pill-green"><span class="status-dot on"></span> جارية</span>'}</div>
         <div class="progress"><span style="width:${pct}%"></span></div>
-        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-top:6px"><span>${fmt(done)} / ${fmt(c.total)}</span><span>${pct}%</span></div></div>`;
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-top:6px"><span class="num">${fmt(done)} / ${fmt(c.total)}</span><span class="num">${pct}%</span></div></div>`;
     }).join('');
   }
-  const list = el.querySelector('#recent');
-  list.innerHTML = Array.isArray(recent) && recent.length ? recent.slice(0, 6).map(h => rowItem({
+  el.querySelector('#recent').innerHTML = Array.isArray(recent) && recent.length ? recent.slice(0, 6).map(h => rowItem({
     icon: h.failed ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-check-double', ic: h.failed ? 'ic-orange' : 'ic-green',
     title: `${esc(h.account_name)} <span class="pill pill-gray num">${fmt(h.sent)}/${fmt(h.total)}</span>`, sub: `${esc(h.time)} · ${esc((h.text || '').slice(0, 40))}`, end: '',
   })).join('') : empty('fa-regular fa-paper-plane', 'ما أرسلت أي حملة بعد', `<button class="btn btn-primary btn-sm" onclick="go('campaign')">أرسل أول حملة</button>`);
@@ -396,38 +410,57 @@ R.acc = async (el, p) => {
 
 // ---------------------------------------------------------------- الشحن
 const PM_ICON = { asiacell: ['fa-solid fa-sim-card', 'ic-red'], binance: ['fa-brands fa-bitcoin', 'ic-orange'], superkey: ['fa-solid fa-credit-card', 'ic-purple'], manual: ['fa-solid fa-building-columns', 'ic-cyan'] };
-R.wallet = async (el) => {
+const PLAN_GRAD = { teal: 'tile-teal', amber: 'tile-amber', violet: 'tile-violet', coral: 'tile-coral', emerald: 'tile-emerald', sky: 'tile-sky' };
+R.wallet = async (el, p) => {
   await refreshMe();
-  const planBtn = ME.balance >= SET.plan_price
-    ? `<button class="btn btn-primary btn-block" id="buyPlan"><i class="fa-solid fa-crown"></i> ${ME.plan_active ? 'تجديد' : 'اشترك'} من رصيدك (${fmt(SET.plan_price)} د.ع)</button>`
-    : `<div class="note warn">تحتاج ${fmt(SET.plan_price - ME.balance)} د.ع إضافية لشراء الاشتراك - اشحن رصيدك من الطرق بالأسفل</div>`;
-  el.innerHTML = head('شحن الرصيد', false, `<button class="btn btn-ghost btn-sm" onclick="go('tx')"><i class="fa-solid fa-clock-rotate-left"></i> السجل</button>`) + `
-    <div class="hero"><div style="display:flex;align-items:center;justify-content:space-between">
-      <div><div class="hero-label">رصيدك الحالي</div><div class="hero-amount"><span class="num">${fmt(ME.balance)}</span></div><div class="hero-sub">دينار عراقي</div></div>
-      <span class="hero-icon"><i class="fa-solid fa-wallet"></i></span></div></div>
-    <div class="stepper"><div class="st done"><b>1</b>اختر الطريقة</div><div class="st"><b>2</b>أرسل المبلغ</div><div class="st"><b>3</b>يُضاف رصيدك</div></div>
-    <div class="section-head">الاشتراك ${planText()}</div>
-    <div class="card">
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span class="row-ic ic-orange"><i class="fa-solid fa-crown"></i></span>
-        <div style="flex:1"><b>${esc(SET.plan_name)}</b><div class="row-sub">إرسال غير محدود لمدة ${fmt(SET.plan_days)} يوم</div></div><b class="num" style="color:var(--primary)">${fmt(SET.plan_price)} <small>د.ع</small></b></div>
-      ${planBtn}
-      ${SET.message_price > 0 ? `<div class="hint" style="text-align:center;margin-top:8px">بدون اشتراك: كل رسالة تنخصم من رصيدك بسعر ${fmt(SET.message_price)} د.ع</div>` : ''}
-    </div>
-    <div class="section-head">طرق الدفع</div>
-    <div class="list stagger" id="pms"><div style="padding:14px"><div class="skel" style="height:44px"></div></div><div style="padding:14px"><div class="skel" style="height:44px"></div></div></div>`;
-  const bp = el.querySelector('#buyPlan');
-  if (bp) bp.onclick = () => confirmTap(bp, async () => {
-    busy(bp, true); const r = await api('/api/plan/buy', { body: {} }); busy(bp, false);
-    if (!r.ok) { toast(r.error, 'err'); return; }
-    ME = r.me; toast('تم تفعيل الاشتراك', 'ok'); document.getElementById('balChip').textContent = fmt(ME.balance); go('wallet', {}, false);
-  }, 'اضغط للتأكيد والخصم من رصيدك');
-  const r = await api('/api/payment-methods');
-  S.methods = r.methods || [];
-  el.querySelector('#pms').innerHTML = S.methods.length ? S.methods.map(m => {
+  const [pr, mr] = await Promise.all([api('/api/plans'), api('/api/payment-methods')]);
+  S.plans = pr.plans || []; S.methods = mr.methods || [];
+  const chosen = p.plan ? S.plans.find(x => String(x.id) === String(p.plan)) : null;
+  const methodsList = (planId) => S.methods.length ? `<div class="list stagger">${S.methods.map(m => {
     const [icon, ic] = PM_ICON[m.type] || PM_ICON.manual;
-    const tag = m.type === 'asiacell' || m.type === 'binance' ? '<span class="pill pill-green">تلقائي</span>' : '<span class="pill pill-gray">يدوي</span>';
-    return rowItem({ icon, ic, img: m.image, title: `${esc(m.name)} ${tag}`, sub: esc(m.note || ''), onclick: `go('pay',{id:${m.id}})` });
-  }).join('') : empty('fa-solid fa-credit-card', 'ما فيه طرق دفع مفعّلة حالياً - تواصل مع الدعم');
+    const tag = m.type === 'asiacell' || m.type === 'binance' ? '<span class="pill pill-green">فوري</span>' : '<span class="pill pill-gray">مراجعة</span>';
+    return rowItem({ icon, ic, img: m.image, title: `${esc(m.name)} ${tag}`, sub: esc(m.note || ''), onclick: `go('pay',{id:${m.id}${planId ? ',plan:' + planId : ''}})` });
+  }).join('')}</div>` : `<div class="card">${empty('fa-solid fa-credit-card', 'ما فيه طرق دفع مفعّلة حالياً - تواصل مع الدعم')}</div>`;
+
+  // صفحة دفع باقة محددة
+  if (chosen) {
+    const enough = ME.balance >= chosen.price;
+    el.innerHTML = head(esc(chosen.name)) + `
+      <div class="plan ${PLAN_GRAD[chosen.color] || 'tile-teal'}" style="cursor:default">
+        <div class="plan-top"><span class="plan-name">${esc(chosen.name)}</span><span class="pill pill-white">${fmt(chosen.days)} يوم</span></div>
+        <div class="plan-price"><span class="num">${fmt(chosen.price)}</span> <small>د.ع</small></div>
+        <ul>${chosen.features_list.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+      </div>
+      <div class="stepper"><div class="st done"><b>1</b>اختر الباقة</div><div class="st ${enough ? 'done' : ''}"><b>2</b>ادفع</div><div class="st"><b>3</b>تتفعّل فوراً</div></div>
+      ${enough ? `<div class="card" style="margin-top:14px"><div class="card-title"><i class="fa-solid fa-wallet"></i> الدفع من رصيدك <span class="spacer"></span><span class="pill pill-green num">${fmt(ME.balance)} د.ع</span></div>
+        <button class="btn btn-primary btn-block" id="buyNow"><i class="fa-solid fa-gem"></i> تفعيل الباقة الآن</button></div>`
+        : `<div class="note warn" style="margin-top:14px">رصيدك ${fmt(ME.balance)} د.ع - ادفع ${fmt(chosen.price - ME.balance)} د.ع أو أكثر بإحدى الطرق، والباقة تتفعّل تلقائياً أول ما يوصل المبلغ.</div>`}
+      <div class="section-head">${enough ? 'أو ادفع بطريقة ثانية' : 'اختر طريقة الدفع'}</div>${methodsList(chosen.id)}`;
+    const b = el.querySelector('#buyNow');
+    if (b) b.onclick = () => confirmTap(b, async () => {
+      busy(b, true); const r = await api('/api/plan/buy', { body: { plan_id: chosen.id } }); busy(b, false);
+      if (!r.ok) { toast(r.error, 'err'); return; }
+      ME = r.me; document.getElementById('balChip').textContent = fmt(ME.balance); toast('تم تفعيل ' + chosen.name, 'ok'); go('wallet', {}, false);
+    }, 'اضغط للتأكيد');
+    return;
+  }
+
+  el.innerHTML = head('الباقات', false, `<button class="btn btn-ghost btn-sm" onclick="go('tx')"><i class="fa-solid fa-clock-rotate-left"></i> السجل</button>`) + `
+    <div class="hero fade-in"><div style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+      <div><div class="hero-label">باقتك الحالية</div>
+        <div style="font-size:22px;font-weight:800;margin-top:2px">${ME.plan_active ? esc(ME.plan_name || 'مشترك') : ME.trial_active ? 'تجربة مجانية' : 'بدون باقة'}</div>
+        <div class="hero-sub">${ME.plan_active ? (ME.plan_days_left === null ? 'اشتراك دائم' : 'باقي ' + ME.plan_days_left + ' يوم') : ME.trial_active ? 'باقي ' + ME.trial_days_left + ' يوم' : 'اختر باقة أو اشحن رصيد للإرسال'}</div></div>
+      <div style="text-align:left"><div class="hero-label">الرصيد</div><div style="font-size:22px;font-weight:800" class="num">${fmt(ME.balance)}</div><div class="hero-sub">د.ع</div></div></div></div>
+    <div class="section-head">اختر باقتك</div>
+    <div class="stagger">${S.plans.map(pl => `<div class="plan ${PLAN_GRAD[pl.color] || 'tile-teal'} ${ME.plan_active && ME.plan_name === pl.name ? 'current' : ''}" onclick="go('wallet',{plan:${pl.id}})">
+      <div class="plan-top"><span class="plan-name">${esc(pl.name)}</span>${pl.popular ? '<span class="plan-badge"><i class="fa-solid fa-fire"></i> الأكثر طلباً</span>' : `<span class="pill pill-white">${fmt(pl.days)} يوم</span>`}</div>
+      <div class="plan-price"><span class="num">${fmt(pl.price)}</span> <small>د.ع / ${fmt(pl.days)} يوم</small></div>
+      <ul>${pl.features_list.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+      <span class="btn btn-white">${ME.plan_active && ME.plan_name === pl.name ? 'تجديد الباقة' : 'اشترك الآن'} <i class="fa-solid fa-arrow-left"></i></span></div>`).join('') || `<div class="card">${empty('fa-solid fa-gem', 'ما فيه باقات حالياً')}</div>`}</div>
+    ${SET.message_price > 0 ? `<div class="section-head">أو ادفع حسب استخدامك</div>
+    <div class="card" style="display:flex;gap:14px;align-items:center"><span class="row-ic ic-orange" style="width:54px;height:54px;font-size:22px"><i class="fa-solid fa-coins"></i></span>
+      <div style="flex:1"><b>شحن رصيد بدون باقة</b><div class="row-sub" style="white-space:normal">كل رسالة تنخصم من رصيدك بـ <b class="num">${fmt(SET.message_price)}</b> د.ع فقط</div></div></div>
+    <div class="section-head">طرق شحن الرصيد</div>${methodsList(null)}` : `<div class="section-head">شحن الرصيد</div>${methodsList(null)}`}`;
 };
 
 R.pay = async (el, p) => {
@@ -437,7 +470,9 @@ R.pay = async (el, p) => {
   const [icon, ic] = PM_ICON[m.type] || PM_ICON.manual;
   const top = `<div class="card" style="display:flex;align-items:center;gap:12px"><span class="row-ic ${ic}" style="width:56px;height:56px;font-size:24px">${m.image ? `<img src="${esc(m.image)}">` : `<i class="${icon}"></i>`}</span>
     <div style="flex:1"><b style="font-size:17px">${esc(m.name)}</b><div class="row-sub" style="white-space:normal">${esc(m.note || '')}</div></div></div>`;
-  el.innerHTML = head('الدفع عبر ' + esc(m.name)) + top + '<div id="payBody" style="margin-top:12px"></div>';
+  const plan = p.plan && S.plans ? S.plans.find(x => String(x.id) === String(p.plan)) : null;
+  const need = plan ? Math.max(0, plan.price - ME.balance) : 0;
+  el.innerHTML = head('الدفع عبر ' + esc(m.name)) + top + (plan ? `<div class="note" style="margin-top:12px"><i class="fa-solid fa-gem"></i> الدفع لـ <b>${esc(plan.name)}</b> - تتفعّل تلقائياً بعد وصول المبلغ (${fmt(plan.price)} د.ع)</div>` : '') + '<div id="payBody" style="margin-top:12px"></div>';
   const body = el.querySelector('#payBody');
 
   if (m.type === 'manual' || m.type === 'superkey') {
@@ -446,7 +481,7 @@ R.pay = async (el, p) => {
       <div class="numbered"><b>1</b><span>حوّل المبلغ للرقم التالي</span></div>
       <div class="copy-box"><span class="v">${esc(m.number || '—')}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(m.number)}')"><i class="fa-regular fa-copy"></i> نسخ</button></div>
       <div class="numbered" style="margin-top:14px"><b>2</b><span>اكتب المبلغ اللي حوّلته وارفع صورة الإيصال</span></div>
-      <input class="input big num" id="amt" type="number" inputmode="numeric" placeholder="0" min="${m.min_amount}">
+      <input class="input big num" id="amt" type="number" inputmode="numeric" placeholder="0" min="${m.min_amount}" value="${need || ''}">
       <div class="chips" style="margin-top:8px;justify-content:center">${quick.map(q => `<button class="chip num" data-q="${q}">${fmt(q)}</button>`).join('')}</div>
       <div class="field" style="margin-top:12px"><label>رقم العملية / ملاحظة (اختياري)</label><input class="input" id="ref"></div>
       <label class="file-drop"><input type="file" id="rc" accept="image/*"><span class="row-ic ic-blue"><i class="fa-solid fa-receipt"></i></span><span style="flex:1"><b style="font-size:13.5px">صورة الإيصال</b><span class="row-sub" id="rcName">اضغط لاختيار صورة</span></span></label>
@@ -459,6 +494,7 @@ R.pay = async (el, p) => {
     body.querySelector('#submit').onclick = async e => {
       const fd = new FormData();
       fd.append('method_id', m.id); fd.append('amount', body.querySelector('#amt').value); fd.append('ref', body.querySelector('#ref').value);
+      if (plan) fd.append('plan_id', plan.id);
       if (body.querySelector('#rc').files[0]) fd.append('receipt', body.querySelector('#rc').files[0]);
       busy(e.currentTarget, true); const r = await api('/api/recharge/manual', { body: fd }); busy(e.currentTarget, false);
       if (!r.ok) { toast(r.error, 'err'); return; }
@@ -472,7 +508,7 @@ R.pay = async (el, p) => {
       <div class="copy-box"><span class="v">${esc(m.number || '—')}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(m.number)}')"><i class="fa-regular fa-copy"></i> نسخ</button></div>
       ${m.qr ? `<div class="qr-frame" style="margin-top:10px"><img src="${esc(m.qr)}" style="width:200px;height:200px;object-fit:contain"></div>` : ''}
       <div class="numbered" style="margin-top:14px"><b>2</b><span>اكتب المبلغ بالدولار ورقم العملية (Order ID)</span></div>
-      <input class="input big num" id="usd" type="number" step="0.01" inputmode="decimal" placeholder="$0.00">
+      <input class="input big num" id="usd" type="number" step="0.01" inputmode="decimal" placeholder="$0.00" value="${need ? (Math.ceil(need / m.usd_rate * 100) / 100) : ''}">
       <div class="hint" style="text-align:center" id="eq">سعر الصرف: 1$ = ${fmt(m.usd_rate)} د.ع</div>
       <div class="field" style="margin-top:10px"><label>رقم العملية Order ID</label><input class="input num" id="oid" inputmode="numeric" style="direction:ltr;text-align:left"></div>
       <button class="btn btn-primary btn-block" id="verify"><i class="fa-solid fa-shield-check"></i> تحقق وأضف الرصيد</button>
@@ -480,10 +516,10 @@ R.pay = async (el, p) => {
     body.querySelector('#usd').oninput = e => { const v = parseFloat(e.target.value) || 0; body.querySelector('#eq').textContent = v ? `= ${fmt(Math.round(v * m.usd_rate))} د.ع تنضاف لرصيدك` : `سعر الصرف: 1$ = ${fmt(m.usd_rate)} د.ع`; };
     body.querySelector('#verify').onclick = async e => {
       busy(e.currentTarget, true);
-      const r = await api('/api/recharge/binance', { body: { amount_usd: body.querySelector('#usd').value, order_id: body.querySelector('#oid').value.trim() } });
+      const r = await api('/api/recharge/binance', { body: { amount_usd: body.querySelector('#usd').value, order_id: body.querySelector('#oid').value.trim(), plan_id: plan ? plan.id : null } });
       busy(e.currentTarget, false);
       if (!r.ok) { toast(r.error, 'err'); return; }
-      toast(r.msg, 'ok'); await refreshMe(); go('wallet');
+      toast(r.msg, 'ok'); await refreshMe(); go('home');
     };
   }
 
@@ -501,7 +537,7 @@ R.pay = async (el, p) => {
       body.querySelectorAll('.tier').forEach(t => t.onclick = () => { amount = +t.dataset.a; body.querySelectorAll('.tier').forEach(x => x.classList.toggle('on', x === t)); });
       body.querySelector('#start').onclick = async e => {
         if (!amount) { toast('اختر المبلغ', 'err'); return; }
-        busy(e.currentTarget, true); const r = await api('/api/recharge/asiacell/start', { body: { phone: body.querySelector('#ph').value, amount } }); busy(e.currentTarget, false);
+        busy(e.currentTarget, true); const r = await api('/api/recharge/asiacell/start', { body: { phone: body.querySelector('#ph').value, amount, plan_id: plan ? plan.id : null } }); busy(e.currentTarget, false);
         if (!r.ok) { toast(r.error, 'err'); return; }
         codeStep('verify', r.msg);
       };
@@ -565,7 +601,7 @@ R.account = async (el) => {
   if (ADMIN) { const s = await api('/api/admin/stats'); pending = s.pending_recharges || 0; }
   el.innerHTML = `
     <div class="card" style="display:flex;align-items:center;gap:12px">
-      <div class="avatar" style="background:var(--hero);color:#fff;position:relative">${esc(first)}</div>
+      <div class="avatar" style="background:var(--hero);color:#fff;position:relative;box-shadow:0 8px 18px var(--primary-glow)">${esc(first)}</div>
       <div style="flex:1;min-width:0"><b style="font-size:16.5px">${esc(ME.name || 'بدون اسم')}</b>
         <div class="row-sub num" style="text-align:right">${esc(contact)}</div>
         <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap"><span class="pill pill-gray"><i class="fa-${ME.login === 'google' ? 'brands fa-google' : ME.login === 'email' ? 'solid fa-envelope' : 'brands fa-whatsapp'}"></i> ${ME.login === 'google' ? 'Google' : ME.login === 'email' ? 'بريد' : 'واتساب'}</span>${ADMIN ? '<span class="pill pill-blue"><i class="fa-solid fa-shield"></i> أدمن</span>' : ''}</div></div>
@@ -573,7 +609,7 @@ R.account = async (el) => {
     </div>
     <div class="stats three stagger" style="margin-top:12px">
       <div class="stat" onclick="go('wallet')"><span class="stat-ic ic-blue"><i class="fa-solid fa-wallet"></i></span><span class="stat-v num">${fmt(ME.balance)}</span><span class="stat-l">الرصيد (د.ع)</span></div>
-      <div class="stat" onclick="go('wallet')"><span class="stat-ic ic-orange"><i class="fa-solid fa-crown"></i></span><span class="stat-v">${ME.plan_active ? (ME.plan_days_left === null ? 'دائم' : ME.plan_days_left + ' يوم') : ME.trial_active ? ME.trial_days_left + ' يوم' : '—'}</span><span class="stat-l">${ME.plan_active ? 'الاشتراك' : ME.trial_active ? 'التجربة' : 'بدون اشتراك'}</span></div>
+      <div class="stat" onclick="go('wallet')"><span class="stat-ic ic-orange"><i class="fa-solid fa-crown"></i></span><span class="stat-v">${ME.plan_active ? (ME.plan_days_left === null ? 'دائم' : ME.plan_days_left + ' يوم') : ME.trial_active ? ME.trial_days_left + ' يوم' : '—'}</span><span class="stat-l">${ME.plan_active ? esc(ME.plan_name || 'الباقة') : ME.trial_active ? 'التجربة' : 'بدون باقة'}</span></div>
       <div class="stat" onclick="go('home')"><span class="stat-ic ic-green"><i class="fa-solid fa-paper-plane"></i></span><span class="stat-v num">${fmt(st.messages_sent || 0)}</span><span class="stat-l">رسائل مرسلة</span></div>
     </div>
     <div class="section-head">حسابي</div>
@@ -594,6 +630,7 @@ R.account = async (el) => {
       ${rowItem({ icon: 'fa-solid fa-gauge-high', ic: 'ic-pink', title: 'لوحة الإدارة', sub: 'نظرة عامة على المنصة', onclick: "go('admin')" })}
       ${rowItem({ icon: 'fa-solid fa-users', ic: 'ic-blue', title: 'المستخدمين', sub: 'الاشتراكات، الفترات المجانية، الأرصدة', onclick: "go('users')" })}
       ${rowItem({ icon: 'fa-solid fa-list-check', ic: 'ic-green', title: 'طلبات الشحن', sub: 'مراجعة التحويلات اليدوية', end: `${pending ? `<span class="pill pill-red">${pending}</span>` : ''}<span class="chev"><i class="fa-solid fa-chevron-left"></i></span>`, onclick: "go('recharges')" })}
+      ${rowItem({ icon: 'fa-solid fa-gem', ic: 'ic-purple', title: 'الباقات', sub: 'الأسعار والمدد والمزايا والألوان', onclick: "go('plansAdmin')" })}
       ${rowItem({ icon: 'fa-solid fa-credit-card', ic: 'ic-orange', title: 'طرق الدفع', sub: 'آسياسيل، Binance، سوبر كي، اليدوي', onclick: "go('payments')" })}
       ${rowItem({ icon: 'fa-solid fa-sliders', ic: 'ic-purple', title: 'الإعدادات', sub: 'الأسعار، الشعار، تسجيل الدخول', onclick: "go('settings')" })}
       ${rowItem({ icon: 'fa-solid fa-shield-halved', ic: 'ic-red', title: 'مركز الأمان', sub: 'سجل الدخول والحظر والجلسات', onclick: "go('security')" })}
@@ -733,13 +770,13 @@ R.admin = async (el) => {
       ${card('fa-brands fa-whatsapp', 'ic-wa', `${s.wa_connected}/${s.wa_accounts}`, 'أرقام واتساب متصلة')}
       ${card('fa-solid fa-coins', 'ic-cyan', fmt(s.balances), 'مجموع أرصدة المستخدمين')}
     </div>
-    <div class="card" style="margin-top:12px;display:flex;align-items:center;gap:12px"><span class="row-ic ${s.engine ? 'ic-green' : 'ic-red'}"><i class="fa-solid fa-server"></i></span><div style="flex:1"><b>محرك واتساب</b><div class="row-sub">${s.engine ? 'شغّال ومتصل' : 'غير متصل - افتح صفحة install.php لتشغيله'}</div></div><a class="btn btn-ghost btn-sm" href="/install.php">الفحص</a></div>
+    <div class="card" style="margin-top:12px;display:flex;align-items:center;gap:12px"><span class="row-ic ${s.engine ? 'ic-green' : 'ic-red'}"><i class="fa-solid fa-server"></i></span><div style="flex:1"><b>محرك واتساب</b><div class="row-sub" style="white-space:normal">${s.engine_outdated ? '⚠️ نسخة قديمة - ارفع مجلد wasel-engine الجديد واضغط Restart' : s.engine ? 'شغّال ومتصل' : 'غير متصل - افتح صفحة install.php لتشغيله'}</div></div><a class="btn btn-ghost btn-sm" href="/install.php">الفحص</a></div>
     <div class="section-head">أقسام الإدارة</div>
     <div class="qa stagger">
+      <button class="qa-item" onclick="go('plansAdmin')"><span class="row-ic ic-purple"><i class="fa-solid fa-gem"></i></span>الباقات</button>
       <button class="qa-item" onclick="go('payments')"><span class="row-ic ic-orange"><i class="fa-solid fa-credit-card"></i></span>طرق الدفع</button>
       <button class="qa-item" onclick="go('settings')"><span class="row-ic ic-purple"><i class="fa-solid fa-sliders"></i></span>الإعدادات</button>
       <button class="qa-item" onclick="go('security')"><span class="row-ic ic-red"><i class="fa-solid fa-shield-halved"></i></span>الأمان</button>
-      <button class="qa-item" onclick="go('backup')"><span class="row-ic ic-cyan"><i class="fa-brands fa-telegram"></i></span>النسخ</button>
     </div>`;
 };
 
@@ -870,7 +907,7 @@ R.settings = async (el) => {
   el.innerHTML = head('الإعدادات') + `
     <div class="section-head">الأسعار والفترات</div>
     <div class="card">
-      <div class="input-row">${f('plan_price', 'سعر الاشتراك (د.ع)', s.plan_price, 'number')}${f('plan_days', 'مدة الاشتراك (يوم)', s.plan_days, 'number')}</div>
+      <div class="note" style="margin-bottom:14px">أسعار ومدد الاشتراك تتعدّل من قسم <a onclick="go('plansAdmin')" style="cursor:pointer;font-weight:800">الباقات</a></div>
       <div class="input-row">${f('trial_days', 'الفترة المجانية (يوم)', s.trial_days, 'number', '0 = بدون تجربة')}${f('message_price', 'سعر الرسالة (د.ع)', s.message_price, 'number', '0 = الإرسال للمشتركين فقط')}</div>
       ${f('usd_rate', 'سعر الدولار بالدينار (لـ Binance)', s.usd_rate, 'number', 'مثال: 1500 يعني 1$ = 1500 د.ع')}
     </div>
@@ -962,6 +999,42 @@ R.backup = async (el) => {
   el.querySelector('#tgs').onclick = async e => { busy(e.currentTarget, true); const r = await api('/api/admin/settings', { body: { tg_token: el.querySelector('#tgt').value, tg_chat_id: el.querySelector('#tgc').value, tg_auto_backup: el.querySelector('#tga').checked } }); busy(e.currentTarget, false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); };
   el.querySelector('#tgn').onclick = async e => { busy(e.currentTarget, true); const r = await api('/api/admin/backup/telegram', { body: {} }); busy(e.currentTarget, false); toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err'); };
   el.querySelector('#tgw').onclick = async e => { busy(e.currentTarget, true); const r = await api('/api/admin/telegram/webhook', { body: {} }); busy(e.currentTarget, false); toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err'); };
+};
+
+R.plansAdmin = async (el) => {
+  el.innerHTML = head('إدارة الباقات') + '<div id="pa"></div>';
+  async function load() {
+    const r = await api('/api/admin/plans');
+    const colors = r.colors || [];
+    const CN = { teal: 'فيروزي', amber: 'ذهبي', violet: 'بنفسجي', coral: 'مرجاني', emerald: 'أخضر', sky: 'سماوي' };
+    el.querySelector('#pa').innerHTML = (r.plans || []).map(pl => `<div class="card" data-pl="${pl.id}">
+      <div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-open>
+        <span class="row-ic" style="background:var(--g-${pl.color});color:#fff"><i class="fa-solid fa-gem"></i></span>
+        <div style="flex:1"><b>${esc(pl.name)}</b> ${pl.popular ? '<span class="pill pill-orange">الأكثر طلباً</span>' : ''}<div class="row-sub num" style="text-align:right">${fmt(pl.price)} د.ع · ${fmt(pl.days)} يوم</div></div>
+        <label class="switch" onclick="event.stopPropagation()"><input type="checkbox" data-active ${pl.active ? 'checked' : ''}><span></span></label></div>
+      <div class="hidden" data-panel style="margin-top:14px">
+        <div class="field"><label>اسم الباقة</label><input class="input" data-f="name" value="${esc(pl.name)}"></div>
+        <div class="input-row"><div class="field" style="flex:1"><label>السعر (د.ع)</label><input class="input num" type="number" data-f="price" value="${pl.price}"></div><div class="field" style="flex:1"><label>المدة (يوم)</label><input class="input num" type="number" data-f="days" value="${pl.days}"></div></div>
+        <div class="field"><label>المزايا (كل ميزة بسطر)</label><textarea class="textarea" data-f="features" style="min-height:90px">${esc(pl.features || '')}</textarea></div>
+        <div class="field"><label>اللون</label><div class="chips">${colors.map(c => `<button class="chip ${c === pl.color ? 'on' : ''}" data-color="${c}"><span style="width:14px;height:14px;border-radius:50%;background:var(--g-${c})"></span>${CN[c] || c}</button>`).join('')}</div></div>
+        <div class="input-row" style="align-items:center"><div class="field" style="flex:1"><label>الترتيب</label><input class="input num" type="number" data-f="sort" value="${pl.sort}"></div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><label class="switch"><input type="checkbox" data-popular ${pl.popular ? 'checked' : ''}><span></span></label> الأكثر طلباً</label></div>
+        <div class="input-row"><button class="btn btn-primary btn-sm" style="flex:2" data-save>حفظ</button><button class="btn btn-red btn-sm" style="flex:1" data-del><i class="fa-solid fa-trash"></i></button></div>
+      </div></div>`).join('') + `<button class="btn btn-primary btn-block" id="addPl" style="margin-top:14px"><i class="fa-solid fa-plus"></i> إضافة باقة</button>`;
+    el.querySelectorAll('[data-pl]').forEach(c => {
+      const id = c.dataset.pl; let color = null;
+      c.querySelector('[data-open]').onclick = () => c.querySelector('[data-panel]').classList.toggle('hidden');
+      c.querySelector('[data-active]').onchange = async e => { await api('/api/admin/plans/' + id, { body: { active: e.target.checked } }); toast(e.target.checked ? 'الباقة ظاهرة للمستخدمين' : 'تم إخفاء الباقة', 'ok'); };
+      c.querySelectorAll('[data-color]').forEach(b => b.onclick = () => { color = b.dataset.color; c.querySelectorAll('[data-color]').forEach(x => x.classList.toggle('on', x === b)); });
+      c.querySelector('[data-save]').onclick = async e => {
+        const body = { popular: c.querySelector('[data-popular]').checked }; c.querySelectorAll('[data-f]').forEach(i => body[i.dataset.f] = i.value); if (color) body.color = color;
+        busy(e.currentTarget, true); const r = await api('/api/admin/plans/' + id, { body }); busy(e.currentTarget, false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); if (r.ok) load();
+      };
+      c.querySelector('[data-del]').onclick = e => confirmTap(e.currentTarget, async () => { await api('/api/admin/plans/' + id, { method: 'DELETE' }); load(); }, 'تأكيد');
+    });
+    el.querySelector('#addPl').onclick = async () => { await api('/api/admin/plans', { body: { name: 'باقة جديدة', price: 10000, days: 30, color: 'sky', active: false } }); toast('تمت الإضافة - عدّلها وفعّلها', 'ok'); load(); };
+  }
+  load();
 };
 
 R.announce = async (el) => {

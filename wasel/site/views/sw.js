@@ -1,6 +1,6 @@
 // Service Worker لمنصة واصل: يجعل الموقع قابل للتثبيت كتطبيق (PWA)، ويخزّن الملفات الثابتة فقط.
 // الصفحات والبيانات تنجلب دائماً من الإنترنت.
-const CACHE = 'wasel-static-v3';
+const CACHE = 'wasel-static-v4';
 self.addEventListener('install', e => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil(
   caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))).then(() => self.clients.claim())

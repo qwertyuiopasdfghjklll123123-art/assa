@@ -1,4 +1,5 @@
 <?php
+const REQUIRED_ENGINE_VERSION = 3;
 /**
  * الاتصال بمحرك واتساب (تطبيق Node.js). كل الطلبات تحمل المفتاح السري ENGINE_SECRET.
  */
@@ -49,6 +50,9 @@ function engine_json(string $method, string $path, $body = null, int $timeout = 
     [$status, $data] = engine_request($method, $path, $body, $timeout);
     if ($status === 0 || !is_array($data)) {
         return ['ok' => false, 'error' => 'محرك واتساب غير شغّال حالياً - الأدمن يفتح صفحة install.php ويتبع خطوة «محرك واتساب»', '_status' => 503];
+    }
+    if ($status === 404 && ($data['error'] ?? '') === 'not found') {
+        return ['ok' => false, 'error' => 'محرك واتساب المرفوع نسخة قديمة - ارفع مجلد wasel-engine الجديد ثم اضغط Restart من Setup Node.js App', '_status' => 503];
     }
     if ($status === 401) {
         return ['ok' => false, 'error' => 'المفتاح السري للمحرك غير مطابق - من صفحة install.php اضغط «إعادة كتابة إعدادات المحرك» ثم Restart', '_status' => 503];

@@ -60,6 +60,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
+const ENGINE_VERSION = 3; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -533,7 +534,7 @@ async function deleteAccount(id) {
 }
 
 const routes = [
-  ['GET', /^\/health$/, async () => [200, { ok: true, accounts: Object.keys(registry).length, time: fmt(now()) }]],
+  ['GET', /^\/health$/, async () => [200, { ok: true, version: ENGINE_VERSION, accounts: Object.keys(registry).length, time: fmt(now()) }]],
 
   ['GET', /^\/accounts$/, async () => [200, Object.keys(registry).map(accountInfo)]],
 
@@ -728,7 +729,7 @@ const server = http.createServer(async (req, res) => {
     if (base && pathname.startsWith(base)) pathname = pathname.slice(base.length) || '/';
     // Setup Node.js App يمرر المسار كامل (مثل /engine/health) - نشيل البادئة تلقائياً
     pathname = pathname.replace(/^(\/[\w.-]+)*\/engine(?=\/|$)/, '') || '/';
-    if (pathname === '/' && req.method === 'GET') return send(res, 200, { ok: true, name: 'wasel-engine' });
+    if (pathname === '/' && req.method === 'GET') return send(res, 200, { ok: true, name: 'wasel-engine', version: ENGINE_VERSION });
     if (!authOk(req)) return send(res, 401, { ok: false, error: 'unauthorized' });
     for (const [method, re, fn] of routes) {
       if (method !== req.method) continue;

@@ -133,6 +133,9 @@ function engine_check(): array
     if (($st['_status'] ?? 0) === 401) {
         return ['warn', 'المحرك شغّال لكن المفتاح السري مختلف - اضغط «إعادة كتابة إعدادات المحرك» ثم Restart للتطبيق'];
     }
+    if (!empty($st['ok']) && (int)($st['version'] ?? 1) < REQUIRED_ENGINE_VERSION) {
+        return ['warn', 'المحرك شغّال لكن نسخته قديمة - ارفع مجلد wasel-engine الجديد (عدا مجلد data) واضغط Restart من Setup Node.js App'];
+    }
     if (!empty($st['ok'])) {
         return ['ok', 'المحرك شغّال ومتصل (' . (int)$st['accounts'] . ' حساب واتساب)'];
     }

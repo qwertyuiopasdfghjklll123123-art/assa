@@ -13,7 +13,7 @@ function me_payload(int $id): array
     return [
         'id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'phone' => $u['phone'],
         'is_admin' => !empty($u['is_admin']), 'balance' => (int)($u['balance'] ?? 0),
-        'plan_active' => $active, 'plan_ends_at' => $active ? $u['plan_ends_at'] : null,
+        'plan_active' => $active, 'plan_ends_at' => $active ? $u['plan_ends_at'] : null, 'plan_name' => $active ? ($u['plan_name'] ?? PLAN_NAME) : null,
         'plan_days_left' => $active ? ($planEnds ? max(0, (int)ceil(($planEnds - time()) / 86400)) : null) : 0,
         'trial_active' => !$active && $trialEnds && $trialEnds > time(),
         'trial_days_left' => !$active && $trialEnds && $trialEnds > time() ? (int)ceil(($trialEnds - time()) / 86400) : 0,
@@ -64,9 +64,13 @@ function api_routes(): array
             $rows = array_reverse(store_where('wallet_tx', fn($t) => (int)$t['user_id'] === $id));
             json_out(['ok' => true, 'items' => array_slice($rows, 0, 100)]);
         }],
+        ['GET', '#^/api/plans$#', function () {
+            require_login();
+            json_out(['ok' => true, 'plans' => plans(true)]);
+        }],
         ['POST', '#^/api/plan/buy$#', function () {
             $id = require_login();
-            [$ok, $err] = buy_plan($id);
+            [$ok, $err] = buy_plan($id, (int)(request_json()['plan_id'] ?? 0) ?: null);
             $ok ? json_out(['ok' => true, 'me' => me_payload($id)]) : json_err($err);
         }],
 
@@ -98,8 +102,10 @@ function api_routes(): array
             if ($pending >= 3) {
                 json_err('عندك 3 طلبات شحن قيد المراجعة - انتظر مراجعتها');
             }
+            $planId = (int)($_POST['plan_id'] ?? 0) ?: null;
             record_recharge($id, $pm, $amount, 'pending', [
                 'receipt' => $receipt, 'ref' => clean_text(mb_substr(trim((string)($_POST['ref'] ?? '')), 0, 80)),
+                'plan_id' => $planId, 'plan_name' => $planId ? (store_find('plans', $planId)['name'] ?? null) : null,
             ]);
             add_event($id, null, 'طلب شحن قيد المراجعة', number_format($amount) . ' د.ع عبر ' . $pm['name'], 'info');
             notify_admins('طلب شحن جديد', number_format($amount) . ' د.ع عبر ' . $pm['name']);
@@ -130,6 +136,8 @@ function api_routes(): array
             $iqd = (int)round($usd * usd_rate());
             record_recharge($id, $pm, $iqd, 'approved', ['ref' => $order, 'orig_amount' => $usd, 'currency' => 'USD']);
             $bal = wallet_add($id, $iqd, 'recharge', "Binance Pay \${$usd}");
+            apply_recharge_plan($id, $d['plan_id'] ?? null);
+            $bal = wallet_balance($id);
             add_event($id, null, 'تم شحن رصيدك', number_format($iqd) . ' د.ع عبر Binance Pay', 'success');
             notify_admins('شحن تلقائي', number_format($iqd) . " د.ع عبر Binance (\${$usd})", 'success');
             json_out(['ok' => true, 'msg' => 'تم التحقق وإضافة ' . number_format($iqd) . ' د.ع لرصيدك', 'balance' => $bal]);
@@ -154,7 +162,8 @@ function api_routes(): array
                 'revenue_today' => array_sum(array_map(fn($r) => $r['status'] === 'approved' && strpos($r['created_at'], $today) === 0 ? (int)$r['amount'] : 0, $rech)),
                 'wa_accounts' => count(store_all('wa_accounts')),
                 'wa_connected' => count(array_filter($live, fn($a) => !empty($a['logged_in']))),
-                'engine' => $live || engine_json('GET', '/health', null, 4)['ok'] ?? false,
+                'engine' => ($h = engine_json('GET', '/health', null, 4))['ok'] ?? false,
+                'engine_outdated' => !empty($h['ok']) && (int)($h['version'] ?? 1) < REQUIRED_ENGINE_VERSION,
             ]);
         }],
         ['GET', '#^/api/admin/users$#', function () {
@@ -250,10 +259,42 @@ function api_routes(): array
             ]));
             if ($act === 'approve') {
                 wallet_add((int)$r['user_id'], $amount, 'recharge', $r['method_name']);
+                apply_recharge_plan((int)$r['user_id'], $r['plan_id'] ?? null);
                 add_event((int)$r['user_id'], null, 'تم شحن رصيدك', number_format($amount) . ' د.ع عبر ' . $r['method_name'], 'success');
             } else {
                 add_event((int)$r['user_id'], null, 'تم رفض طلب الشحن', $note ?: 'تواصل مع الدعم للتفاصيل', 'warning');
             }
+            json_out(['ok' => true]);
+        }],
+
+        // ------------------------------------------------ الأدمن: الباقات
+        ['GET', '#^/api/admin/plans$#', function () {
+            require_admin();
+            json_out(['ok' => true, 'plans' => plans(false), 'colors' => PLAN_COLORS]);
+        }],
+        ['POST', '#^/api/admin/plans(?:/(\d+))?$#', function ($pid = null) {
+            require_admin();
+            $d = request_json();
+            $old = $pid ? store_find('plans', $pid) : null;
+            if ($pid && !$old) {
+                json_err('الباقة غير موجودة', 404);
+            }
+            $row = [
+                'name' => clean_text(mb_substr(trim((string)($d['name'] ?? ($old['name'] ?? 'باقة جديدة'))), 0, 40)) ?: 'باقة',
+                'price' => max(0, (int)($d['price'] ?? ($old['price'] ?? 0))),
+                'days' => max(1, (int)($d['days'] ?? ($old['days'] ?? 30))),
+                'features' => clean_text(mb_substr((string)($d['features'] ?? ($old['features'] ?? '')), 0, 600)),
+                'color' => in_array($d['color'] ?? '', PLAN_COLORS, true) ? $d['color'] : ($old['color'] ?? 'teal'),
+                'popular' => array_key_exists('popular', $d) ? !empty($d['popular']) : !empty($old['popular']),
+                'active' => array_key_exists('active', $d) ? !empty($d['active']) : ($old['active'] ?? true),
+                'sort' => (int)($d['sort'] ?? ($old['sort'] ?? 99)),
+            ];
+            $old ? store_update('plans', $pid, fn($p) => array_merge($p, $row)) : store_insert('plans', $row + ['created_at' => now_str()]);
+            json_out(['ok' => true]);
+        }],
+        ['DELETE', '#^/api/admin/plans/(\d+)$#', function ($pid) {
+            require_admin();
+            store_delete('plans', $pid);
             json_out(['ok' => true]);
         }],
 
@@ -587,7 +628,7 @@ function handle_asiacell($step): void
             json_err($err);
         }
         asiacell_flow($uid, ['api' => $api->state(), 'phone' => $phone, 'total' => $amount, 'bonus' => (int)$tier['bonus'],
-            'paid' => 0, 'chunk' => 0, 'max' => (int)($pm['extras']['max_transfer'] ?? 10000), 'step' => 'sms']);
+            'paid' => 0, 'chunk' => 0, 'max' => (int)($pm['extras']['max_transfer'] ?? 10000), 'step' => 'sms', 'plan_id' => (int)($d['plan_id'] ?? 0) ?: null]);
         json_out(['ok' => true, 'msg' => 'وصلك رمز SMS على رقمك - اكتبه هنا']);
     }
 
@@ -646,7 +687,9 @@ function handle_asiacell($step): void
     }
     $credit = (int)$flow['total'] + (int)$flow['bonus'];
     record_recharge($uid, $pm, $credit, 'approved', ['ref' => 'asiacell:' . $flow['phone']]);
-    $bal = wallet_add($uid, $credit, 'recharge', 'آسياسيل' . ($flow['bonus'] ? ' + هدية ' . number_format($flow['bonus']) : ''));
+    wallet_add($uid, $credit, 'recharge', 'آسياسيل' . ($flow['bonus'] ? ' + هدية ' . number_format($flow['bonus']) : ''));
+    apply_recharge_plan($uid, $flow['plan_id'] ?? null);
+    $bal = wallet_balance($uid);
     asiacell_flow($uid, null, true);
     add_event($uid, null, 'تم شحن رصيدك', number_format($credit) . ' د.ع عبر آسياسيل', 'success');
     json_out(['ok' => true, 'done' => true, 'balance' => $bal, 'msg' => 'تم شحن ' . number_format($credit) . ' د.ع لرصيدك']);
