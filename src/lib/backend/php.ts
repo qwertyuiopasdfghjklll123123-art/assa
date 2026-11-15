@@ -31,9 +31,21 @@ function getToken() {
 function setToken(t: string | null) {
   try {
     if (t) localStorage.setItem(TOKEN_KEY, t)
-    else localStorage.removeItem(TOKEN_KEY)
+    else {
+      localStorage.removeItem(TOKEN_KEY)
+      localStorage.removeItem(AUTH_KEY)
+    }
   } catch {
     /* storage unavailable */
+  }
+}
+
+const AUTH_KEY = 'sufra.authInfo'
+function cachedAuth(): AuthInfo | null {
+  try {
+    return getToken() ? (JSON.parse(localStorage.getItem(AUTH_KEY) || 'null') as AuthInfo | null) : null
+  } catch {
+    return null
   }
 }
 
@@ -41,6 +53,11 @@ const authListeners = new Set<(info: AuthInfo | null) => void>()
 let currentAuth: AuthInfo | null = null
 const emitAuth = (info: AuthInfo | null) => {
   currentAuth = info
+  try {
+    if (info) localStorage.setItem(AUTH_KEY, JSON.stringify(info))
+  } catch {
+    /* ignore */
+  }
   authListeners.forEach((l) => l(info))
 }
 
@@ -112,17 +129,21 @@ function session(r: { token: string; uid: string; email: string }): AuthInfo {
 }
 
 export async function createPhpBackend(): Promise<Backend> {
-  const authReady = (async () => {
+  // Start instantly with the last known session, then confirm it with the server in the background.
+  const cached = cachedAuth()
+  const verify = (async () => {
     if (!getToken()) return null
     try {
       return await call<AuthInfo | null>('auth.me')
     } catch {
-      return null
+      return cached // offline: keep the cached session
     }
   })()
-  authReady.then((info) => {
+  const authReady = cached ? Promise.resolve(cached) : verify
+  if (cached) currentAuth = cached
+  verify.then((info) => {
     if (!info) setToken(null)
-    emitAuth(info)
+    if (JSON.stringify(info) !== JSON.stringify(currentAuth) || !cached) emitAuth(info)
   })
 
   const backend: Backend = {

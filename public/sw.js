@@ -1,9 +1,9 @@
 /* Sufra service worker: caches the app shell so it opens instantly and works offline.
    API calls (/api/) always go to the network — orders and points must be live. */
-const CACHE = 'sufra-v2'
+const CACHE = 'sufra-v3'
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', 'manifest.webmanifest', 'icons/icon-192.png'])).then(() => self.skipWaiting()))
+  e.waitUntil(caches.open(CACHE).then((c) => c.addAll(['./', 'home/', 'menu/', 'manifest.webmanifest', 'icons/icon-192.png']).catch(() => {})).then(() => self.skipWaiting()))
 })
 
 self.addEventListener('activate', (e) => {
@@ -22,11 +22,19 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((res) => put(req, res))))
     return
   }
-  // Pages, images and the rest: network first, fall back to cache when offline.
+  // Pages, page data and images: answer instantly from cache, refresh it in the background
+  // (stale-while-revalidate). The first visit goes to the network.
   e.respondWith(
-    fetch(req)
-      .then((res) => put(req, res))
-      .catch(() => caches.match(req).then((hit) => hit || caches.match('./'))),
+    caches.match(req).then((hit) => {
+      const net = fetch(req)
+        .then((res) => put(req, res))
+        .catch(() => hit || caches.match('home/') || caches.match('./'))
+      if (hit) {
+        e.waitUntil(net.catch(() => {}))
+        return hit
+      }
+      return net
+    }),
   )
 })
 

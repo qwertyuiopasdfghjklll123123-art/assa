@@ -5,6 +5,9 @@ import { getBackend, type AuthInfo } from '@/lib/backend'
 import { byOrder, useCollection } from '@/lib/hooks'
 import type { Branch, OrderItem, Product, UserProfile } from '@/lib/models'
 import { ensureProfile } from '@/lib/services'
+import { clearPrivate, docKey, readKey, subscribeKey } from '@/lib/store'
+
+const PROFILE_KEY = 'sufra.profile'
 
 /* ------------------------------------------------------------------ auth */
 
@@ -37,14 +40,30 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!auth) return
     let unsub: (() => void) | undefined
     let alive = true
+    // Show the last known profile at once (instant app start), then keep it live.
+    try {
+      const last = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null') as UserProfile | null
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      if (last?.id === auth.uid) setProfile({ uid: auth.uid, data: last })
+    } catch {
+      /* ignore */
+    }
     getBackend().then(async (b) => {
-      // Covers Google sign-ins and accounts whose profile was never written.
-      await ensureProfile(auth.uid, { email: auth.email, name: auth.name }).catch(() => null)
+      // The PHP server always creates the profile; the local demo may need it written.
+      if (!b.serverSide) await ensureProfile(auth.uid, { email: auth.email, name: auth.name }).catch(() => null)
       if (!alive) return
-      unsub = b.subscribeDoc<UserProfile>('users', auth.uid, (p) => {
+      const key = docKey('users', auth.uid)
+      unsub = subscribeKey(key, () => {
+        const p = readKey(key) as UserProfile | null | undefined
+        if (p === undefined) return
         if (p?.deleted || p?.blocked) {
           b.signOut()
           return
+        }
+        try {
+          localStorage.setItem(PROFILE_KEY, JSON.stringify(p))
+        } catch {
+          /* ignore */
         }
         setProfile({ uid: auth.uid, data: p })
       })
@@ -54,6 +73,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       unsub?.()
     }
   }, [auth])
+
+  // Signing out: forget cached private data.
+  useEffect(() => {
+    if (authLoading || auth) return
+    clearPrivate()
+    try {
+      localStorage.removeItem(PROFILE_KEY)
+    } catch {
+      /* ignore */
+    }
+  }, [auth, authLoading])
 
   const user = auth && profile?.uid === auth.uid ? profile.data : null
   const value = useMemo(

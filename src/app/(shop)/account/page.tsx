@@ -209,7 +209,7 @@ function Account() {
                 run(async () => {
                   await disablePush().catch(() => {})
                   await (await getBackend()).signOut()
-                  router.replace('/')
+                  router.replace('/login/')
                 })
               }
             >
@@ -280,7 +280,7 @@ function Account() {
               onClick={() =>
                 run(async () => {
                   await deleteMyAccount(user!.id)
-                  router.replace('/')
+                  router.replace('/login/')
                 })
               }
             >

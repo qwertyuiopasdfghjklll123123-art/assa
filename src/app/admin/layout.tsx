@@ -37,7 +37,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           <ShieldAlert className="mx-auto size-12 text-danger" />
           <h1 className="mt-3 font-display text-xl font-extrabold">لا تملك صلاحية الوصول</h1>
           <p className="mt-1 text-sm text-ink-2">هذه الصفحة مخصصة لحساب الإدارة فقط.</p>
-          <Link href="/">
+          <Link href="/home/">
             <Button className="mt-4">العودة للرئيسية</Button>
           </Link>
         </div>
@@ -73,7 +73,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="space-y-1 border-t border-white/10 pt-3">
-          <Link href="/" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white">
+          <Link href="/home/" className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold text-white/70 hover:bg-white/10 hover:text-white">
             <Home className="size-5" /> عرض التطبيق
           </Link>
           <button
@@ -92,7 +92,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <span className="font-display font-extrabold">
               {settings.restaurantName} <span className="text-sm font-semibold text-sky-600">· الإدارة</span>
             </span>
-            <Link href="/" className="grid size-9 place-items-center rounded-lg border border-line text-ink-2" aria-label="عرض التطبيق">
+            <Link href="/home/" className="grid size-9 place-items-center rounded-lg border border-line text-ink-2" aria-label="عرض التطبيق">
               <Home className="size-4" />
             </Link>
           </div>

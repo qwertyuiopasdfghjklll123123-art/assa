@@ -48,7 +48,7 @@ export function Button({
 
 export function Logo({ name = 'سُفرة', compact }: { name?: string; compact?: boolean }) {
   return (
-    <Link href="/" className="flex items-center gap-2.5" aria-label={name}>
+    <Link href="/home/" className="flex items-center gap-2.5" aria-label={name}>
       <span className="grid size-10 place-items-center rounded-xl hero-grad text-white shadow-[0_6px_16px_rgba(249,115,22,0.3)]">
         <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
           <path d="M3 14h18" />

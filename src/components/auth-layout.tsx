@@ -16,7 +16,7 @@ export function useAfterAuth() {
   useEffect(() => {
     if (!user) return
     const next = params.get('next')
-    router.replace(next && next.startsWith('/') && !next.startsWith('//') ? next : isAdmin ? '/admin/' : '/')
+    router.replace(next && next.startsWith('/') && !next.startsWith('//') ? next : isAdmin ? '/admin/' : '/home/')
   }, [user, isAdmin, params, router])
 }
 

@@ -3,9 +3,10 @@
 import { Bell, Gift, Home, LayoutDashboard, MapPin, ReceiptText, ShoppingBag, User, UtensilsCrossed } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { cx } from '@/lib/format'
 import { useCollection, useSettings } from '@/lib/hooks'
+import { listKey, prefetch } from '@/lib/store'
 import type { AppNotification, Order } from '@/lib/models'
 import { NotifyPrompt } from './notify-prompt'
 import { ProductSheetProvider } from './product-card'
@@ -13,14 +14,14 @@ import { useAuth, useBranch, useCart } from './providers'
 import { Logo, Sheet } from './ui'
 
 const NAV = [
-  { href: '/', label: 'الرئيسية', icon: Home },
+  { href: '/home/', label: 'الرئيسية', icon: Home },
   { href: '/menu/', label: 'المنيو', icon: UtensilsCrossed },
   { href: '/orders/', label: 'طلباتي', icon: ReceiptText },
   { href: '/loyalty/', label: 'الولاء', icon: Gift },
   { href: '/account/', label: 'حسابي', icon: User },
 ]
 
-const isActive = (path: string, href: string) => (href === '/' ? path === '/' : path.startsWith(href.replace(/\/$/, '')))
+const isActive = (path: string, href: string) => path === href || path.startsWith(href.replace(/\/$/, '') + '/') || path === href.replace(/\/$/, '')
 
 export function useUnreadCount() {
   const { user } = useAuth()
@@ -103,6 +104,14 @@ export function ShopShell({ children }: { children: ReactNode }) {
   const { count } = useCart()
   const unread = useUnreadCount()
   const { items: myOrders } = useCollection<Order>(user ? 'orders' : null, user ? { field: 'userId', op: '==', value: user.id } : undefined)
+  // Warm the data of every tab so switching between them is instant.
+  const uid = user?.id
+  useEffect(() => {
+    for (const col of ['products', 'categories', 'branches']) prefetch(listKey(col))
+    if (uid) {
+      prefetch(listKey('notifications', { field: 'userId', op: 'in', value: [uid, 'all'] }))
+    }
+  }, [uid])
   const activeOrders = myOrders.filter((o) => ['pending', 'confirmed', 'preparing', 'on_the_way'].includes(o.status)).length
 
   return (
