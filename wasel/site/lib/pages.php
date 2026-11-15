@@ -61,24 +61,28 @@ function logo_svg(int $size = 32): string
     </svg>';
 }
 
-function frontend_sections(): array
+function view_file(string $name): string
 {
-    $content = file_get_contents(__DIR__ . '/../views/frontend.html');
-    $cut = function (string $start, string $end) use ($content): string {
-        $a = strpos($content, $start . "\n");
-        $b = strpos($content, "\n" . $end);
-        if ($a === false || $b === false) {
-            throw new RuntimeException('علامات الأقسام مفقودة من views/frontend.html');
-        }
-        $a += strlen($start) + 1;
-        return substr($content, $a, $b - $a);
-    };
-    return [$cut(FRONTEND_WELCOME_START, FRONTEND_WELCOME_END), $cut(FRONTEND_APP_START, FRONTEND_APP_END)];
+    return (string)file_get_contents(__DIR__ . '/../views/' . $name);
+}
+
+function logo_html(int $size, string $class = ''): string
+{
+    [$siteName, $hasLogo] = branding_context();
+    if ($hasLogo) {
+        return '<img src="/branding/logo?v=' . (int)@filemtime(logo_path()) . '" alt="' . $siteName . '" class="' . $class . '" style="width:' . $size . 'px;height:' . $size . 'px;object-fit:contain">';
+    }
+    return '<span class="' . $class . ' logo-default" style="width:' . $size . 'px;height:' . $size . 'px">' . logo_svg((int)round($size * .62)) . '</span>';
+}
+
+function js_json($v): string
+{
+    return json_encode($v, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT);
 }
 
 function render_welcome_page(): string
 {
-    [$siteName, $hasLogo, $hasCustomName] = branding_context();
+    [$siteName] = branding_context();
     $cc = default_country_code();
     $ccLabel = '+' . $cc;
     foreach (COUNTRY_CODES as [$c, $label]) {
@@ -86,52 +90,60 @@ function render_welcome_page(): string
             $ccLabel = $label;
         }
     }
-    $googleEnabled = GOOGLE_CLIENT_ID !== '';
-    $replace = [
-        '__WELCOME_PAGE_TITLE__' => $hasCustomName ? $siteName : "$siteName — Wasel Business",
-        '__WELCOME_FONT_LINKS__' => FONT_LINKS,
-        '__WELCOME_FONT_STACK__' => FONT_STACK,
-        '__WELCOME_PAGE_TRANSITION_CSS__' => PAGE_TRANSITION_CSS,
-        '__WELCOME_HERO_LOGO_CLASS__' => $hasLogo ? 'w-logo has-custom-logo' : 'w-logo',
-        '__WELCOME_HERO_LOGO_HTML__' => $hasLogo ? '<img src="/branding/logo" alt="' . $siteName . '" style="width:78px;height:78px;object-fit:contain;border-radius:20px;">' : logo_svg(78),
-        '__WELCOME_SITE_NAME__' => $siteName,
-        '__WELCOME_BRAND_SUB_HTML__' => $hasCustomName ? '' : '<div class="en">WASEL BUSINESS</div>',
-        '__WELCOME_ICON_SEND_ARROW__' => ICON_SEND_ARROW,
-        '__WELCOME_ICON_SEND__' => ICON_SEND,
-        '__WELCOME_ICON_USERS__' => ICON_USERS,
-        '__WELCOME_ICON_TREND__' => ICON_TREND,
-        '__WELCOME_ICON_BOLT__' => ICON_BOLT,
-        '__WELCOME_ICON_CHART__' => ICON_CHART,
-        '__WELCOME_ICON_TARGET__' => ICON_TARGET,
-        '__WELCOME_WHATSAPP_ICON_HTML__' => $hasLogo ? '<img src="/branding/logo" alt="' . $siteName . '" class="custom-logo-icon">' : ICON_WHATSAPP,
-        '__WELCOME_ICON_BACK__' => ICON_BACK,
-        '__WELCOME_LOGIN_LOGO_CLASS__' => $hasLogo ? 'logo has-custom-logo' : 'logo',
-        '__WELCOME_LOGIN_LOGO_HTML__' => $hasLogo ? '<img src="/branding/logo" alt="' . $siteName . '" style="width:54px;height:54px;object-fit:contain;border-radius:14px;">' : logo_svg(54),
-        '__WELCOME_ICON_CHECK__' => ICON_CHECK,
-        '__WELCOME_DEFAULT_COUNTRY_LABEL__' => $ccLabel,
-        '__WELCOME_ICON_LOCK_SM__' => ICON_LOCK_SM,
-        '__WELCOME_PAGE_TRANSITION_JS__' => PAGE_TRANSITION_JS,
-        '__WELCOME_DEFAULT_COUNTRY_CODE__' => $cc,
-        '__WELCOME_GOOGLE_CLIENT_ID__' => htmlspecialchars(GOOGLE_CLIENT_ID, ENT_QUOTES),
-        '__WELCOME_GOOGLE_ENABLED__' => $googleEnabled ? 'true' : 'false',
-        '__WELCOME_GOOGLE_SCRIPT__' => $googleEnabled ? '<script src="https://accounts.google.com/gsi/client" async defer></script>' : '',
+    $boot = [
+        'site' => html_entity_decode($siteName), 'cc' => $cc, 'cc_label' => $ccLabel,
+        'google' => GOOGLE_CLIENT_ID, 'whatsapp' => !empty(settings()['whatsapp_login']) || users_count() === 0,
+        'trial_days' => trial_days(), 'message_price' => message_price(), 'plan_price' => plan_price(),
     ];
-    return strtr(frontend_sections()[0], $replace);
+    return strtr(view_file('welcome.html'), [
+        '__SITE_NAME__' => $siteName,
+        '__LOGO_BIG__' => logo_html(84, 'hero-logo'),
+        '__LOGO_SM__' => logo_html(56, 'login-logo'),
+        '__GOOGLE_SCRIPT__' => GOOGLE_CLIENT_ID !== '' ? '<script src="https://accounts.google.com/gsi/client" async defer></script>' : '',
+        '__BOOT_JSON__' => js_json($boot),
+    ]);
 }
 
-function render_app_page(): string
+function render_app_page(string $section = ''): string
 {
-    [$siteName, $hasLogo, $hasCustomName] = branding_context();
-    $codes = array_map(fn($c) => [$c[0], $c[1]], COUNTRY_CODES);
-    $replace = [
-        '__IS_ADMIN__' => !empty($_SESSION['is_admin']) ? 'true' : 'false',
-        '__USERNAME_JSON__' => json_encode((string)(($_SESSION['name'] ?? '') ?: ($_SESSION['email'] ?? '')), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE),
-        '__COUNTRY_CODES_JSON__' => json_encode($codes, JSON_UNESCAPED_UNICODE),
-        '__DEFAULT_COUNTRY_CODE__' => default_country_code(),
-        '__TOPBAR_LOGO_CLASS__' => $hasLogo ? 'has-custom-img' : '',
-        '__TOPBAR_LOGO_HTML__' => $hasLogo ? '<img src="/branding/logo" alt="' . $siteName . '">' : 'و',
-        '__TOPBAR_NAME_HTML__' => $hasCustomName ? $siteName : 'منصة <span>واصل</span>',
-        '__HAS_LOGO__' => $hasLogo ? 'true' : 'false',
+    [$siteName, $hasLogo] = branding_context();
+    $boot = [
+        'site' => html_entity_decode($siteName), 'has_logo' => $hasLogo,
+        'me' => me_payload(uid()), 'settings' => public_settings(),
+        'cc' => default_country_code(), 'country_codes' => COUNTRY_CODES,
+        'section' => $section, 'is_admin' => !empty($_SESSION['is_admin']),
     ];
-    return strtr(frontend_sections()[1], $replace);
+    return strtr(view_file('app.html'), [
+        '__SITE_NAME__' => $siteName,
+        '__LOGO_SM__' => logo_html(34, 'top-logo'),
+        '__BOOT_JSON__' => js_json($boot),
+    ]);
+}
+
+/** أيقونات PWA بصيغة PNG: من شعار الموقع لو موجود (عبر GD)، وإلا الأيقونة الافتراضية */
+function serve_pwa_icon($size): void
+{
+    $size = (int)$size === 512 ? 512 : 192;
+    $cache = DATA_DIR . "/pwa-{$size}.png";
+    $default = __DIR__ . "/../views/pwa-{$size}.png";
+    [, $hasLogo] = branding_context();
+    if ($hasLogo && !is_file($cache) && function_exists('imagecreatefromstring')) {
+        $src = @imagecreatefromstring((string)file_get_contents(logo_path()));
+        if ($src) {
+            $dst = imagecreatetruecolor($size, $size);
+            imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+            $pad = (int)($size * .12);
+            $w = imagesx($src);
+            $h = imagesy($src);
+            $scale = min(($size - 2 * $pad) / $w, ($size - 2 * $pad) / $h);
+            $nw = (int)($w * $scale);
+            $nh = (int)($h * $scale);
+            imagecopyresampled($dst, $src, (int)(($size - $nw) / 2), (int)(($size - $nh) / 2), 0, 0, $nw, $nh, $w, $h);
+            imagepng($dst, $cache);
+        }
+    }
+    $file = $hasLogo && is_file($cache) ? $cache : $default;
+    header('Content-Type: image/png');
+    header('Cache-Control: public, max-age=3600');
+    readfile($file);
 }

@@ -6,6 +6,20 @@
 
 require_once __DIR__ . '/handlers.php';
 
+/** إرسال رسالة باسم مستخدم: يخصم سعر الرسالة (لو ما عنده اشتراك) ويرجعه لو فشل الإرسال */
+function user_send(int $owner, string $accId, string $phone, string $text): array
+{
+    [$ok, $charged] = charge_message($owner);
+    if (!$ok) {
+        return [false, no_balance_error()];
+    }
+    [$sent, $err] = engine_send($accId, $phone, $text);
+    if (!$sent) {
+        refund_message($owner, $charged);
+    }
+    return [$sent, $err];
+}
+
 // ================================================================ رسائل الاشتراكات
 
 function send_subscription_start_message(int $subId): void
@@ -19,7 +33,7 @@ function send_subscription_start_message(int $subId): void
         return;
     }
     $tpl = subscription_settings((int)$s['owner'])['start_message'];
-    [$ok, $err] = engine_send($acc['id'], $s['phone'], fill_subscription_message($tpl, $s['name'], $s['duration_days']));
+    [$ok, $err] = user_send((int)$s['owner'], $acc['id'], $s['phone'], fill_subscription_message($tpl, $s['name'], $s['duration_days']));
     if ($ok) {
         add_event((int)$s['owner'], $acc['name'], 'تم إشعار مشترك جديد', $s['name'] . ': تم إرسال رسالة بداية الاشتراك', 'info');
     } else {
@@ -86,7 +100,7 @@ function run_scheduled_tasks(): array
                 if (!$acc) {
                     continue;
                 }
-                [$ok] = engine_send($acc['id'], $s['phone'], fill_subscription_message($cfg['expired_message'], $s['name'], 0));
+                [$ok] = user_send((int)$s['owner'], $acc['id'], $s['phone'], fill_subscription_message($cfg['expired_message'], $s['name'], 0));
                 if ($ok) {
                     store_update('subscribers', $s['id'], fn($r) => array_merge($r, ['expired_sent' => true, 'reminder_sent' => true]));
                     add_event((int)$s['owner'], $acc['name'], 'انتهى اشتراك مستخدم', $s['name'] . ': تم إرسال رسالة انتهاء الاشتراك', 'warning');
@@ -97,7 +111,7 @@ function run_scheduled_tasks(): array
                 if (!$acc) {
                     continue;
                 }
-                [$ok] = engine_send($acc['id'], $s['phone'], fill_subscription_message($cfg['reminder_message'], $s['name'], $left));
+                [$ok] = user_send((int)$s['owner'], $acc['id'], $s['phone'], fill_subscription_message($cfg['reminder_message'], $s['name'], $left));
                 if ($ok) {
                     store_update('subscribers', $s['id'], fn($r) => array_merge($r, ['reminder_sent' => true]));
                     add_event((int)$s['owner'], $acc['name'], 'تذكير انتهاء اشتراك', $s['name'] . ": يبقى {$left} يوم", 'info');
@@ -107,6 +121,13 @@ function run_scheduled_tasks(): array
         }
 
         cleanup_bootstrap();
+
+        // نسخة احتياطية يومية لتيليجرام (لو مفعّلة)
+        $s = settings();
+        if (!empty($s['tg_auto_backup']) && (empty($s['tg_last_backup']) || strtotime($s['tg_last_backup']) < time() - 86400)) {
+            [$okB] = tg_send_backup();
+            $report['telegram_backup'] = $okB;
+        }
 
         // 3) تنظيف جلسات PHP القديمة جداً (أكثر من سنة)
         foreach (glob(DATA_DIR . '/sessions/sess_*') ?: [] as $f) {
@@ -162,10 +183,19 @@ function handle_engine_hook(): void
             // no break
         case 'ai_reply':
             $owner = user_by_id((int)($d['owner'] ?? 0));
-            if (!user_has_access($owner)) {
+            if (!can_send($owner)) {
                 json_out(['reply' => null]);
             }
             json_out(['reply' => ai_reply((string)($d['message'] ?? ''))]);
+            // no break
+        case 'charge':
+            // المحرك يطلب خصم رسالة قبل إرسالها (حملات + رد آلي)
+            [$ok, $charged] = charge_message((int)($d['owner'] ?? 0), (string)($d['note'] ?? 'رسالة واتساب'));
+            json_out(['ok' => $ok, 'charged' => $charged, 'error' => $ok ? null : no_balance_error()]);
+            // no break
+        case 'refund':
+            refund_message((int)($d['owner'] ?? 0), (int)($d['amount'] ?? 0));
+            json_out(['ok' => true]);
             // no break
         case 'tick':
             json_out(run_scheduled_tasks());
@@ -212,8 +242,8 @@ function handle_api_send(): void
     if (!api_rate_ok($hash)) {
         json_err('تجاوزت الحد المسموح من الطلبات (20 بالدقيقة)، حاول بعد قليل', 429);
     }
-    if (!effective_plan_active(user_by_id((int)$key['owner']))) {
-        json_err('اشتراك صاحب المفتاح غير فعّال حالياً', 402);
+    if (!can_send(user_by_id((int)$key['owner']))) {
+        json_err('اشتراك صاحب المفتاح غير فعّال ورصيده ما يكفي', 402);
     }
     $acc = wa_account($key['account_id']);
     if (!$acc || (int)$acc['owner'] !== (int)$key['owner'] || !engine_logged_in($acc['id'])) {
@@ -233,6 +263,6 @@ function handle_api_send(): void
         $message = "رمز التحقق الخاص بك: {$code}\nصالح لمدة 10 دقائق.";
     }
     store_update('api_keys', $key['id'], fn($k) => array_merge($k, ['last_used_at' => now_str()]));
-    [$ok, $err] = engine_send($acc['id'], $phone, $message);
-    $ok ? json_out(['ok' => true]) : json_err('فشل الإرسال: ' . $err, 502);
+    [$ok, $err] = user_send((int)$key['owner'], $acc['id'], $phone, $message);
+    $ok ? json_out(['ok' => true]) : json_err('فشل الإرسال: ' . $err, $err === no_balance_error() ? 402 : 502);
 }

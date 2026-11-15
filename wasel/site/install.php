@@ -12,6 +12,9 @@ require __DIR__ . '/lib/engine.php';
 require __DIR__ . '/lib/core.php';
 require __DIR__ . '/lib/pages.php';
 require __DIR__ . '/lib/tasks.php';
+require __DIR__ . '/lib/wallet.php';
+require __DIR__ . '/lib/backup.php';
+require __DIR__ . '/lib/api.php';
 
 if (!is_dir(DATA_DIR)) {
     @mkdir(DATA_DIR, 0755, true);
@@ -189,9 +192,12 @@ if ($action === 'install' && !APP_INSTALLED) {
             ], true);
             // الأدمن عنده اشتراك دائم (بدون فترة تجربة)
             update_user((int)$user['id'], ['is_admin' => true, 'plan_active' => true, 'plan_ends_at' => null]);
-            if ($siteName !== '') {
-                update_settings(['site_name' => clean_text(mb_substr($siteName, 0, 60))]);
-            }
+            update_settings(array_filter([
+                'site_name' => $siteName !== '' ? clean_text(mb_substr($siteName, 0, 60)) : null,
+                'admin_email' => $email,
+                'whatsapp_login' => true,
+            ], fn($v) => $v !== null));
+            ensure_default_payment_methods();
             set_session_user(user_by_id((int)$user['id']));
             header('Location: install.php?done=1');
             exit;
@@ -226,6 +232,23 @@ if ($isAdmin && $action === 'start_engine') {
         @exec('/bin/bash ' . escapeshellarg(ENGINE_DIR . '/start.sh') . ' > /dev/null 2>&1 &');
         sleep(4);
         $notice = 'تم إرسال أمر التشغيل - انتظر دقيقة ثم حدّث الصفحة';
+    }
+}
+
+if ($action === 'admin_login' && APP_INSTALLED && !$isAdmin) {
+    $email = strtolower(trim((string)($_POST['email'] ?? '')));
+    $u = user_by('email', $email);
+    if (!login_throttle()) {
+        $errors[] = 'محاولات كثيرة، حاول بعد 15 دقيقة';
+    } elseif (!$u || empty($u['is_admin']) || empty($u['password_hash']) || !password_verify((string)($_POST['password'] ?? ''), $u['password_hash'])) {
+        login_throttle(true);
+        log_login($u['id'] ?? null, 'password', false, $email);
+        $errors[] = 'البريد أو كلمة المرور غير صحيحة';
+    } else {
+        set_session_user($u);
+        log_login((int)$u['id'], 'password', true, $email);
+        header('Location: install.php');
+        exit;
     }
 }
 
@@ -295,8 +318,15 @@ $phpBin = PHP_BINDIR . '/php';
   <?php if (APP_INSTALLED && !$isAdmin): ?>
     <div class="card">
       <h2>المنصة منصّبة</h2>
-      <p>هذه الصفحة للأدمن فقط. سجّل دخولك بحساب الأدمن أولاً ثم ارجع لها.</p>
-      <a class="btn" href="./">الذهاب لتسجيل الدخول</a>
+      <p>هذه الصفحة للأدمن فقط. سجّل دخولك بكوكل (ببريد الأدمن) من الموقع، أو استخدم دخول الطوارئ بكلمة المرور اللي حددتها وقت التنصيب:</p>
+      <form method="post">
+        <input type="hidden" name="action" value="admin_login">
+        <input type="hidden" name="csrf" value="<?= h($_SESSION['install_csrf']) ?>">
+        <label>بريد الأدمن</label><input name="email" type="email" dir="ltr" required>
+        <label>كلمة المرور</label><input name="password" type="password" dir="ltr" required>
+        <button type="submit">دخول الأدمن</button>
+        <a class="btn alt" href="./">الذهاب للموقع</a>
+      </form>
     </div>
   <?php else: ?>
 
@@ -319,10 +349,11 @@ $phpBin = PHP_BINDIR . '/php';
     <input name="site_name" placeholder="مثال: واصل" value="<?= h($_POST['site_name'] ?? '') ?>">
     <label>اسمك</label>
     <input name="admin_name" required value="<?= h($_POST['admin_name'] ?? '') ?>">
-    <label>بريدك الإلكتروني (للدخول)</label>
+    <label>بريد الأدمن (حساب كوكل اللي راح تدخل بيه)</label>
     <input name="admin_email" type="email" dir="ltr" required value="<?= h($_POST['admin_email'] ?? '') ?>">
-    <label>كلمة المرور</label>
+    <label>كلمة مرور الطوارئ</label>
     <input name="admin_password" type="password" dir="ltr" minlength="6" required>
+    <div class="hint">للدخول من صفحة install.php لو صار خلل بكوكل - الدخول العادي يكون بزر كوكل</div>
     <label>Google Client ID (اختياري - تقدر تضيفه بعدين)</label>
     <input name="google_client_id" dir="ltr" placeholder="xxxx.apps.googleusercontent.com" value="<?= h($_POST['google_client_id'] ?? '') ?>">
     <label>رابط محرك واتساب</label>

@@ -320,6 +320,8 @@ async function handleIncoming(id, m) {
     reply = res?.reply || null;
   }
   if (!reply) return;
+  const charge = await hook({ type: 'charge', owner: acc.owner, note: 'رد آلي' });
+  if (!charge || !charge.ok) return;
   lastReply.set(key, Date.now());
   const chatName = m.pushName || digits(m.key.remoteJidAlt || jid.split('@')[0]);
   const job = r.sendChain.then(() => r.sock?.sendMessage(jid, { text: reply }, { quoted: m }));
@@ -386,6 +388,13 @@ async function runCampaign(id) {
         if (!registry[id]) break;
         continue;
       }
+      // خصم سعر الرسالة من رصيد صاحب الحساب (لو ما عنده اشتراك) قبل الإرسال
+      const charge = await hook({ type: 'charge', owner: acc.owner, note: `حملة: ${acc.name}` });
+      if (!charge || !charge.ok) {
+        st.stop_requested = true;
+        addEvent(acc, 'توقفت الحملة', charge?.error || 'تعذر التحقق من الرصيد - تأكد أن الموقع شغّال', 'warning');
+        break;
+      }
       const number = st.pending_numbers.shift();
       try {
         await sendTo(id, number, st.text, media, st.media_delay);
@@ -394,6 +403,7 @@ async function runCampaign(id) {
         console.log(`[حملة] فشل الإرسال لـ ${number} (${acc.name}): ${e.message}`);
         st.failed += 1;
         st.failed_numbers.push(number);
+        if (charge.charged > 0) hook({ type: 'refund', owner: acc.owner, amount: charge.charged });
       }
       persistCampaign(id);
       if (st.pending_numbers.length && !st.stop_requested) {
@@ -576,6 +586,27 @@ const routes = [
     return [200, accountInfo(m[1])];
   }],
 
+  ['POST', /^\/accounts\/([\w-]+)\/pair$/, async (m, body) => {
+    const id = m[1];
+    if (!registry[id]) return [404, { ok: false, error: 'حساب غير موجود' }];
+    const phone = digits(body.phone);
+    if (phone.length < 10) return [400, { ok: false, error: 'رقم غير صالح' }];
+    const r = rt(id);
+    if (r.status === 'connected') return [400, { ok: false, error: 'الحساب متصل أصلاً' }];
+    if (isRegistered(id)) return [400, { ok: false, error: 'الحساب مربوط - انتظر الاتصال' }];
+    ensureStarted(id);
+    // ننتظر لحد ما يجهز الاتصال (أول رمز QR يعني جاهز لطلب رمز الربط)
+    for (let i = 0; i < 40 && !(r.sock && r.status === 'qr'); i++) await sleep(500);
+    if (!r.sock) return [503, { ok: false, error: 'تعذر الاتصال بواتساب، حاول مرة ثانية' }];
+    try {
+      const code = await r.sock.requestPairingCode(phone);
+      const pretty = String(code).replace(/[^A-Z0-9]/gi, '').toUpperCase().replace(/^(.{4})(.{4})$/, '$1-$2');
+      return [200, { ok: true, code: pretty }];
+    } catch (e) {
+      return [502, { ok: false, error: 'تعذر توليد الرمز: ' + e.message }];
+    }
+  }],
+
   ['GET', /^\/accounts\/([\w-]+)\/qr$/, async (m) => {
     const id = m[1];
     if (!registry[id]) return [204, undefined];
@@ -609,7 +640,7 @@ const routes = [
   ['POST', /^\/accounts\/([\w-]+)\/campaign$/, async (m, body) => {
     const id = m[1];
     if (!registry[id]) return [404, { ok: false, error: 'حساب غير موجود' }];
-    if (!isConnected(id)) return [400, { ok: false, error: 'تأكد من تسجيل الدخول أولاً' }];
+    if (!isConnected(id)) return [400, { ok: false, error: 'الرقم غير متصل بواتساب - اربطه من قسم أرقامي أولاً' }];
     const st = getCampaign(id);
     if (st.running) return [400, { ok: false, error: 'فيه حملة شغالة أو مجدولة حالياً على هذا الحساب' }];
     const numbers = [...new Set((body.numbers || []).map(digits).filter((n) => n.length >= 8))];

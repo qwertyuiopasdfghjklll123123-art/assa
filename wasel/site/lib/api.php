@@ -1,0 +1,653 @@
+<?php
+/**
+ * مسارات الواجهة الجديدة: الحساب، المحفظة والشحن، ولوحة الأدمن (المستخدمين، طلبات الشحن، طرق الدفع،
+ * الإعدادات، الأمان، النسخ الاحتياطي). ترجع مصفوفة مسارات تُدمج مع مسارات index.php.
+ */
+
+function me_payload(int $id): array
+{
+    $u = user_by_id($id);
+    $trialEnds = parse_dt($u['trial_ends_at'] ?? null);
+    $planEnds = parse_dt($u['plan_ends_at'] ?? null);
+    $active = effective_plan_active($u);
+    return [
+        'id' => $u['id'], 'name' => $u['name'], 'email' => $u['email'], 'phone' => $u['phone'],
+        'is_admin' => !empty($u['is_admin']), 'balance' => (int)($u['balance'] ?? 0),
+        'plan_active' => $active, 'plan_ends_at' => $active ? $u['plan_ends_at'] : null,
+        'plan_days_left' => $active ? ($planEnds ? max(0, (int)ceil(($planEnds - time()) / 86400)) : null) : 0,
+        'trial_active' => !$active && $trialEnds && $trialEnds > time(),
+        'trial_days_left' => !$active && $trialEnds && $trialEnds > time() ? (int)ceil(($trialEnds - time()) / 86400) : 0,
+        'can_send' => can_send($u), 'created_at' => $u['created_at'],
+        'login' => !empty($u['google_sub']) ? 'google' : (empty($u['phone']) && !empty($u['email']) ? 'email' : 'whatsapp'),
+    ];
+}
+
+function public_settings(): array
+{
+    $s = settings();
+    return [
+        'plan_name' => PLAN_NAME, 'plan_price' => plan_price(), 'plan_days' => plan_days(),
+        'message_price' => message_price(), 'usd_rate' => usd_rate(), 'trial_days' => trial_days(),
+        'support_number' => $s['whatsapp_support_number'] ?: WHATSAPP_PAY_NUMBER,
+    ];
+}
+
+/** يقرأ صورة من رفع ملف أو data-URL */
+function incoming_image(string $field, string $sub): ?string
+{
+    if (!empty($_FILES[$field]['name'])) {
+        return save_uploaded_image($_FILES[$field], $sub);
+    }
+    $d = request_json()[$field] ?? ($_POST[$field] ?? '');
+    return is_string($d) && $d !== '' ? save_data_image($d, $sub) : null;
+}
+
+function api_routes(): array
+{
+    return [
+        // ------------------------------------------------ الحساب
+        ['GET', '#^/api/me$#', function () {
+            json_out(['ok' => true, 'me' => me_payload(require_login()), 'settings' => public_settings()]);
+        }],
+        ['POST', '#^/api/me$#', function () {
+            $id = require_login();
+            $name = clean_text(mb_substr(trim((string)(request_json()['name'] ?? '')), 0, 60));
+            if ($name === '') {
+                json_err('اكتب اسمك');
+            }
+            update_user($id, ['name' => $name]);
+            $_SESSION['name'] = $name;
+            json_out(['ok' => true]);
+        }],
+        ['GET', '#^/api/wallet/tx$#', function () {
+            $id = require_login();
+            $rows = array_reverse(store_where('wallet_tx', fn($t) => (int)$t['user_id'] === $id));
+            json_out(['ok' => true, 'items' => array_slice($rows, 0, 100)]);
+        }],
+        ['POST', '#^/api/plan/buy$#', function () {
+            $id = require_login();
+            [$ok, $err] = buy_plan($id);
+            $ok ? json_out(['ok' => true, 'me' => me_payload($id)]) : json_err($err);
+        }],
+
+        // ------------------------------------------------ الشحن
+        ['GET', '#^/api/payment-methods$#', function () {
+            require_login();
+            json_out(['ok' => true, 'methods' => array_map('pm_public', payment_methods(true))]);
+        }],
+        ['GET', '#^/pm-image/([a-f0-9]{16}\.(?:png|jpg|gif|webp))$#', fn($n) => serve_image('pm', $n)],
+        ['GET', '#^/api/recharge/history$#', function () {
+            $id = require_login();
+            json_out(['ok' => true, 'items' => array_slice(array_reverse(store_where('recharges', fn($r) => (int)$r['user_id'] === $id)), 0, 50)]);
+        }],
+        ['POST', '#^/api/recharge/manual$#', function () {
+            $id = require_login();
+            $pm = store_find('payment_methods', (int)($_POST['method_id'] ?? 0));
+            if (!$pm || empty($pm['active']) || !in_array($pm['type'], ['manual', 'superkey'], true)) {
+                json_err('طريقة الدفع غير متاحة');
+            }
+            $amount = (int)($_POST['amount'] ?? 0);
+            if ($amount < max(1, (int)($pm['min_amount'] ?? 0))) {
+                json_err('أقل مبلغ للشحن ' . number_format(max(1, (int)$pm['min_amount'])) . ' د.ع');
+            }
+            $receipt = !empty($_FILES['receipt']['name']) ? save_uploaded_image($_FILES['receipt'], 'receipts') : null;
+            if (!$receipt) {
+                json_err('ارفع صورة إيصال التحويل');
+            }
+            $pending = count(store_where('recharges', fn($r) => (int)$r['user_id'] === $id && $r['status'] === 'pending'));
+            if ($pending >= 3) {
+                json_err('عندك 3 طلبات شحن قيد المراجعة - انتظر مراجعتها');
+            }
+            record_recharge($id, $pm, $amount, 'pending', [
+                'receipt' => $receipt, 'ref' => clean_text(mb_substr(trim((string)($_POST['ref'] ?? '')), 0, 80)),
+            ]);
+            add_event($id, null, 'طلب شحن قيد المراجعة', number_format($amount) . ' د.ع عبر ' . $pm['name'], 'info');
+            notify_admins('طلب شحن جديد', number_format($amount) . ' د.ع عبر ' . $pm['name']);
+            json_out(['ok' => true, 'msg' => 'تم إرسال طلب الشحن - راح يتراجع ويضاف لرصيدك قريباً']);
+        }],
+        ['POST', '#^/api/recharge/binance$#', function () {
+            $id = require_login();
+            $d = request_json();
+            $pm = store_first('payment_methods', fn($m) => $m['type'] === 'binance' && !empty($m['active']));
+            if (!$pm) {
+                json_err('Binance Pay غير متاح حالياً');
+            }
+            $usd = round((float)($d['amount_usd'] ?? 0), 2);
+            $order = trim((string)($d['order_id'] ?? ''));
+            if ($usd <= 0) {
+                json_err('أدخل المبلغ بالدولار');
+            }
+            if (!preg_match('/^\d{6,30}$/', $order)) {
+                json_err('أدخل رقم العملية (Order ID) بشكل صحيح');
+            }
+            if (store_first('recharges', fn($r) => ($r['ref'] ?? '') === $order && $r['method_type'] === 'binance')) {
+                json_err('رقم العملية هذا مستخدم مسبقاً');
+            }
+            [$ok, $res] = verify_binance_order($pm, $order, $usd);
+            if (!$ok) {
+                json_err($res);
+            }
+            $iqd = (int)round($usd * usd_rate());
+            record_recharge($id, $pm, $iqd, 'approved', ['ref' => $order, 'orig_amount' => $usd, 'currency' => 'USD']);
+            $bal = wallet_add($id, $iqd, 'recharge', "Binance Pay \${$usd}");
+            add_event($id, null, 'تم شحن رصيدك', number_format($iqd) . ' د.ع عبر Binance Pay', 'success');
+            notify_admins('شحن تلقائي', number_format($iqd) . " د.ع عبر Binance (\${$usd})", 'success');
+            json_out(['ok' => true, 'msg' => 'تم التحقق وإضافة ' . number_format($iqd) . ' د.ع لرصيدك', 'balance' => $bal]);
+        }],
+        ['POST', '#^/api/recharge/asiacell/(start|verify|confirm|cancel)$#', 'handle_asiacell'],
+
+        // ------------------------------------------------ الأدمن: إحصائيات ومستخدمين
+        ['GET', '#^/api/admin/stats$#', function () {
+            require_admin();
+            $users = store_all('users');
+            $rech = store_all('recharges');
+            $today = date('Y-m-d');
+            $live = engine_accounts();
+            json_out(['ok' => true,
+                'users' => count($users),
+                'users_today' => count(array_filter($users, fn($u) => strpos((string)$u['created_at'], $today) === 0)),
+                'active_plans' => count(array_filter($users, 'effective_plan_active')),
+                'trials' => count(array_filter($users, fn($u) => !effective_plan_active($u) && user_has_access($u))),
+                'balances' => array_sum(array_map(fn($u) => (int)($u['balance'] ?? 0), $users)),
+                'pending_recharges' => count(array_filter($rech, fn($r) => $r['status'] === 'pending')),
+                'revenue' => array_sum(array_map(fn($r) => $r['status'] === 'approved' ? (int)$r['amount'] : 0, $rech)),
+                'revenue_today' => array_sum(array_map(fn($r) => $r['status'] === 'approved' && strpos($r['created_at'], $today) === 0 ? (int)$r['amount'] : 0, $rech)),
+                'wa_accounts' => count(store_all('wa_accounts')),
+                'wa_connected' => count(array_filter($live, fn($a) => !empty($a['logged_in']))),
+                'engine' => $live || engine_json('GET', '/health', null, 4)['ok'] ?? false,
+            ]);
+        }],
+        ['GET', '#^/api/admin/users$#', function () {
+            require_admin();
+            $q = mb_strtolower(trim((string)($_GET['q'] ?? '')));
+            $rows = [];
+            foreach (array_reverse(store_all('users')) as $u) {
+                $hay = mb_strtolower(($u['name'] ?? '') . ' ' . ($u['email'] ?? '') . ' ' . ($u['phone'] ?? ''));
+                if ($q !== '' && mb_strpos($hay, $q) === false) {
+                    continue;
+                }
+                $rows[] = me_payload((int)$u['id']) + ['banned' => !empty($u['banned']), 'last_login_at' => $u['last_login_at'] ?? null, 'last_ip' => $u['last_ip'] ?? null,
+                    'wa_count' => count(wa_accounts_of((int)$u['id']))];
+            }
+            json_out(['ok' => true, 'users' => $rows]);
+        }],
+        ['POST', '#^/api/admin/users/(\d+)$#', function ($uidT) {
+            $admin = require_admin();
+            $uidT = (int)$uidT;
+            $u = user_by_id($uidT);
+            if (!$u) {
+                json_err('مستخدم غير موجود', 404);
+            }
+            $d = request_json();
+            $action = (string)($d['action'] ?? '');
+            $val = (int)($d['value'] ?? 0);
+            switch ($action) {
+                case 'balance_add':
+                    if ($val === 0) {
+                        json_err('أدخل مبلغ');
+                    }
+                    wallet_add($uidT, $val, 'admin', $val > 0 ? 'إضافة من الإدارة' : 'خصم من الإدارة', true);
+                    add_event($uidT, null, $val > 0 ? 'تمت إضافة رصيد' : 'تم خصم رصيد', number_format(abs($val)) . ' د.ع من الإدارة', $val > 0 ? 'success' : 'warning');
+                    break;
+                case 'plan_days':
+                    if ($val > 0) {
+                        activate_plan_for_days($uidT, $val);
+                    } else {
+                        set_plan_active($uidT, false);
+                    }
+                    break;
+                case 'trial_days':
+                    update_user($uidT, ['trial_ends_at' => date('Y-m-d H:i', time() + max(0, $val) * 86400), 'trial_ended_notified' => false]);
+                    break;
+                case 'ban':
+                case 'unban':
+                    if ($uidT === $admin) {
+                        json_err('ما تقدر تحظر نفسك');
+                    }
+                    update_user($uidT, ['banned' => $action === 'ban']);
+                    break;
+                case 'admin':
+                case 'unadmin':
+                    if ($uidT === $admin) {
+                        json_err('ما تقدر تغيّر صلاحياتك');
+                    }
+                    update_user($uidT, ['is_admin' => $action === 'admin']);
+                    break;
+                default:
+                    json_err('إجراء غير معروف');
+            }
+            json_out(['ok' => true, 'user' => me_payload($uidT) + ['banned' => !empty(user_by_id($uidT)['banned'])]]);
+        }],
+
+        // ------------------------------------------------ الأدمن: طلبات الشحن
+        ['GET', '#^/api/admin/recharges$#', function () {
+            require_admin();
+            $status = (string)($_GET['status'] ?? 'pending');
+            $rows = array_reverse(store_where('recharges', fn($r) => $status === 'all' || $r['status'] === $status));
+            foreach ($rows as &$r) {
+                $u = user_by_id((int)$r['user_id']);
+                $r['user_name'] = $u['name'] ?? '';
+                $r['user_contact'] = $u ? ($u['email'] ?: $u['phone']) : '';
+                $r['receipt_url'] = $r['receipt'] ? '/api/admin/receipt/' . $r['receipt'] : null;
+            }
+            json_out(['ok' => true, 'items' => array_slice($rows, 0, 200)]);
+        }],
+        ['GET', '#^/api/admin/receipt/([a-f0-9]{16}\.(?:png|jpg|gif|webp))$#', function ($n) {
+            require_admin();
+            serve_image('receipts', $n, false);
+        }],
+        ['POST', '#^/api/admin/recharges/(\d+)/(approve|reject)$#', function ($rid, $act) {
+            require_admin();
+            $d = request_json();
+            $r = store_find('recharges', $rid);
+            if (!$r || $r['status'] !== 'pending') {
+                json_err('الطلب غير موجود أو تمت مراجعته');
+            }
+            $amount = isset($d['amount']) && (int)$d['amount'] > 0 ? (int)$d['amount'] : (int)$r['amount'];
+            $note = clean_text(mb_substr(trim((string)($d['note'] ?? '')), 0, 200));
+            store_update('recharges', $rid, fn($x) => array_merge($x, [
+                'status' => $act === 'approve' ? 'approved' : 'rejected', 'amount' => $amount, 'admin_note' => $note, 'reviewed_at' => now_str(),
+            ]));
+            if ($act === 'approve') {
+                wallet_add((int)$r['user_id'], $amount, 'recharge', $r['method_name']);
+                add_event((int)$r['user_id'], null, 'تم شحن رصيدك', number_format($amount) . ' د.ع عبر ' . $r['method_name'], 'success');
+            } else {
+                add_event((int)$r['user_id'], null, 'تم رفض طلب الشحن', $note ?: 'تواصل مع الدعم للتفاصيل', 'warning');
+            }
+            json_out(['ok' => true]);
+        }],
+
+        // ------------------------------------------------ الأدمن: طرق الدفع
+        ['GET', '#^/api/admin/payment-methods$#', function () {
+            require_admin();
+            $rows = array_map(function ($m) {
+                $p = pm_public($m) + ['active' => !empty($m['active']), 'sort' => $m['sort'] ?? 0];
+                $ex = $m['extras'] ?? [];
+                $p['has_api_key'] = !empty($ex['api_key']);
+                $p['max_transfer'] = (int)($ex['max_transfer'] ?? 10000);
+                return $p;
+            }, payment_methods(false));
+            json_out(['ok' => true, 'methods' => $rows, 'types' => PM_TYPES]);
+        }],
+        ['POST', '#^/api/admin/payment-methods(?:/(\d+))?$#', function ($pmId = null) {
+            require_admin();
+            $d = request_json();
+            $existing = $pmId ? store_find('payment_methods', $pmId) : null;
+            if ($pmId && !$existing) {
+                json_err('طريقة غير موجودة', 404);
+            }
+            $type = $existing['type'] ?? (string)($d['type'] ?? 'manual');
+            if (!isset(PM_TYPES[$type])) {
+                json_err('نوع غير معروف');
+            }
+            $ex = $existing['extras'] ?? [];
+            if ($type === 'binance') {
+                foreach (['api_key', 'api_secret'] as $k) {
+                    if (trim((string)($d[$k] ?? '')) !== '') {
+                        $ex[$k] = trim((string)$d[$k]);
+                    }
+                }
+                if (!empty($d['qr'])) {
+                    $ex['qr'] = save_data_image((string)$d['qr'], 'pm') ?? ($ex['qr'] ?? null);
+                }
+            }
+            if ($type === 'asiacell') {
+                $tiers = [];
+                foreach ((array)($d['tiers'] ?? []) as $t) {
+                    $iqd = (int)($t['iqd'] ?? 0);
+                    if (in_array($iqd, ASIACELL_TIERS, true)) {
+                        $tiers[] = ['iqd' => $iqd, 'bonus' => max(0, (int)($t['bonus'] ?? 0))];
+                    }
+                }
+                if ($tiers) {
+                    $ex['tiers'] = $tiers;
+                }
+                $ex['max_transfer'] = max(1000, (int)($d['max_transfer'] ?? ($ex['max_transfer'] ?? 10000)));
+            }
+            $row = [
+                'type' => $type,
+                'name' => clean_text(mb_substr(trim((string)($d['name'] ?? ($existing['name'] ?? PM_TYPES[$type]))), 0, 40)) ?: PM_TYPES[$type],
+                'number' => clean_text(mb_substr(trim((string)($d['number'] ?? ($existing['number'] ?? ''))), 0, 80)),
+                'note' => clean_text(mb_substr(trim((string)($d['note'] ?? ($existing['note'] ?? ''))), 0, 300)),
+                'active' => array_key_exists('active', $d) ? !empty($d['active']) : !empty($existing['active']),
+                'min_amount' => max(0, (int)($d['min_amount'] ?? ($existing['min_amount'] ?? 1000))),
+                'sort' => (int)($d['sort'] ?? ($existing['sort'] ?? 99)),
+                'extras' => $ex,
+                'image' => $existing['image'] ?? null,
+            ];
+            if (!empty($d['image'])) {
+                $img = save_data_image((string)$d['image'], 'pm');
+                if (!$img) {
+                    json_err('صورة الشعار غير صالحة');
+                }
+                $row['image'] = $img;
+            } elseif (!empty($d['remove_image'])) {
+                $row['image'] = null;
+            }
+            if ($existing) {
+                store_update('payment_methods', $pmId, fn($m) => array_merge($m, $row));
+            } else {
+                store_insert('payment_methods', $row + ['created_at' => now_str()]);
+            }
+            json_out(['ok' => true]);
+        }],
+        ['DELETE', '#^/api/admin/payment-methods/(\d+)$#', function ($pmId) {
+            require_admin();
+            store_delete('payment_methods', $pmId);
+            json_out(['ok' => true]);
+        }],
+
+        // ------------------------------------------------ الأدمن: الإعدادات
+        ['GET', '#^/api/admin/settings$#', function () {
+            require_admin();
+            $s = settings();
+            [, $hasLogo] = branding_context();
+            json_out(['ok' => true, 'settings' => [
+                'site_name' => $s['site_name'], 'has_logo' => $hasLogo,
+                'default_country_code' => default_country_code(),
+                'plan_price' => plan_price(), 'plan_days' => plan_days(), 'trial_days' => trial_days(),
+                'message_price' => message_price(), 'usd_rate' => usd_rate(),
+                'whatsapp_support_number' => $s['whatsapp_support_number'],
+                'whatsapp_login' => !empty($s['whatsapp_login']),
+                'admin_email' => $s['admin_email'],
+                'tg_token_set' => $s['tg_token'] !== '', 'tg_chat_id' => $s['tg_chat_id'],
+                'tg_auto_backup' => !empty($s['tg_auto_backup']), 'tg_last_backup' => $s['tg_last_backup'],
+                'ai_key_set' => $s['ai_api_key'] !== '', 'ai_knowledge_base' => $s['ai_knowledge_base'],
+                'google_client_id' => GOOGLE_CLIENT_ID,
+            ]]);
+        }],
+        ['POST', '#^/api/admin/settings$#', function () {
+            require_admin();
+            $d = request_json();
+            $f = [];
+            $ints = ['plan_price' => 'plan_price_iqd', 'plan_days' => 'plan_days', 'trial_days' => 'trial_days', 'message_price' => 'message_price'];
+            foreach ($ints as $in => $key) {
+                if (array_key_exists($in, $d)) {
+                    $f[$key] = max(0, (int)$d[$in]);
+                }
+            }
+            if (isset($f['plan_days'])) {
+                $f['plan_days'] = max(1, $f['plan_days']);
+            }
+            if (array_key_exists('usd_rate', $d)) {
+                $f['usd_rate'] = max(1, (float)$d['usd_rate']);
+            }
+            if (array_key_exists('site_name', $d)) {
+                $f['site_name'] = clean_text(mb_substr(trim((string)$d['site_name']), 0, 60));
+            }
+            if (array_key_exists('default_country_code', $d) && valid_country_code((string)$d['default_country_code'])) {
+                $f['default_country_code'] = (string)$d['default_country_code'];
+            }
+            if (array_key_exists('whatsapp_support_number', $d)) {
+                $f['whatsapp_support_number'] = digits_only($d['whatsapp_support_number']);
+                $f['whatsapp_subscribe_number'] = $f['whatsapp_support_number'];
+            }
+            if (array_key_exists('whatsapp_login', $d)) {
+                $f['whatsapp_login'] = !empty($d['whatsapp_login']);
+            }
+            if (array_key_exists('admin_email', $d)) {
+                $em = strtolower(trim((string)$d['admin_email']));
+                if ($em !== '' && !filter_var($em, FILTER_VALIDATE_EMAIL)) {
+                    json_err('بريد الأدمن غير صحيح');
+                }
+                $f['admin_email'] = $em;
+            }
+            if (trim((string)($d['tg_token'] ?? '')) !== '') {
+                $f['tg_token'] = trim((string)$d['tg_token']);
+            }
+            if (array_key_exists('tg_chat_id', $d)) {
+                $f['tg_chat_id'] = trim((string)$d['tg_chat_id']);
+            }
+            if (array_key_exists('tg_auto_backup', $d)) {
+                $f['tg_auto_backup'] = !empty($d['tg_auto_backup']);
+            }
+            if (trim((string)($d['ai_api_key'] ?? '')) !== '') {
+                $f['ai_api_key'] = trim((string)$d['ai_api_key']);
+            }
+            if (array_key_exists('ai_knowledge_base', $d)) {
+                $f['ai_knowledge_base'] = (string)$d['ai_knowledge_base'];
+            }
+            if (array_key_exists('logo', $d)) {
+                if ($d['logo']) {
+                    if (!preg_match('#^data:(image/(png|jpeg|gif|webp));base64,(.+)$#s', (string)$d['logo'], $m) || strlen($d['logo']) > MAX_LOGO_B64_CHARS) {
+                        json_err('الشعار لازم يكون صورة PNG/JPG/WEBP أقل من 2 ميغابايت');
+                    }
+                    file_put_contents(logo_path(), base64_decode($m[3]));
+                    $f['has_logo'] = true;
+                    $f['logo_mime'] = $m[1];
+                } else {
+                    @unlink(logo_path());
+                    $f['has_logo'] = false;
+                }
+                @unlink(DATA_DIR . '/pwa-192.png');
+                @unlink(DATA_DIR . '/pwa-512.png');
+            }
+            if (array_key_exists('google_client_id', $d)) {
+                $cfgPath = DATA_DIR . '/config.json';
+                $cfg = json_decode((string)@file_get_contents($cfgPath), true) ?: [];
+                $cfg['GOOGLE_CLIENT_ID'] = trim((string)$d['google_client_id']);
+                file_put_contents($cfgPath, json_encode($cfg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
+            }
+            update_settings($f);
+            json_out(['ok' => true]);
+        }],
+
+        // ------------------------------------------------ الأدمن: الأمان
+        ['GET', '#^/api/admin/security$#', function () {
+            require_admin();
+            $log = array_reverse(store_all('login_log'));
+            $names = [];
+            foreach (store_all('users') as $u) {
+                $names[$u['id']] = $u['name'] ?: ($u['email'] ?: $u['phone']);
+            }
+            foreach ($log as &$l) {
+                $l['user'] = $l['user_id'] ? ($names[$l['user_id']] ?? '#' . $l['user_id']) : null;
+            }
+            $fails = array_filter($log, fn($l) => !$l['ok'] && strtotime($l['time']) > time() - 86400);
+            json_out(['ok' => true, 'log' => array_slice($log, 0, 100),
+                'failed_24h' => count($fails),
+                'banned' => array_values(array_map(fn($u) => ['id' => $u['id'], 'name' => $u['name'] ?: ($u['email'] ?: $u['phone'])], store_where('users', fn($u) => !empty($u['banned'])))),
+                'admins' => array_values(array_map(fn($u) => ['id' => $u['id'], 'name' => $u['name'] ?: ($u['email'] ?: $u['phone'])], store_where('users', fn($u) => !empty($u['is_admin'])))),
+                'whatsapp_login' => !empty(settings()['whatsapp_login']),
+                'https' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'),
+                'data_protected' => true,
+            ]);
+        }],
+        ['POST', '#^/api/admin/security$#', function () {
+            require_admin();
+            $act = (string)(request_json()['action'] ?? '');
+            if ($act === 'logout_all') {
+                $epoch = (int)(settings()['session_epoch'] ?? 1) + 1;
+                update_settings(['session_epoch' => $epoch]);
+                $_SESSION['epoch'] = $epoch; // الأدمن الحالي يبقى داخل
+                json_out(['ok' => true, 'msg' => 'تم إنهاء جلسات كل المستخدمين']);
+            }
+            if ($act === 'clear_log') {
+                store_update_all('login_log', function (array &$rows) {
+                    $rows = [];
+                });
+                json_out(['ok' => true]);
+            }
+            json_err('إجراء غير معروف');
+        }],
+
+        // ------------------------------------------------ الأدمن: النسخ الاحتياطي (JSON + تيليجرام)
+        ['GET', '#^/api/admin/backup/download$#', function () {
+            require_admin();
+            header('Content-Type: application/json; charset=utf-8');
+            header('Content-Disposition: attachment; filename="wasel-backup-' . date('Ymd-His') . '.json"');
+            echo backup_json();
+        }],
+        ['POST', '#^/api/admin/backup/import$#', function () {
+            require_admin();
+            $f = $_FILES['file'] ?? null;
+            if (!$f || $f['error'] !== UPLOAD_ERR_OK) {
+                json_err('اختر ملف JSON');
+            }
+            [$ok, $m] = backup_import((string)file_get_contents($f['tmp_name']));
+            $ok ? json_out(['ok' => true, 'msg' => $m]) : json_err($m);
+        }],
+        ['POST', '#^/api/admin/backup/telegram$#', function () {
+            require_admin();
+            [$ok, $m] = tg_send_backup();
+            $ok ? json_out(['ok' => true, 'msg' => $m]) : json_err($m);
+        }],
+        ['POST', '#^/api/admin/telegram/webhook$#', function () {
+            require_admin();
+            $url = tg_webhook_url(site_base_url());
+            $r = tg_api('setWebhook', ['url' => $url, 'allowed_updates' => json_encode(['message'])]);
+            !empty($r['ok']) ? json_out(['ok' => true, 'msg' => 'تم ربط البوت - أرسل له /backup أو ملف JSON']) : json_err('فشل الربط: ' . ($r['description'] ?? 'تأكد من التوكن'));
+        }],
+        ['POST', '#^/telegram/webhook/([a-f0-9]{24})$#', function ($key) {
+            if (!hash_equals((string)(settings()['tg_webhook_key'] ?? ''), $key)) {
+                json_err('unauthorized', 401);
+            }
+            $u = request_json();
+            json_out_then(['ok' => true], fn() => tg_handle_update($u));
+        }],
+
+        // ------------------------------------------------ ربط حساب واتساب برمز (بدل الباركود)
+        ['POST', '#^/accounts/([\w-]+)/pair$#', function ($accId) {
+            require_login();
+            $acc = owned_account($accId);
+            if (!$acc) {
+                json_err('حساب غير موجود', 404);
+            }
+            $phone = digits_only(request_json()['phone'] ?? '');
+            if (strlen($phone) < 10) {
+                json_err('اكتب رقم واتساب كامل مع رمز الدولة');
+            }
+            if (!isset(engine_accounts()[$accId])) {
+                engine_request('POST', '/accounts', ['id' => $accId, 'owner' => (int)$acc['owner'], 'name' => $acc['name']], 8);
+            }
+            $r = engine_json('POST', '/accounts/' . rawurlencode($accId) . '/pair', ['phone' => $phone], 40);
+            $st = $r['_status'] ?? 503;
+            unset($r['_status']);
+            json_out($r, $st === 200 ? 200 : 400);
+        }],
+    ];
+}
+
+function site_base_url(): string
+{
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    return ($https ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? 'localhost');
+}
+
+// ================================================================ آسياسيل: الخطوات
+
+function handle_asiacell($step): void
+{
+    $uid = require_login();
+    $d = request_json();
+    $pm = store_first('payment_methods', fn($m) => $m['type'] === 'asiacell' && !empty($m['active']));
+    if (!$pm) {
+        json_err('آسياسيل غير متاح حالياً');
+    }
+    $receiver = digits_only($pm['number']);
+    if ($receiver === '') {
+        json_err('لم يتم إعداد رقم آسياسيل المستلم من الإدارة');
+    }
+    $flow = asiacell_flow($uid);
+
+    if ($step === 'cancel') {
+        if ($flow && ($flow['paid'] ?? 0) > 0) {
+            $part = (int)$flow['paid'];
+            record_recharge($uid, $pm, $part, 'approved', ['ref' => 'asiacell-partial']);
+            wallet_add($uid, $part, 'recharge', 'آسياسيل (جزئي)');
+        }
+        asiacell_flow($uid, null, true);
+        json_out(['ok' => true]);
+    }
+
+    if ($step === 'start') {
+        if ($flow && ($flow['paid'] ?? 0) > 0) {
+            json_err('عندك عملية آسياسيل غير مكتملة - أكملها أو ألغها');
+        }
+        $phone = digits_only($d['phone'] ?? '');
+        if (preg_match('/^9647/', $phone)) {
+            $phone = '0' . substr($phone, 3);
+        }
+        if (!preg_match('/^07[789]\d{8}$/', $phone)) {
+            json_err('رقم آسياسيل لازم يكون بصيغة 077xxxxxxxx');
+        }
+        $amount = (int)($d['amount'] ?? 0);
+        $tier = null;
+        foreach (($pm['extras']['tiers'] ?? []) as $t) {
+            if ((int)$t['iqd'] === $amount) {
+                $tier = $t;
+            }
+        }
+        if (!$tier) {
+            json_err('اختر أحد المبالغ المتاحة');
+        }
+        $api = new AsiaCellAPI();
+        [$ok, $err] = $api->login($phone);
+        if (!$ok) {
+            json_err($err);
+        }
+        asiacell_flow($uid, ['api' => $api->state(), 'phone' => $phone, 'total' => $amount, 'bonus' => (int)$tier['bonus'],
+            'paid' => 0, 'chunk' => 0, 'max' => (int)($pm['extras']['max_transfer'] ?? 10000), 'step' => 'sms']);
+        json_out(['ok' => true, 'msg' => 'وصلك رمز SMS على رقمك - اكتبه هنا']);
+    }
+
+    if (!$flow) {
+        json_err('انتهت صلاحية العملية، ابدأ من جديد');
+    }
+    $code = digits_only($d['code'] ?? '');
+    if (!preg_match('/^\d{4,6}$/', $code)) {
+        json_err('الرمز لازم يكون من 4 إلى 6 أرقام');
+    }
+    $api = new AsiaCellAPI($flow['api']);
+
+    if ($step === 'verify') {
+        if ($flow['step'] !== 'sms') {
+            json_err('خطوة غير صحيحة');
+        }
+        [$ok, $err] = $api->verifySms($code);
+        if (!$ok) {
+            json_err($err);
+        }
+        $chunk = min($flow['max'], $flow['total'] - $flow['paid']);
+        [$ok, $err] = $api->startTransfer($chunk, $receiver);
+        if (!$ok) {
+            json_err($err);
+        }
+        $flow['api'] = $api->state();
+        $flow['chunk'] = $chunk;
+        $flow['step'] = 'confirm';
+        asiacell_flow($uid, $flow);
+        json_out(['ok' => true, 'msg' => 'وصلك رمز تأكيد التحويل (' . number_format($chunk) . ' د.ع) - اكتبه هنا']);
+    }
+
+    // confirm
+    if ($flow['step'] !== 'confirm') {
+        json_err('خطوة غير صحيحة');
+    }
+    [$ok, $err] = $api->confirmTransfer($code);
+    if (!$ok) {
+        json_err($err);
+    }
+    $flow['paid'] += $flow['chunk'];
+    if ($flow['paid'] < $flow['total']) {
+        $next = min($flow['max'], $flow['total'] - $flow['paid']);
+        [$ok, $err] = $api->startTransfer($next, $receiver);
+        if (!$ok) {
+            $part = (int)$flow['paid'];
+            record_recharge($uid, $pm, $part, 'approved', ['ref' => 'asiacell-partial']);
+            wallet_add($uid, $part, 'recharge', 'آسياسيل (جزئي)');
+            asiacell_flow($uid, null, true);
+            json_err('تم تحويل ' . number_format($part) . ' د.ع وأضيفت لرصيدك، لكن تعذر إكمال الباقي: ' . $err);
+        }
+        $flow['api'] = $api->state();
+        $flow['chunk'] = $next;
+        asiacell_flow($uid, $flow);
+        json_out(['ok' => true, 'done' => false, 'msg' => 'تم تحويل ' . number_format($flow['paid']) . ' د.ع - وصلك رمز للدفعة التالية (' . number_format($next) . ' د.ع)']);
+    }
+    $credit = (int)$flow['total'] + (int)$flow['bonus'];
+    record_recharge($uid, $pm, $credit, 'approved', ['ref' => 'asiacell:' . $flow['phone']]);
+    $bal = wallet_add($uid, $credit, 'recharge', 'آسياسيل' . ($flow['bonus'] ? ' + هدية ' . number_format($flow['bonus']) : ''));
+    asiacell_flow($uid, null, true);
+    add_event($uid, null, 'تم شحن رصيدك', number_format($credit) . ' د.ع عبر آسياسيل', 'success');
+    json_out(['ok' => true, 'done' => true, 'balance' => $bal, 'msg' => 'تم شحن ' . number_format($credit) . ' د.ع لرصيدك']);
+}

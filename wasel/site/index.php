@@ -12,6 +12,9 @@ require __DIR__ . '/lib/core.php';
 require __DIR__ . '/lib/pages.php';
 require __DIR__ . '/lib/xlsx.php';
 require __DIR__ . '/lib/tasks.php';
+require __DIR__ . '/lib/wallet.php';
+require __DIR__ . '/lib/backup.php';
+require __DIR__ . '/lib/api.php';
 
 if (!is_dir(DATA_DIR)) {
     @mkdir(DATA_DIR, 0700, true);
@@ -41,9 +44,10 @@ if ($path === '/api/v1/send' && $method === 'POST') {
 }
 
 start_session();
+enforce_session();
 
 // الموقع لسا ما تنصّب: كل الصفحات تروح لصفحة التنصيب
-if (!APP_INSTALLED && $method === 'GET' && !preg_match('#^/(branding/logo|icon\.svg|manifest\.json|sw\.js)$#', $path)) {
+if (!APP_INSTALLED && $method === 'GET' && !preg_match('#^/(branding/logo|icon\.svg|pwa-\d+\.png|manifest\.json|sw\.js|assets/.+)$#', $path)) {
     redirect_to(($base ?: '') . '/install.php');
 }
 
@@ -62,33 +66,48 @@ $routes = [
         echo render_welcome_page();
     }],
     ['GET', '#^/(login|signup)$#', fn() => redirect_to('/')],
-    ['GET', '#^/app$#', function () {
+    ['GET', '#^/app(?:/([a-z0-9-]+))?$#', function ($section = '') {
         if (!uid() || !user_by_id(uid())) {
             $_SESSION = [];
             redirect_to('/');
         }
-        echo render_app_page();
+        // المستخدم العادي يشوف /app فقط - روابط الأقسام للأدمن
+        if ($section !== '' && empty($_SESSION['is_admin'])) {
+            redirect_to('/app');
+        }
+        echo render_app_page($section);
     }],
     ['POST', '#^/logout$#', function () {
         $_SESSION = [];
         session_destroy();
         redirect_to('/');
     }],
-    ['GET', '#^/manifest\.json$#', fn() => json_out([
-        'name' => 'منصة حملات واتساب', 'short_name' => 'حملات واتساب', 'start_url' => '/',
-        'display' => 'standalone', 'background_color' => '#f5f0e8', 'theme_color' => '#b8860b',
-        'dir' => 'rtl', 'lang' => 'ar',
-        'icons' => [['src' => '/icon.svg', 'sizes' => 'any', 'type' => 'image/svg+xml', 'purpose' => 'any maskable']],
-    ])],
-    ['GET', '#^/icon\.svg$#', function () {
-        header('Content-Type: image/svg+xml');
-        echo '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><rect width="128" height="128" rx="28" fill="#b8860b"/><circle cx="64" cy="64" r="30" fill="#fff"/></svg>';
+    ['GET', '#^/manifest\.json$#', function () {
+        [$siteName] = branding_context();
+        $name = html_entity_decode($siteName);
+        header('Content-Type: application/manifest+json; charset=utf-8');
+        echo json_encode([
+            'name' => $name, 'short_name' => $name, 'id' => '/app', 'start_url' => '/app', 'scope' => '/',
+            'display' => 'standalone', 'background_color' => '#f7f4f0', 'theme_color' => '#f7f4f0',
+            'dir' => 'rtl', 'lang' => 'ar', 'description' => 'حملات واتساب، رد آلي، ورسائل اشتراكات',
+            'icons' => [
+                ['src' => '/pwa-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => '/pwa-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
+                ['src' => '/pwa-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+            ],
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }],
+    ['GET', '#^/pwa-(192|512)\.png$#', 'serve_pwa_icon'],
+    ['GET', '#^/assets/(ui\.css|app\.js)$#', function ($f) {
+        header('Content-Type: ' . (str_ends_with($f, '.css') ? 'text/css' : 'application/javascript') . '; charset=utf-8');
+        header('Cache-Control: public, max-age=600');
+        readfile(__DIR__ . '/views/' . $f);
+    }],
+    ['GET', '#^/icon\.svg$#', fn() => serve_pwa_icon('192')],
     ['GET', '#^/sw\.js$#', function () {
         header('Content-Type: application/javascript');
-        echo "self.addEventListener('install', e => self.skipWaiting());\n"
-            . "self.addEventListener('activate', e => self.clients.claim());\n"
-            . "self.addEventListener('notificationclick', e => {\n  e.notification.close();\n  e.waitUntil(clients.openWindow('/app'));\n});\n";
+        header('Cache-Control: no-cache');
+        echo file_get_contents(__DIR__ . '/views/sw.js');
     }],
     ['GET', '#^/branding/logo$#', function () {
         [, $hasLogo] = branding_context();
@@ -103,7 +122,6 @@ $routes = [
 
     // ------------------------------------------------ تسجيل الدخول
     ['POST', '#^/auth/google$#', 'handle_google_login'],
-    ['POST', '#^/auth/email/signup$#', 'handle_email_signup'],
     ['POST', '#^/auth/email/login$#', 'handle_email_login'],
     ['POST', '#^/auth/whatsapp/send_code$#', 'handle_send_code'],
     ['GET', '#^/auth/whatsapp/send_status$#', 'handle_send_status'],
@@ -479,8 +497,9 @@ $routes = [
     }],
     ['POST', '#^/api_keys$#', function () {
         $id = require_login();
-        if (!effective_plan_active(user_by_id($id))) {
-            json_err('مفاتيح API تحتاج اشتراك مفعّل (مو فترة تجربة)', 402, ['needs_subscription' => true]);
+        $me = user_by_id($id);
+        if (!effective_plan_active($me) && !(message_price() > 0 && (int)($me['balance'] ?? 0) > 0) && empty($me['is_admin'])) {
+            json_err('مفاتيح API تحتاج اشتراك مفعّل أو رصيد (مو فترة تجربة)', 402, ['needs_subscription' => true]);
         }
         $d = request_json();
         $accId = (string)($d['account_id'] ?? '');
@@ -504,6 +523,8 @@ $routes = [
         json_out(['ok' => true]);
     }],
 ];
+
+$routes = array_merge($routes, api_routes());
 
 foreach ($routes as [$m, $re, $fn]) {
     if ($m !== $method || !preg_match($re, $path, $mm)) {

@@ -62,12 +62,21 @@ function handle_google_login(): void
     $email = strtolower((string)($info['email'] ?? ''));
     $name = clean_text(trim((string)($info['name'] ?? '')));
 
+    $adminEmail = strtolower((string)(settings()['admin_email'] ?? ''));
+    $isAdminEmail = $adminEmail !== '' && hash_equals($adminEmail, $email);
     $user = user_by('google_sub', $sub) ?? user_by('email', $email);
     $isNew = false;
+    if ($user && !empty($user['banned'])) {
+        log_login((int)$user['id'], 'google', false, 'محظور');
+        json_err('هذا الحساب محظور - تواصل مع الدعم', 403);
+    }
     if (!$user) {
-        $user = create_user(['email' => $email, 'google_sub' => $sub, 'name' => $name ?: null], users_count() === 0);
+        $user = create_user(['email' => $email, 'google_sub' => $sub, 'name' => $name ?: null], $adminEmail !== '' ? $isAdminEmail : users_count() === 0);
         $isNew = true;
     } else {
+        if ($isAdminEmail && empty($user['is_admin'])) {
+            update_user((int)$user['id'], ['is_admin' => true]);
+        }
         $fields = ['google_sub' => $sub];
         if (empty($user['name']) && $name !== '') {
             $fields['name'] = $name;
@@ -78,7 +87,8 @@ function handle_google_login(): void
         $user = update_user((int)$user['id'], $fields);
     }
     cleanup_bootstrap();
-    set_session_user($user);
+    set_session_user(user_by_id((int)$user['id']));
+    log_login((int)$user['id'], 'google', true, $email);
     json_out(['ok' => true, 'is_new' => $isNew && empty($user['name'])]);
 }
 
@@ -145,12 +155,17 @@ function handle_email_login(): void
     $user = user_by('email', $email);
     if (!$user || empty($user['password_hash']) || !password_verify((string)($d['password'] ?? ''), $user['password_hash'])) {
         login_throttle(true);
+        log_login($user['id'] ?? null, 'password', false, $email);
         if ($user && empty($user['password_hash']) && !empty($user['google_sub'])) {
             json_err('هذا الحساب مسجّل بكوكل - استخدم زر كوكل');
         }
         json_err('البريد الإلكتروني أو كلمة المرور غير صحيحة');
     }
+    if (!empty($user['banned'])) {
+        json_err('هذا الحساب محظور', 403);
+    }
     set_session_user($user);
+    log_login((int)$user['id'], 'password', true, $email);
     json_out(['ok' => true]);
 }
 
@@ -180,6 +195,13 @@ function handle_send_code(): void
     $phone = digits_only(request_json()['phone'] ?? '');
     if (strlen($phone) < 8) {
         json_err('أدخل رقم واتساب صحيح مع مفتاح الدولة');
+    }
+    if (empty(settings()['whatsapp_login']) && users_count() > 0 && $phone !== MASTER_ADMIN_PHONE) {
+        json_err('تسجيل الدخول برقم واتساب متوقف حالياً - استخدم زر كوكل');
+    }
+    $existing = user_by('phone', $phone);
+    if ($existing && !empty($existing['banned'])) {
+        json_err('هذا الحساب محظور - تواصل مع الدعم', 403);
     }
     // حساب الأدمن الثابت: يدخل برمزه الثابت بدون إرسال (لازم يكتب الرمز - مو دخول مباشر)
     if (MASTER_ADMIN_PHONE !== '' && $phone === MASTER_ADMIN_PHONE) {
@@ -258,10 +280,12 @@ function handle_verify_code(): void
             return $all;
         });
         if ($result !== null) {
+            log_login(user_by('phone', $phone)['id'] ?? null, 'whatsapp', false, $phone);
             json_err($result);
         }
     }
     $isNew = login_as_phone($phone, $isMaster);
+    log_login(uid(), 'whatsapp', true, $phone);
     json_out(['ok' => true, 'is_new' => $isNew]);
 }
 
@@ -270,7 +294,7 @@ function login_as_phone(string $phone, bool $isMaster): bool
     $user = user_by('phone', $phone);
     $isNew = !$user;
     if (!$user) {
-        $isAdmin = $isMaster || users_count() === 0;
+        $isAdmin = $isMaster || (settings()['admin_email'] === '' && users_count() === 0);
         $user = create_user(['phone' => $phone], $isAdmin);
         if ($isAdmin && !$isMaster) {
             // حساب الإعداد الأولي يصير حساب واتساب الأول للمدير ومرسل رموز التحقق
@@ -623,11 +647,11 @@ function engine_start_campaign(string $accId, array $numbers, string $text, ?str
 function handle_start_campaign($accId): void
 {
     $id = require_login();
-    if (!user_has_access(user_by_id($id))) {
-        json_err('انتهت فترتك التجريبية، فعّل الاشتراك من قسم الإعدادات للمتابعة', 402, ['needs_subscription' => true]);
+    if (!can_send(user_by_id($id))) {
+        json_err(message_price() > 0 ? no_balance_error() : 'انتهت فترتك التجريبية - فعّل اشتراكك من قسم الشحن', 402, ['needs_subscription' => true]);
     }
     if (!owned_account($accId)) {
-        json_err('تأكد من تسجيل الدخول أولاً');
+        json_err('الحساب غير موجود');
     }
     $numbers = numbers_from_text((string)($_POST['numbers_text'] ?? ''));
     $f = $_FILES['numbers_file'] ?? null;
@@ -705,7 +729,7 @@ function handle_set_auto_reply($accId): void
         }
     }
     $enabled = !empty($d['enabled']);
-    if ($enabled && empty($acc['auto_reply_enabled']) && !user_has_access(user_by_id($id))) {
+    if ($enabled && empty($acc['auto_reply_enabled']) && !can_send(user_by_id($id))) {
         json_err('انتهت فترتك التجريبية، فعّل الاشتراك من قسم الإعدادات للمتابعة', 402, ['needs_subscription' => true]);
     }
     $acc = store_update('wa_accounts', $accId, fn($a) => array_merge($a, [

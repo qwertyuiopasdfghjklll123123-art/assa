@@ -1,0 +1,295 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f7f4f0">
+<title>__SITE_NAME__ — منصة رسائل واتساب</title>
+<link rel="manifest" href="/manifest.json">
+<link rel="apple-touch-icon" href="/pwa-192.png">
+<link rel="icon" type="image/png" href="/pwa-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/assets/ui.css?v=3">
+__GOOGLE_SCRIPT__
+<style>
+  body{overflow-x:hidden}
+  .stage{position:relative;max-width:460px;margin:0 auto;min-height:100vh;min-height:100dvh}
+  .screen{position:absolute;inset:0;padding:calc(20px + env(safe-area-inset-top,0px)) 18px calc(28px + env(safe-area-inset-bottom,0px));
+    display:flex;flex-direction:column;transition:transform .55s cubic-bezier(.65,0,.25,1),opacity .45s ease,filter .45s ease;will-change:transform,opacity}
+  .screen.off-right{transform:translateX(-100%);opacity:0;pointer-events:none}
+  .screen.off-left{transform:translateX(30%) scale(.92);opacity:0;filter:blur(3px);pointer-events:none}
+  /* خلفية بفقاعات دردشة خفيفة */
+  .bg-deco{position:fixed;inset:0;pointer-events:none;overflow:hidden;z-index:-1}
+  .bg-deco i{position:absolute;color:rgba(37,99,235,.06);font-size:56px;animation:float 9s ease-in-out infinite}
+  .bg-deco i:nth-child(1){top:8%;right:6%}.bg-deco i:nth-child(2){top:34%;left:4%;animation-delay:-3s;font-size:44px}
+  .bg-deco i:nth-child(3){bottom:18%;right:10%;animation-delay:-5s;font-size:48px}.bg-deco i:nth-child(4){bottom:6%;left:14%;animation-delay:-7s}
+  @keyframes float{50%{transform:translateY(-14px) rotate(6deg)}}
+
+  /* الترحيب */
+  .w-top{display:flex;justify-content:flex-start}
+  .icon-btn{width:40px;height:40px;border-radius:12px;background:var(--orange-bg);color:#b45309;display:flex;align-items:center;justify-content:center}
+  .w-hero{text-align:center;margin-top:14px}
+  .logo-wrap{width:108px;height:108px;margin:0 auto;border-radius:30px;background:var(--card);border:1px solid var(--line);box-shadow:0 18px 40px rgba(37,99,235,.14);display:flex;align-items:center;justify-content:center;animation:pop .7s cubic-bezier(.2,1.4,.4,1) both}
+  .logo-wrap img,.logo-wrap .logo-default{border-radius:22px}
+  @keyframes pop{from{transform:scale(.6);opacity:0}}
+  .w-name{font-size:30px;font-weight:800;color:var(--primary);margin-top:16px;letter-spacing:-.5px}
+  .w-badge{margin-top:8px;background:var(--primary-bg);color:var(--primary);border:1px solid var(--line)}
+  .w-feats{display:flex;justify-content:center;gap:8px;margin-top:20px;flex-wrap:wrap}
+  .w-feat{display:flex;flex-direction:column;align-items:center;gap:5px;width:72px;font-size:11px;font-weight:700;color:var(--text2)}
+  .w-feat span{width:46px;height:46px;border-radius:14px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-size:18px}
+  .w-text{margin-top:18px;font-size:13.5px;line-height:1.9;color:var(--text2)}
+  .w-text b{color:var(--text)}
+  .w-steps{margin-top:14px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .w-step{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px 8px;text-align:center;box-shadow:var(--shadow)}
+  .w-step b{display:inline-flex;width:26px;height:26px;border-radius:9px;background:var(--primary);color:#fff;align-items:center;justify-content:center;font-size:12px}
+  .w-step p{font-size:11.5px;font-weight:700;margin-top:6px;color:var(--text2)}
+  .w-cta{margin-top:auto;padding-top:22px;text-align:center}
+  .btn-start{height:60px;font-size:18px;border-radius:20px;width:100%;max-width:300px}
+  .btn-start i{transition:transform .3s}
+  .btn-start:hover i{transform:translateX(-4px) rotate(-12deg)}
+  .w-cta small{display:block;margin-top:10px;color:var(--text3);font-size:12px}
+
+  /* تسجيل الدخول */
+  .l-head{display:flex;align-items:center;justify-content:space-between}
+  .back{width:42px;height:42px;border-radius:14px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;font-size:16px}
+  .l-brand{text-align:center;margin-top:26px}
+  .l-brand .logo-wrap{width:84px;height:84px;border-radius:24px}
+  .l-brand h1{font-size:24px;font-weight:800;margin-top:14px}
+  .l-brand p{color:var(--text3);font-size:13.5px;margin-top:4px}
+  .l-card{margin-top:26px;padding:20px}
+  .g-wrap{display:flex;justify-content:center;min-height:46px}
+  .g-fallback{display:flex;align-items:center;justify-content:center;gap:10px;width:100%;height:50px;border-radius:14px;border:1.5px solid var(--line2);background:var(--card);font-weight:700;color:var(--text2)}
+  .g-fallback img{width:20px;height:20px}
+  .step{animation:fadeUp .35s cubic-bezier(.2,.8,.2,1) both}
+  .cc-row{display:flex;gap:8px}
+  .cc{flex:none;display:flex;align-items:center;justify-content:center;padding:0 14px;height:52px;border-radius:13px;background:var(--input);border:1.5px solid var(--input-line);font-weight:800;direction:ltr}
+  .cc-row .input{height:52px;font-size:17px;direction:ltr;text-align:left;letter-spacing:.5px}
+  .qr-box{display:flex;justify-content:center;padding:12px;background:#fff;border-radius:16px;border:1px solid var(--line)}
+  .qr-box img{width:220px;height:220px}
+  .status{min-height:20px;margin-top:12px;text-align:center;font-size:13px;font-weight:600}
+  .status.err{color:var(--red)}.status.ok{color:var(--green)}
+  .l-foot{margin-top:auto;padding-top:18px;text-align:center;font-size:11.5px;color:var(--text3)}
+  .secure{display:flex;align-items:center;justify-content:center;gap:6px;color:var(--text3);font-size:12px;margin-top:14px}
+</style>
+</head>
+<body>
+<div class="bg-deco"><i class="fa-brands fa-whatsapp"></i><i class="fa-solid fa-paper-plane"></i><i class="fa-solid fa-comment-dots"></i><i class="fa-solid fa-bolt"></i></div>
+<div class="stage">
+
+  <!-- ===================== شاشة الترحيب ===================== -->
+  <section class="screen" id="welcome">
+    <div class="w-top"><button class="icon-btn" onclick="toggleTheme()" aria-label="المظهر"><i class="fa-solid fa-circle-half-stroke"></i></button></div>
+    <div class="w-hero">
+      <div class="logo-wrap">__LOGO_BIG__</div>
+      <div class="w-name">__SITE_NAME__</div>
+      <span class="pill w-badge"><i class="fa-solid fa-bolt"></i> منصة رسائل واتساب الذكية</span>
+    </div>
+    <div class="w-feats stagger">
+      <div class="w-feat"><span class="ic-blue"><i class="fa-solid fa-paper-plane"></i></span>حملات</div>
+      <div class="w-feat"><span class="ic-green"><i class="fa-solid fa-robot"></i></span>رد آلي</div>
+      <div class="w-feat"><span class="ic-purple"><i class="fa-solid fa-users"></i></span>اشتراكات</div>
+      <div class="w-feat"><span class="ic-orange"><i class="fa-solid fa-code"></i></span>API</div>
+    </div>
+    <div class="card w-text fade-in">
+      مرحباً بك في <b>__SITE_NAME__</b> — أرسل حملات واتساب لآلاف الأرقام، فعّل الرد الآلي بالذكاء الاصطناعي، وذكّر مشتركيك تلقائياً بانتهاء اشتراكاتهم. اربط رقمك بالباركود أو برمز الربط خلال ثوانٍ.
+    </div>
+    <div class="w-steps stagger">
+      <div class="w-step"><b>1</b><p>سجّل بحساب كوكل</p></div>
+      <div class="w-step"><b>2</b><p>اربط رقم واتساب</p></div>
+      <div class="w-step"><b>3</b><p>أرسل حملتك</p></div>
+    </div>
+    <div class="w-cta">
+      <button class="btn btn-primary btn-start" onclick="goLogin()"><i class="fa-solid fa-rocket"></i> ابدأ الآن</button>
+      <small id="trialNote">سجّل دخولك أو أنشئ حسابك في ثوانٍ</small>
+    </div>
+  </section>
+
+  <!-- ===================== شاشة تسجيل الدخول ===================== -->
+  <section class="screen off-right" id="login">
+    <div class="l-head">
+      <button class="back" onclick="goWelcome()" aria-label="رجوع"><i class="fa-solid fa-arrow-right"></i></button>
+      <span class="pill pill-blue"><i class="fa-solid fa-shield-halved"></i> دخول آمن</span>
+    </div>
+    <div class="l-brand">
+      <div class="logo-wrap">__LOGO_SM__</div>
+      <h1>تسجيل الدخول</h1>
+      <p>بدون كلمة مرور — بحسابك في كوكل أو برقم واتساب</p>
+    </div>
+
+    <div class="card l-card">
+      <!-- الخيارات -->
+      <div id="stChoose" class="step">
+        <div class="g-wrap" id="gBtn"></div>
+        <div id="gMissing" class="g-fallback hidden"><img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 48'%3E%3Cpath fill='%23FFC107' d='M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z'/%3E%3Cpath fill='%23FF3D00' d='M6.3 14.7l6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z'/%3E%3Cpath fill='%234CAF50' d='M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-8l-6.5 5C9.5 39.6 16.2 44 24 44z'/%3E%3Cpath fill='%231976D2' d='M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z'/%3E%3C/svg%3E" alt="">تسجيل الدخول بكوكل غير مفعّل بعد</div>
+        <div class="divider" id="orLine">أو</div>
+        <button class="btn btn-wa btn-block" id="waBtn" onclick="showStep('phone')"><i class="fa-brands fa-whatsapp" style="font-size:20px"></i> تسجيل الدخول برقم واتساب</button>
+        <div class="secure"><i class="fa-solid fa-lock"></i> ما نطلب كلمة مرور، ولا ننشر أي شي باسمك</div>
+      </div>
+
+      <!-- رقم واتساب -->
+      <div id="stPhone" class="step hidden">
+        <div class="field">
+          <label>رقم واتساب</label>
+          <div class="cc-row">
+            <div class="cc" id="ccLabel"></div>
+            <input class="input" id="phone" type="tel" inputmode="numeric" placeholder="7701234567" autocomplete="tel">
+          </div>
+          <div class="hint">راح يوصلك رمز تحقق على واتساب</div>
+        </div>
+        <button class="btn btn-wa btn-block" id="sendBtn" onclick="sendCode()"><i class="fa-solid fa-paper-plane"></i> إرسال الرمز</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="showStep('choose')">رجوع</button>
+      </div>
+
+      <!-- أول تشغيل: QR -->
+      <div id="stQr" class="step hidden">
+        <div class="note" style="margin-bottom:12px">أول استخدام للمنصة: امسح الرمز من واتساب جوالك (الأجهزة المرتبطة) حتى نرسل لك رمز التحقق ويصير هذا الرقم حساب المدير.</div>
+        <div class="qr-box"><img id="qrImg" alt="QR"></div>
+      </div>
+
+      <!-- رمز التحقق -->
+      <div id="stCode" class="step hidden">
+        <div class="field">
+          <label>رمز التحقق</label>
+          <input class="input big" id="code" inputmode="numeric" maxlength="6" placeholder="••••••" autocomplete="one-time-code">
+          <div class="hint" id="codeHint">أرسلنا الرمز على واتساب</div>
+        </div>
+        <button class="btn btn-primary btn-block" id="verifyBtn" onclick="verifyCode()"><i class="fa-solid fa-check"></i> تحقق ودخول</button>
+        <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="showStep('phone')">تعديل الرقم</button>
+      </div>
+
+      <!-- الاسم لأول مرة -->
+      <div id="stName" class="step hidden">
+        <div class="field">
+          <label>أهلاً بك! شنو اسمك؟</label>
+          <input class="input" id="name" placeholder="اسمك الكامل" autocomplete="name">
+        </div>
+        <button class="btn btn-primary btn-block" id="nameBtn" onclick="saveName()"><i class="fa-solid fa-arrow-left"></i> متابعة</button>
+      </div>
+
+      <div class="status" id="status"></div>
+    </div>
+    <div class="l-foot">بتسجيل الدخول فإنك توافق على شروط الاستخدام وسياسة الخصوصية</div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const B = __BOOT_JSON__;
+let waPhone = '', bootAcc = null, bootTimer = null;
+const $ = id => document.getElementById(id);
+
+try { if (localStorage.getItem('theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+function toggleTheme() {
+  const d = document.documentElement.dataset.theme === 'dark' ? '' : 'dark';
+  document.documentElement.dataset.theme = d;
+  try { localStorage.setItem('theme', d); } catch (e) {}
+}
+if (B.trial_days > 0) $('trialNote').textContent = 'سجّل الآن واحصل على ' + B.trial_days + ' أيام تجربة مجانية';
+$('ccLabel').textContent = B.cc_label;
+if (!B.whatsapp) { $('waBtn').classList.add('hidden'); $('orLine').classList.add('hidden'); }
+
+// انتقال متحرك بين الشاشتين (مع زر الرجوع بالجوال)
+function goLogin(push = true) {
+  $('welcome').classList.add('off-left');
+  $('login').classList.remove('off-right');
+  if (push) history.pushState({ s: 'login' }, '', '#login');
+  initGoogle();
+}
+function goWelcome(fromPop = false) {
+  $('login').classList.add('off-right');
+  $('welcome').classList.remove('off-left');
+  showStep('choose');
+  if (!fromPop && location.hash === '#login') history.back();
+}
+window.addEventListener('popstate', () => { location.hash === '#login' ? goLogin(false) : goWelcome(true); });
+if (location.hash === '#login') goLogin(false);
+
+function setStatus(msg, kind) { const s = $('status'); s.textContent = msg || ''; s.className = 'status ' + (kind || ''); }
+function busy(id, on) { $(id).classList.toggle('loading', on); $(id).disabled = on; }
+function showStep(st) {
+  ['choose', 'phone', 'qr', 'code', 'name'].forEach(x => $('st' + x[0].toUpperCase() + x.slice(1)).classList.toggle('hidden', x !== st));
+  setStatus('');
+  if (st !== 'qr') clearInterval(bootTimer);
+  if (st === 'phone') setTimeout(() => $('phone').focus(), 300);
+  if (st === 'code') setTimeout(() => $('code').focus(), 300);
+}
+async function post(url, data) {
+  try {
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    return await r.json();
+  } catch (e) { return { ok: false, error: 'تعذر الاتصال بالسيرفر' }; }
+}
+function enterApp() { document.body.style.transition = 'opacity .3s'; document.body.style.opacity = 0; setTimeout(() => location.href = '/app', 280); }
+
+// ---------------- كوكل
+let gInit = false;
+function initGoogle() {
+  if (gInit) return;
+  if (!B.google) { $('gMissing').classList.remove('hidden'); gInit = true; return; }
+  if (!window.google || !google.accounts || !google.accounts.id) { setTimeout(initGoogle, 250); return; }
+  gInit = true;
+  google.accounts.id.initialize({ client_id: B.google, callback: onGoogle, ux_mode: 'popup', auto_select: false });
+  const w = $('gBtn');
+  google.accounts.id.renderButton(w, { theme: 'outline', size: 'large', shape: 'pill', text: 'continue_with', locale: 'ar', logo_alignment: 'center', width: Math.min(360, Math.max(240, w.clientWidth || 320)) });
+}
+async function onGoogle(resp) {
+  setStatus('جارِ تسجيل الدخول...', 'ok');
+  const r = await post('/auth/google', { credential: resp.credential });
+  if (!r.ok) { setStatus(r.error || 'تعذر تسجيل الدخول', 'err'); return; }
+  if (r.is_new) { showStep('name'); return; }
+  enterApp();
+}
+
+// ---------------- واتساب
+async function sendCode() {
+  let p = $('phone').value.replace(/\D/g, '');
+  if (p.startsWith('0')) p = p.slice(1);
+  if (p.length < 6) { setStatus('أدخل رقم صحيح', 'err'); return; }
+  waPhone = p.startsWith(B.cc) && p.length > 10 ? p : B.cc + p;
+  busy('sendBtn', true);
+  const r = await post('/auth/whatsapp/send_code', { phone: waPhone });
+  busy('sendBtn', false);
+  if (!r.ok) { setStatus(r.error, 'err'); return; }
+  if (r.bootstrap) { bootAcc = r.acc_id; showStep('qr'); pollBoot(); return; }
+  showStep('code');
+  setStatus('أرسلنا الرمز على واتساب +' + waPhone, 'ok');
+}
+function pollBoot() {
+  const refresh = () => { $('qrImg').src = '/auth/bootstrap/qr/' + bootAcc + '?t=' + Date.now(); };
+  refresh();
+  clearInterval(bootTimer);
+  bootTimer = setInterval(async () => {
+    refresh();
+    const r = await fetch('/auth/bootstrap/status/' + bootAcc).then(x => x.json()).catch(() => ({}));
+    if (r.connected && r.code_sent) { showStep('code'); setStatus('تم الاتصال وأرسلنا رمز التحقق', 'ok'); }
+  }, 2500);
+}
+async function verifyCode() {
+  const c = $('code').value.replace(/\D/g, '');
+  if (c.length < 4) { setStatus('أدخل الرمز', 'err'); return; }
+  busy('verifyBtn', true);
+  const r = await post('/auth/whatsapp/verify', { phone: waPhone, code: c });
+  busy('verifyBtn', false);
+  if (!r.ok) { setStatus(r.error, 'err'); return; }
+  if (r.is_new) { showStep('name'); return; }
+  enterApp();
+}
+$('code').addEventListener('input', e => { if (e.target.value.replace(/\D/g, '').length === 6) verifyCode(); });
+async function saveName() {
+  const n = $('name').value.trim();
+  if (!n) { setStatus('اكتب اسمك', 'err'); return; }
+  busy('nameBtn', true);
+  const r = await post('/auth/set_name', { name: n });
+  busy('nameBtn', false);
+  r.ok ? enterApp() : setStatus(r.error, 'err');
+}
+['phone', 'code', 'name'].forEach(id => $(id).addEventListener('keydown', e => {
+  if (e.key === 'Enter') ({ phone: sendCode, code: verifyCode, name: saveName })[id]();
+}));
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
+</script>
+</body>
+</html>

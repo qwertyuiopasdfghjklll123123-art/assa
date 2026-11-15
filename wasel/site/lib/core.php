@@ -179,6 +179,51 @@ function set_session_user(array $user): void
     $_SESSION['email'] = $user['email'] ?: $user['phone'];
     $_SESSION['name'] = $user['name'];
     $_SESSION['is_admin'] = !empty($user['is_admin']);
+    $_SESSION['epoch'] = (int)(settings()['session_epoch'] ?? 1);
+    update_user((int)$user['id'], ['last_login_at' => now_str(), 'last_ip' => client_ip_addr()]);
+}
+
+function client_ip_addr(): string
+{
+    return (string)($_SERVER['REMOTE_ADDR'] ?? '');
+}
+
+/** سجل محاولات الدخول (لقسم الأمان) - آخر 300 */
+function log_login(?int $userId, string $method, bool $ok, string $note = ''): void
+{
+    store_update_all('login_log', function (array &$rows) use ($userId, $method, $ok, $note) {
+        $max = 0;
+        foreach ($rows as $r) {
+            $max = max($max, (int)$r['id']);
+        }
+        $id = $max + 1;
+        $rows[(string)$id] = [
+            'id' => $id, 'user_id' => $userId, 'method' => $method, 'ok' => $ok, 'note' => clean_text($note),
+            'ip' => client_ip_addr(), 'ua' => clean_text(mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 160)),
+            'time' => now_str(),
+        ];
+        if (count($rows) > 300) {
+            ksort($rows, SORT_NUMERIC);
+            $rows = array_slice($rows, -300, null, true);
+        }
+    });
+}
+
+/** يطلّع الجلسة لو المستخدم محظور أو الأدمن أنهى كل الجلسات */
+function enforce_session(): void
+{
+    if (!uid()) {
+        return;
+    }
+    $u = user_by_id(uid());
+    $epoch = (int)(settings()['session_epoch'] ?? 1);
+    if (!$u || !empty($u['banned']) || (int)($_SESSION['epoch'] ?? 0) !== $epoch) {
+        $_SESSION = [];
+        return;
+    }
+    // تحديث صلاحية الأدمن واسم المستخدم لو تغيّرت
+    $_SESSION['is_admin'] = !empty($u['is_admin']);
+    $_SESSION['name'] = $u['name'];
 }
 
 // ---------------------------------------------------------------- المستخدمين والاشتراك
@@ -204,14 +249,17 @@ function users_count(): int
 function create_user(array $fields, bool $isAdmin): array
 {
     $now = time();
+    $trialDays = trial_days();
     $row = array_merge([
         'email' => null, 'phone' => null, 'name' => null, 'google_sub' => null,
         'is_admin' => $isAdmin, 'plan_active' => false, 'plan_ends_at' => null,
-        'trial_ends_at' => date('Y-m-d H:i', $now + TRIAL_DAYS * 86400),
+        'trial_ends_at' => date('Y-m-d H:i', $now + $trialDays * 86400), 'balance' => 0, 'banned' => false,
         'trial_ended_notified' => false, 'created_at' => date('Y-m-d H:i', $now),
     ], $fields);
     $id = store_insert('users', $row);
-    add_event($id, null, 'بدأت الفترة التجريبية', 'لديك ' . TRIAL_DAYS . ' أيام مجانية لتجربة المنصة', 'info');
+    if ($trialDays > 0) {
+        add_event($id, null, 'بدأت الفترة التجريبية', 'لديك ' . $trialDays . ' أيام مجانية لتجربة المنصة', 'info');
+    }
     return store_find('users', $id);
 }
 
@@ -383,6 +431,12 @@ function settings(): array
         'whatsapp_subscribe_number' => '', 'whatsapp_support_number' => '',
         'plan_price_iqd' => null, 'has_logo' => false, 'logo_mime' => null,
         'ai_api_key' => '', 'ai_knowledge_base' => '',
+        // الفوترة
+        'trial_days' => TRIAL_DAYS, 'plan_days' => PLAN_ACTIVATION_DAYS, 'message_price' => 0, 'usd_rate' => 1500,
+        // تسجيل الدخول والأمان
+        'admin_email' => '', 'whatsapp_login' => true, 'session_epoch' => 1,
+        // نسخ احتياطي عبر تيليجرام
+        'tg_token' => '', 'tg_chat_id' => '', 'tg_webhook_key' => '', 'tg_auto_backup' => false, 'tg_last_backup' => '',
         'port' => null, 'domain' => '',
     ]);
 }
@@ -390,6 +444,26 @@ function settings(): array
 function update_settings(array $fields): void
 {
     store_update_doc('settings', fn($s) => array_merge($s, $fields));
+}
+
+function trial_days(): int
+{
+    return max(0, (int)(settings()['trial_days'] ?? TRIAL_DAYS));
+}
+
+function plan_days(): int
+{
+    return max(1, (int)(settings()['plan_days'] ?? PLAN_ACTIVATION_DAYS));
+}
+
+function message_price(): int
+{
+    return max(0, (int)(settings()['message_price'] ?? 0));
+}
+
+function usd_rate(): float
+{
+    return max(1, (float)(settings()['usd_rate'] ?? 1500));
 }
 
 function plan_price(): int
