@@ -48,7 +48,20 @@ function every(ms, fn) { const t = setInterval(fn, ms); S.timers.push(t); return
 function head(title, back = true, extra = '') {
   return `<div class="page-head">${back ? `<button class="back" onclick="goBack()"><i class="fa-solid fa-arrow-right"></i></button>` : ''}<h2>${title}</h2>${extra}</div>`;
 }
-function empty(icon, text, btn = '') { return `<div class="empty"><i class="${icon}"></i>${text}${btn ? `<div style="margin-top:12px">${btn}</div>` : ''}</div>`; }
+const ILL_PLANE = `<svg viewBox="0 0 220 150" class="ill" aria-hidden="true"><defs><linearGradient id="ig" x1="0" x2="1"><stop offset="0" stop-color="var(--ill1)"/><stop offset="1" stop-color="var(--ill2)"/></linearGradient></defs>
+  <ellipse cx="110" cy="132" rx="74" ry="9" fill="var(--ill-shadow)"/><circle cx="110" cy="70" r="56" fill="var(--ill-bg)"/>
+  <path d="M40 104 C70 96 78 70 108 72" fill="none" stroke="var(--ill2)" stroke-width="2.5" stroke-dasharray="4 6" stroke-linecap="round" opacity=".7"/>
+  <g transform="translate(104 34) rotate(8)"><path d="M0 34 L62 0 L46 64 L30 44 Z" fill="url(#ig)"/><path d="M30 44 L62 0 L22 40 Z" fill="#fff" opacity=".35"/><path d="M22 40 L30 44 L26 58 Z" fill="var(--ill1)" opacity=".8"/></g>
+  <g fill="#fff"><ellipse cx="58" cy="44" rx="16" ry="8"/><ellipse cx="68" cy="40" rx="11" ry="9"/><ellipse cx="170" cy="96" rx="14" ry="7"/><ellipse cx="160" cy="93" rx="9" ry="8"/></g>
+  <circle cx="176" cy="38" r="4" fill="var(--ill2)" opacity=".6"/><circle cx="44" cy="84" r="3" fill="var(--ill1)" opacity=".5"/></svg>`;
+const ILL_BASE = `<svg viewBox="0 0 220 150" class="ill" aria-hidden="true"><ellipse cx="110" cy="132" rx="70" ry="9" fill="var(--ill-shadow)"/><circle cx="110" cy="66" r="56" fill="var(--ill-bg)"/>
+  <g fill="#fff"><ellipse cx="52" cy="50" rx="15" ry="7"/><ellipse cx="62" cy="46" rx="10" ry="8"/><ellipse cx="172" cy="98" rx="13" ry="7"/><ellipse cx="163" cy="95" rx="8" ry="7"/></g>
+  <circle cx="178" cy="36" r="4" fill="var(--ill2)" opacity=".6"/><circle cx="40" cy="92" r="3" fill="var(--ill1)" opacity=".5"/><circle cx="150" cy="22" r="2.5" fill="var(--ill1)" opacity=".4"/></svg>`;
+/** حالة فارغة برسمة توضيحية بدل الفراغ */
+function empty(icon, text, btn = '') {
+  const art = /paper-plane/.test(icon) ? ILL_PLANE : `<div class="ill-wrap">${ILL_BASE}<span class="ill-badge"><i class="${icon}"></i></span></div>`;
+  return `<div class="empty fade-in">${art}<b>${text}</b>${btn ? `<div style="margin-top:12px">${btn}</div>` : ''}</div>`;
+}
 function rowItem({ icon, ic = 'ic-blue', title, sub = '', end = '<span class="chev"><i class="fa-solid fa-chevron-left"></i></span>', onclick = '', img = '' }) {
   return `<div class="row" role="button" tabindex="0" ${onclick ? `onclick="${onclick}"` : ''}><span class="row-ic ${ic}">${img ? `<img src="${esc(img)}" alt="">` : `<i class="${icon}"></i>`}</span>
     <span class="row-body"><span class="row-title">${title}</span>${sub ? `<span class="row-sub">${sub}</span>` : ''}</span><span class="row-end">${end}</span></div>`;
@@ -128,54 +141,47 @@ const R = {};
 // ---------------------------------------------------------------- الرئيسية
 R.home = async (el) => {
   const first = (ME.name || '؟').trim()[0] || '؟';
-  const planLine = ME.plan_active ? `<i class="fa-solid fa-gem"></i> ${esc(ME.plan_name || 'مشترك')} · ${ME.plan_days_left === null ? 'دائم' : ME.plan_days_left + ' يوم'}`
-    : ME.trial_active ? `<i class="fa-solid fa-gift"></i> تجربة مجانية · ${ME.trial_days_left} يوم` : SET.message_price > 0 ? '<i class="fa-solid fa-coins"></i> الدفع حسب الرسائل' : '<i class="fa-solid fa-lock"></i> بدون باقة';
+  const h = new Date().getHours();
+  const hello = h < 12 ? 'صباح الخير' : h < 18 ? 'يومك سعيد' : 'مساء الخير';
+  const planLbl = ME.plan_active ? esc(ME.plan_name || 'مشترك') : ME.trial_active ? 'تجربة مجانية' : SET.message_price > 0 ? 'الدفع حسب الرسائل' : 'بدون باقة';
+  const planDays = ME.plan_active ? (ME.plan_days_left === null ? 'اشتراك دائم' : 'باقي ' + ME.plan_days_left + ' يوم') : ME.trial_active ? 'باقي ' + ME.trial_days_left + ' يوم' : '';
   el.innerHTML = `
-    <div class="hero fade-in">
-      <div class="greet">
-        <div class="avatar">${esc(first)}</div>
-        <div style="flex:1;min-width:0">
-          <div style="font-size:12.5px;opacity:.85">أهلاً بعودتك 👋</div>
-          <div style="font-weight:800;font-size:19px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(ME.name || 'صديقنا')}</div>
-        </div>
-        <span class="pill pill-white" onclick="go('wallet')" style="cursor:pointer">${planLine}</span>
-      </div>
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-top:18px">
-        <div><div class="hero-label">رصيدك</div><div class="hero-amount"><span class="num">${fmt(ME.balance)}</span> <span style="font-size:15px;font-weight:600">د.ع</span></div></div>
-        <button class="btn btn-white btn-sm" onclick="go('wallet')"><i class="fa-solid fa-plus"></i> شحن</button>
-      </div>
-      <div class="hero-stats" id="heroStats"><div><b>—</b><span>أرقام متصلة</span></div><div><b>—</b><span>رسائل مرسلة</span></div><div><b>—</b><span>نسبة النجاح</span></div></div>
+    <div class="greet fade-in"><div><small>${hello}</small><h2>${esc(ME.name || 'صديقنا')}</h2></div><div class="avatar">${esc(first)}</div></div>
+    <div class="hero fade-in" onclick="go('wallet')" style="cursor:pointer">
+      <div class="hc-top"><span class="pill pill-white"><i class="fa-solid fa-gem"></i> ${planLbl}</span><span style="opacity:.8">${planDays}</span></div>
+      <div style="margin-top:12px"><div class="hero-label">الرصيد</div><div class="hero-amount"><span class="num">${fmt(ME.balance)}</span> <span style="font-size:15px;font-weight:600;opacity:.85">د.ع</span></div></div>
+      <div class="hero-stats" id="heroStats"><div><b>—</b><span>أرقام متصلة</span></div><div><b>—</b><span>رسالة مرسلة</span></div><div><b>—</b><span>نجاح</span></div></div>
     </div>
-    <div class="section-head">ابدأ من هنا</div>
-    <div class="bento stagger">
-      <div class="tile tile-teal wide" onclick="go('campaign')"><span class="t-ic"><i class="fa-solid fa-paper-plane"></i></span><div style="flex:1"><b style="margin:0">حملة جديدة</b><small>أرسل رسالتك لآلاف الأرقام بضغطة</small></div><i class="fa-solid fa-arrow-left"></i><i class="fa-solid fa-paper-plane big-ic"></i></div>
-      <div class="tile tile-emerald" onclick="go('accounts')"><span class="t-ic"><i class="fa-brands fa-whatsapp"></i></span><div><b>أرقامي</b><small>ربط بالباركود أو الرمز</small></div><i class="fa-brands fa-whatsapp big-ic"></i></div>
-      <div class="tile tile-amber" onclick="go('wallet')"><span class="t-ic"><i class="fa-solid fa-gem"></i></span><div><b>الباقات</b><small>اشترك أو اشحن رصيد</small></div><i class="fa-solid fa-gem big-ic"></i></div>
-      <div class="tile tile-violet" onclick="go('subscribers')"><span class="t-ic"><i class="fa-solid fa-user-clock"></i></span><div><b>مشتركيني</b><small>تذكير تلقائي بالانتهاء</small></div><i class="fa-solid fa-user-clock big-ic"></i></div>
-      <div class="tile tile-sky" onclick="go('apikeys')"><span class="t-ic"><i class="fa-solid fa-code"></i></span><div><b>ربط API</b><small>رسائل من موقعك</small></div><i class="fa-solid fa-code big-ic"></i></div>
-      ${ADMIN ? `<div class="tile tile-coral wide" onclick="go('admin')"><span class="t-ic"><i class="fa-solid fa-gauge-high"></i></span><div style="flex:1"><b style="margin:0">لوحة الإدارة</b><small>المستخدمين، الشحن، الباقات والأمان</small></div><i class="fa-solid fa-arrow-left"></i><i class="fa-solid fa-shield-halved big-ic"></i></div>` : ''}
+    <div class="qa stagger" style="margin-top:18px">
+      <button class="qa-item" onclick="go('campaign')"><span class="qa-ic"><i class="fa-solid fa-paper-plane"></i></span>حملة</button>
+      <button class="qa-item" onclick="go('accounts')"><span class="qa-ic"><i class="fa-brands fa-whatsapp"></i></span>أرقامي</button>
+      <button class="qa-item" onclick="go('subscribers')"><span class="qa-ic"><i class="fa-solid fa-user-clock"></i></span>مشتركين</button>
+      <button class="qa-item" onclick="go('apikeys')"><span class="qa-ic"><i class="fa-solid fa-code"></i></span>API</button>
     </div>
+    ${ADMIN ? `<div class="list" style="margin-top:18px">${rowItem({ icon: 'fa-solid fa-gauge-high', title: 'لوحة الإدارة', sub: 'المستخدمين، الشحن، الباقات والأمان', onclick: "go('admin')" })}</div>` : ''}
     <div id="running"></div>
-    <div class="section-head">آخر الحملات</div>
-    <div class="list mini-list" id="recent"><div style="padding:14px"><div class="skel" style="height:44px"></div></div></div>`;
+    <div class="section-head">آخر الحملات <a onclick="go('campaign')">عرض الكل</a></div>
+    <div id="recent"><div class="card"><div class="skel" style="height:60px"></div></div></div>`;
   const [st, run, recent] = await Promise.all([api('/dashboard/stats'), api('/dashboard/running_campaigns'), api('/dashboard/campaigns')]);
   if (st.accounts_total !== undefined) {
     el.querySelector('#heroStats').innerHTML = `<div><b class="num">${st.accounts_connected}/${st.accounts_total}</b><span>أرقام متصلة</span></div>
-      <div><b class="num">${fmt(st.messages_sent)}</b><span>رسائل مرسلة</span></div><div><b class="num">${st.success_rate}%</b><span>نسبة النجاح</span></div>`;
+      <div><b class="num">${fmt(st.messages_sent)}</b><span>رسالة مرسلة</span></div><div><b class="num">${st.success_rate}%</b><span>نجاح</span></div>`;
   }
   if (Array.isArray(run) && run.length) {
     el.querySelector('#running').innerHTML = `<div class="section-head">حملات جارية <span class="pill pill-green">${run.length}</span></div>` + run.map(c => {
       const done = c.sent + c.failed, pct = c.total ? Math.round(done / c.total * 100) : 0;
-      return `<div class="card" onclick="go('campaign',{acc:'${esc(c.account_id)}'})" style="cursor:pointer">
+      return `<div class="card fade-in" onclick="go('campaign',{acc:'${esc(c.account_id)}'})" style="cursor:pointer">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><b>${esc(c.account_name)}</b>${c.paused ? '<span class="pill pill-orange">موقوفة</span>' : '<span class="pill pill-green"><span class="status-dot on"></span> جارية</span>'}</div>
         <div class="progress"><span style="width:${pct}%"></span></div>
         <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text3);margin-top:6px"><span class="num">${fmt(done)} / ${fmt(c.total)}</span><span class="num">${pct}%</span></div></div>`;
     }).join('');
   }
-  el.querySelector('#recent').innerHTML = Array.isArray(recent) && recent.length ? recent.slice(0, 6).map(h => rowItem({
-    icon: h.failed ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-check-double', ic: h.failed ? 'ic-orange' : 'ic-green',
-    title: `${esc(h.account_name)} <span class="pill pill-gray num">${fmt(h.sent)}/${fmt(h.total)}</span>`, sub: `${esc(h.time)} · ${esc((h.text || '').slice(0, 40))}`, end: '',
-  })).join('') : empty('fa-regular fa-paper-plane', 'ما أرسلت أي حملة بعد', `<button class="btn btn-primary btn-sm" onclick="go('campaign')">أرسل أول حملة</button>`);
+  el.querySelector('#recent').innerHTML = Array.isArray(recent) && recent.length
+    ? '<div class="list mini-list">' + recent.slice(0, 6).map(x => rowItem({
+      icon: x.failed ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-check-double', ic: x.failed ? 'ic-red' : 'ic-green',
+      title: `${esc(x.account_name)} <span class="pill pill-gray num">${fmt(x.sent)}/${fmt(x.total)}</span>`, sub: `${esc(x.time)} · ${esc((x.text || '').slice(0, 40))}`, end: '',
+    })).join('') + '</div>'
+    : `<div class="card">${empty('fa-solid fa-paper-plane', 'ما أرسلت أي حملة بعد', `<button class="btn btn-primary btn-sm" onclick="go('campaign')"><i class="fa-solid fa-plus"></i> حملة جديدة</button>`).replace('<b>', '<b>').replace('</b>', '</b><small style="display:block;margin-bottom:2px">أرسل أول رسالة لعملائك خلال دقيقة</small>')}</div>`;
 };
 
 // ---------------------------------------------------------------- الحملات
@@ -410,7 +416,6 @@ R.acc = async (el, p) => {
 
 // ---------------------------------------------------------------- الشحن
 const PM_ICON = { asiacell: ['fa-solid fa-sim-card', 'ic-red'], binance: ['fa-brands fa-bitcoin', 'ic-orange'], superkey: ['fa-solid fa-credit-card', 'ic-purple'], manual: ['fa-solid fa-building-columns', 'ic-cyan'] };
-const PLAN_GRAD = { teal: 'tile-teal', amber: 'tile-amber', violet: 'tile-violet', coral: 'tile-coral', emerald: 'tile-emerald', sky: 'tile-sky' };
 R.wallet = async (el, p) => {
   await refreshMe();
   const [pr, mr] = await Promise.all([api('/api/plans'), api('/api/payment-methods')]);
@@ -426,7 +431,7 @@ R.wallet = async (el, p) => {
   if (chosen) {
     const enough = ME.balance >= chosen.price;
     el.innerHTML = head(esc(chosen.name)) + `
-      <div class="plan ${PLAN_GRAD[chosen.color] || 'tile-teal'}" style="cursor:default">
+      <div class="plan solid fade-in" style="cursor:default">
         <div class="plan-top"><span class="plan-name">${esc(chosen.name)}</span><span class="pill pill-white">${fmt(chosen.days)} يوم</span></div>
         <div class="plan-price"><span class="num">${fmt(chosen.price)}</span> <small>د.ع</small></div>
         <ul>${chosen.features_list.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
@@ -452,13 +457,13 @@ R.wallet = async (el, p) => {
         <div class="hero-sub">${ME.plan_active ? (ME.plan_days_left === null ? 'اشتراك دائم' : 'باقي ' + ME.plan_days_left + ' يوم') : ME.trial_active ? 'باقي ' + ME.trial_days_left + ' يوم' : 'اختر باقة أو اشحن رصيد للإرسال'}</div></div>
       <div style="text-align:left"><div class="hero-label">الرصيد</div><div style="font-size:22px;font-weight:800" class="num">${fmt(ME.balance)}</div><div class="hero-sub">د.ع</div></div></div></div>
     <div class="section-head">اختر باقتك</div>
-    <div class="stagger">${S.plans.map(pl => `<div class="plan ${PLAN_GRAD[pl.color] || 'tile-teal'} ${ME.plan_active && ME.plan_name === pl.name ? 'current' : ''}" onclick="go('wallet',{plan:${pl.id}})">
-      <div class="plan-top"><span class="plan-name">${esc(pl.name)}</span>${pl.popular ? '<span class="plan-badge"><i class="fa-solid fa-fire"></i> الأكثر طلباً</span>' : `<span class="pill pill-white">${fmt(pl.days)} يوم</span>`}</div>
+    <div class="stagger">${S.plans.map(pl => `<div class="plan ${pl.popular ? 'featured' : ''} ${ME.plan_active && ME.plan_name === pl.name ? 'current' : ''}" onclick="go('wallet',{plan:${pl.id}})">
+      <div class="plan-top"><span class="plan-name">${esc(pl.name)}</span>${pl.popular ? '<span class="plan-badge"><i class="fa-solid fa-star"></i> الأكثر طلباً</span>' : `<span class="pill pill-blue">${fmt(pl.days)} يوم</span>`}</div>
       <div class="plan-price"><span class="num">${fmt(pl.price)}</span> <small>د.ع / ${fmt(pl.days)} يوم</small></div>
       <ul>${pl.features_list.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
-      <span class="btn btn-white">${ME.plan_active && ME.plan_name === pl.name ? 'تجديد الباقة' : 'اشترك الآن'} <i class="fa-solid fa-arrow-left"></i></span></div>`).join('') || `<div class="card">${empty('fa-solid fa-gem', 'ما فيه باقات حالياً')}</div>`}</div>
+      <span class="btn ${pl.popular ? 'btn-white' : 'btn-primary'}">${ME.plan_active && ME.plan_name === pl.name ? 'تجديد الباقة' : 'اشترك الآن'} <i class="fa-solid fa-arrow-left"></i></span></div>`).join('') || `<div class="card">${empty('fa-solid fa-gem', 'ما فيه باقات حالياً')}</div>`}</div>
     ${SET.message_price > 0 ? `<div class="section-head">أو ادفع حسب استخدامك</div>
-    <div class="card" style="display:flex;gap:14px;align-items:center"><span class="row-ic ic-orange" style="width:54px;height:54px;font-size:22px"><i class="fa-solid fa-coins"></i></span>
+    <div class="card" style="display:flex;gap:14px;align-items:center"><span class="row-ic" style="width:54px;height:54px;font-size:22px"><i class="fa-solid fa-coins"></i></span>
       <div style="flex:1"><b>شحن رصيد بدون باقة</b><div class="row-sub" style="white-space:normal">كل رسالة تنخصم من رصيدك بـ <b class="num">${fmt(SET.message_price)}</b> د.ع فقط</div></div></div>
     <div class="section-head">طرق شحن الرصيد</div>${methodsList(null)}` : `<div class="section-head">شحن الرصيد</div>${methodsList(null)}`}`;
 };
@@ -601,7 +606,7 @@ R.account = async (el) => {
   if (ADMIN) { const s = await api('/api/admin/stats'); pending = s.pending_recharges || 0; }
   el.innerHTML = `
     <div class="card" style="display:flex;align-items:center;gap:12px">
-      <div class="avatar" style="background:var(--hero);color:#fff;position:relative;box-shadow:0 8px 18px var(--primary-glow)">${esc(first)}</div>
+      <div class="avatar" style="background:var(--btn);color:#fff;position:relative;box-shadow:0 8px 18px var(--primary-glow)">${esc(first)}</div>
       <div style="flex:1;min-width:0"><b style="font-size:16.5px">${esc(ME.name || 'بدون اسم')}</b>
         <div class="row-sub num" style="text-align:right">${esc(contact)}</div>
         <div style="margin-top:5px;display:flex;gap:6px;flex-wrap:wrap"><span class="pill pill-gray"><i class="fa-${ME.login === 'google' ? 'brands fa-google' : ME.login === 'email' ? 'solid fa-envelope' : 'brands fa-whatsapp'}"></i> ${ME.login === 'google' ? 'Google' : ME.login === 'email' ? 'بريد' : 'واتساب'}</span>${ADMIN ? '<span class="pill pill-blue"><i class="fa-solid fa-shield"></i> أدمن</span>' : ''}</div></div>
@@ -617,7 +622,7 @@ R.account = async (el) => {
       ${rowItem({ icon: 'fa-solid fa-user-clock', ic: 'ic-purple', title: 'اشتراكات عملائي', sub: 'تذكير تلقائي قبل انتهاء الاشتراك', onclick: "go('subscribers')" })}
       ${rowItem({ icon: 'fa-solid fa-code', ic: 'ic-orange', title: 'ربط API', sub: 'أرسل رسائل ورموز تحقق من موقعك', onclick: "go('apikeys')" })}
       ${rowItem({ icon: 'fa-solid fa-clock-rotate-left', ic: 'ic-cyan', title: 'السجل المالي', sub: 'حركات الرصيد وطلبات الشحن', onclick: "go('tx')" })}
-      ${rowItem({ icon: 'fa-solid fa-bell', ic: 'ic-red', title: 'الإشعارات', onclick: "go('notifications')" })}
+      ${rowItem({ icon: 'fa-solid fa-bell', title: 'الإشعارات', sub: 'تنبيهات الحملات والشحن', onclick: "go('notifications')" })}
     </div>
     <div class="section-head">التطبيق</div>
     <div class="list">
@@ -1009,16 +1014,15 @@ R.plansAdmin = async (el) => {
     const CN = { teal: 'فيروزي', amber: 'ذهبي', violet: 'بنفسجي', coral: 'مرجاني', emerald: 'أخضر', sky: 'سماوي' };
     el.querySelector('#pa').innerHTML = (r.plans || []).map(pl => `<div class="card" data-pl="${pl.id}">
       <div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-open>
-        <span class="row-ic" style="background:var(--g-${pl.color});color:#fff"><i class="fa-solid fa-gem"></i></span>
+        <span class="row-ic"><i class="fa-solid fa-gem"></i></span>
         <div style="flex:1"><b>${esc(pl.name)}</b> ${pl.popular ? '<span class="pill pill-orange">الأكثر طلباً</span>' : ''}<div class="row-sub num" style="text-align:right">${fmt(pl.price)} د.ع · ${fmt(pl.days)} يوم</div></div>
         <label class="switch" onclick="event.stopPropagation()"><input type="checkbox" data-active ${pl.active ? 'checked' : ''}><span></span></label></div>
       <div class="hidden" data-panel style="margin-top:14px">
         <div class="field"><label>اسم الباقة</label><input class="input" data-f="name" value="${esc(pl.name)}"></div>
         <div class="input-row"><div class="field" style="flex:1"><label>السعر (د.ع)</label><input class="input num" type="number" data-f="price" value="${pl.price}"></div><div class="field" style="flex:1"><label>المدة (يوم)</label><input class="input num" type="number" data-f="days" value="${pl.days}"></div></div>
         <div class="field"><label>المزايا (كل ميزة بسطر)</label><textarea class="textarea" data-f="features" style="min-height:90px">${esc(pl.features || '')}</textarea></div>
-        <div class="field"><label>اللون</label><div class="chips">${colors.map(c => `<button class="chip ${c === pl.color ? 'on' : ''}" data-color="${c}"><span style="width:14px;height:14px;border-radius:50%;background:var(--g-${c})"></span>${CN[c] || c}</button>`).join('')}</div></div>
         <div class="input-row" style="align-items:center"><div class="field" style="flex:1"><label>الترتيب</label><input class="input num" type="number" data-f="sort" value="${pl.sort}"></div>
-          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><label class="switch"><input type="checkbox" data-popular ${pl.popular ? 'checked' : ''}><span></span></label> الأكثر طلباً</label></div>
+          <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><label class="switch"><input type="checkbox" data-popular ${pl.popular ? 'checked' : ''}><span></span></label> مميّزة (الأكثر طلباً)</label></div>
         <div class="input-row"><button class="btn btn-primary btn-sm" style="flex:2" data-save>حفظ</button><button class="btn btn-red btn-sm" style="flex:1" data-del><i class="fa-solid fa-trash"></i></button></div>
       </div></div>`).join('') + `<button class="btn btn-primary btn-block" id="addPl" style="margin-top:14px"><i class="fa-solid fa-plus"></i> إضافة باقة</button>`;
     el.querySelectorAll('[data-pl]').forEach(c => {

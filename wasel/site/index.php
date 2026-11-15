@@ -98,7 +98,7 @@ $routes = [
         header('Content-Type: application/manifest+json; charset=utf-8');
         echo json_encode([
             'name' => $name, 'short_name' => $name, 'id' => '/app', 'start_url' => '/app', 'scope' => '/',
-            'display' => 'standalone', 'background_color' => '#eef4f5', 'theme_color' => '#034f5c',
+            'display' => 'standalone', 'background_color' => '#f3f7f8', 'theme_color' => '#f3f7f8',
             'dir' => 'rtl', 'lang' => 'ar', 'description' => 'حملات واتساب، رد آلي، ورسائل اشتراكات',
             'icons' => [
                 ['src' => '/pwa-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
