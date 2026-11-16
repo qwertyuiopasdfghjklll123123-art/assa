@@ -29,6 +29,31 @@ if ($base !== '' && strpos($path, $base) === 0) {
 }
 $path = '/' . trim($path, '/');
 
+// ------------------------------------------------ حماية: ترويسات أمان على كل الردود
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()');
+header('Cross-Origin-Opener-Policy: same-origin-allow-popups');
+if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+    header('Strict-Transport-Security: max-age=31536000');
+}
+header_remove('X-Powered-By');
+
+// مهام مجدولة تلقائية مع زيارات الموقع (بديل Cron): كل 5 دقائق كحد أقصى، بعد إرسال الرد للزائر
+if (APP_INSTALLED && $method === 'GET' && function_exists('fastcgi_finish_request')) {
+    $lastCron = (int)(settings()['last_cron'] ?? 0);
+    if (time() - $lastCron > 300) {
+        register_shutdown_function(function () {
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
+            fastcgi_finish_request();
+            run_scheduled_tasks();
+        });
+    }
+}
+
 // مسارات ما تحتاج جلسة (المحرك، Cron، API الخارجي)
 if ($path === '/engine_hook' && $method === 'POST') {
     handle_engine_hook();
@@ -41,6 +66,34 @@ if ($path === '/cron') {
 }
 if ($path === '/api/v1/send' && $method === 'POST') {
     handle_api_send();
+}
+// تنصيب المهام المجدولة برابط: افتحه مرة بالمتصفح
+if ($path === '/cron/setup') {
+    if (CRON_KEY === '' || !hash_equals(CRON_KEY, (string)($_GET['key'] ?? ''))) {
+        http_response_code(403);
+        exit('رابط غير صالح');
+    }
+    cron_setup_page();
+}
+if ($path === '/dev-photo') {
+    $f = DATA_DIR . '/dev.bin';
+    if (!is_file($f)) {
+        http_response_code(404);
+        exit;
+    }
+    $info = @getimagesize($f);
+    header('Content-Type: ' . ($info['mime'] ?? 'image/png'));
+    header('Cache-Control: public, max-age=86400');
+    readfile($f);
+    exit;
+}
+// حماية من طلبات مزوّرة من مواقع ثانية (CSRF): أي طلب تعديل لازم يجي من نفس الموقع
+if (in_array($method, ['POST', 'DELETE', 'PUT'], true) && strpos($path, '/telegram/webhook/') !== 0) {
+    $origin = (string)($_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '');
+    $host = (string)($_SERVER['HTTP_HOST'] ?? '');
+    if ($origin !== '' && parse_url($origin, PHP_URL_HOST) . (parse_url($origin, PHP_URL_PORT) ? ':' . parse_url($origin, PHP_URL_PORT) : '') !== $host) {
+        json_err('طلب مرفوض', 403);
+    }
 }
 
 start_session();
@@ -439,6 +492,9 @@ $routes = [
             'enabled' => !empty($a['auto_reply_enabled']),
             'ai_enabled' => !empty($a['auto_reply_ai_enabled']),
             'rules' => $a['auto_reply_rules'] ?? [],
+            'ai_profile' => $a['ai_profile'] ?? new stdClass(),
+            'ai_fields' => array_map(fn($f) => ['label' => $f[0], 'max' => $f[1], 'required' => $f[2] > 0], AI_PROFILE_FIELDS),
+            'ai_available' => !empty(settings()['ai_api_key']),
         ]);
     }],
     ['POST', '#^/accounts/([\w-]+)/auto_reply$#', 'handle_set_auto_reply'],

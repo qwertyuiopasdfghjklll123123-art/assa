@@ -1,5 +1,5 @@
 <?php
-const REQUIRED_ENGINE_VERSION = 3;
+const REQUIRED_ENGINE_VERSION = 4;
 /**
  * الاتصال بمحرك واتساب (تطبيق Node.js). كل الطلبات تحمل المفتاح السري ENGINE_SECRET.
  */
@@ -18,6 +18,9 @@ function engine_request(string $method, string $path, $body = null, int $timeout
     if ($body !== null) {
         $headers[] = 'Content-Type: application/json';
         curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($body, JSON_UNESCAPED_UNICODE));
+    }
+    if ($method !== 'GET') {
+        @unlink(DATA_DIR . '/engine_cache.json'); // أي تغيير يلغي الكاش
     }
     curl_setopt_array($ch, [
         CURLOPT_CUSTOMREQUEST => $method,
@@ -68,12 +71,21 @@ function engine_accounts(): array
     if ($cache !== null) {
         return $cache;
     }
-    [$status, $data] = engine_request('GET', '/accounts', null, 6);
+    // كاش 4 ثواني بملف: صفحات كثيرة تطلب نفس الحالة، وطلب المحرك عبر الإنترنت ياخذ وقت
+    $file = DATA_DIR . '/engine_cache.json';
+    if (is_file($file) && time() - filemtime($file) < 4) {
+        $cache = json_decode((string)@file_get_contents($file), true);
+        if (is_array($cache)) {
+            return $cache;
+        }
+    }
+    [$status, $data] = engine_request('GET', '/accounts', null, 4);
     $cache = [];
     if ($status === 200 && is_array($data)) {
         foreach ($data as $a) {
             $cache[$a['id']] = $a;
         }
+        @file_put_contents($file, json_encode($cache, JSON_UNESCAPED_UNICODE));
     }
     return $cache;
 }

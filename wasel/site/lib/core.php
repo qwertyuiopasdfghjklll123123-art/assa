@@ -437,6 +437,10 @@ function settings(): array
         'admin_email' => '', 'whatsapp_login' => true, 'session_epoch' => 1,
         // نسخ احتياطي عبر تيليجرام
         'tg_token' => '', 'tg_chat_id' => '', 'tg_webhook_key' => '', 'tg_auto_backup' => false, 'tg_last_backup' => '',
+        // بطاقة المطور بقسم حسابي
+        'dev_name' => '', 'dev_title' => '', 'dev_phone' => '', 'dev_photo' => false,
+        // المهام المجدولة
+        'last_cron' => 0, 'cron_installed' => '',
         'port' => null, 'domain' => '',
     ]);
 }
@@ -493,25 +497,75 @@ function branding_context(): array
 
 // ---------------------------------------------------------------- الذكاء الاصطناعي (DeepSeek)
 
-function ai_reply(string $customerMessage): ?string
+/** حقول بطاقة تعليمات الذكاء الاصطناعي لكل رقم (الإلزامية عليها *) */
+const AI_PROFILE_FIELDS = [
+    'business_name' => ['اسم النشاط *', 40, 2],
+    'business_type' => ['نوع النشاط *', 60, 2],
+    'description' => ['وصف النشاط وما تقدمه *', 800, 20],
+    'products' => ['المنتجات أو الخدمات مع الأسعار *', 3000, 10],
+    'hours' => ['أوقات العمل', 200, 0],
+    'location' => ['الموقع / التوصيل', 300, 0],
+    'contact' => ['طريقة الطلب أو التواصل', 300, 0],
+    'tone' => ['أسلوب الرد', 60, 0],
+    'rules' => ['تعليمات إضافية للمساعد', 1200, 0],
+    'forbidden' => ['أشياء ممنوع يتكلم عنها', 600, 0],
+];
+
+function ai_profile_missing(array $p): array
+{
+    $missing = [];
+    foreach (AI_PROFILE_FIELDS as $k => [$label, , $min]) {
+        if ($min > 0 && mb_strlen(trim((string)($p[$k] ?? ''))) < $min) {
+            $missing[] = trim($label, ' *');
+        }
+    }
+    return $missing;
+}
+
+/**
+ * رد ذكي بالاعتماد على بطاقة تعليمات الرقم + سجل المحادثة (حتى ما يكرر الترحيب بكل رسالة)
+ */
+function ai_reply(string $customerMessage, array $history = [], ?array $profile = null, string $customer = ''): ?string
 {
     $s = settings();
     if (empty($s['ai_api_key'])) {
         return null;
     }
-    $payload = [
-        'model' => 'deepseek-chat',
-        'messages' => [
-            ['role' => 'system', 'content' => "أنت مساعد خدمة عملاء لمتجر عبر واتساب. هذه قائمة المنتجات والأسعار التي تعتمد عليها فقط بالرد:\n"
-                . $s['ai_knowledge_base'] . "\nرد بإيجاز ووضوح باللهجة العربية، ولا تخترع معلومات غير موجودة أعلاه."],
-            ['role' => 'user', 'content' => $customerMessage],
-        ],
-    ];
+    $p = $profile ?: [];
+    $info = [];
+    foreach (AI_PROFILE_FIELDS as $k => [$label]) {
+        $v = trim((string)($p[$k] ?? ''));
+        if ($v !== '') {
+            $info[] = trim($label, ' *') . ":\n" . $v;
+        }
+    }
+    if (!$info && trim((string)$s['ai_knowledge_base']) !== '') {
+        $info[] = "معلومات المتجر:\n" . $s['ai_knowledge_base'];
+    }
+    $isFirst = count($history) === 0;
+    $system = "أنت موظف خدمة عملاء حقيقي لـ «" . ($p['business_name'] ?? 'المتجر') . "» ترد على العملاء عبر واتساب.\n\n"
+        . implode("\n\n", $info) . "\n\nقواعد مهمة:\n"
+        . "- اكتب بالعربية فقط (لهجة عراقية بسيطة ومهذبة" . (!empty($p['tone']) ? '، وبأسلوب: ' . $p['tone'] : '') . ") ولا تستخدم أي كلمة إنجليزية.\n"
+        . ($isFirst ? "- هذه أول رسالة بالمحادثة: رحّب بالعميل ترحيباً قصيراً جداً ثم أجب مباشرة.\n"
+            : "- المحادثة مستمرة: لا ترحّب ولا تقل «أهلاً» أو «مرحباً» مرة ثانية، أجب مباشرة على آخر رسالة مع مراعاة سياق ما سبق.\n")
+        . "- افهم الرسالة القصيرة مثل «نعم» أو «اي» أو «كم» حسب سؤالك أو كلامك السابق.\n"
+        . "- اعتمد فقط على المعلومات أعلاه. إذا ما تعرف الجواب قل إنك راح تحوّل السؤال لصاحب النشاط، ولا تخترع أسعار أو معلومات.\n"
+        . "- الرد قصير وواضح (3 أسطر أو أقل غالباً)، بدون تكرار نفس الكلام.\n"
+        . (!empty($p['forbidden']) ? "- لا تتكلم أبداً عن: " . $p['forbidden'] . "\n" : '')
+        . (!empty($p['rules']) ? "- تعليمات صاحب النشاط: " . $p['rules'] . "\n" : '')
+        . ($customer !== '' ? "- اسم العميل على واتساب: {$customer}\n" : '');
+    $messages = [['role' => 'system', 'content' => $system]];
+    foreach (array_slice($history, -12) as $h) {
+        if (in_array($h['role'] ?? '', ['user', 'assistant'], true) && trim((string)($h['content'] ?? '')) !== '') {
+            $messages[] = ['role' => $h['role'], 'content' => mb_substr((string)$h['content'], 0, 1500)];
+        }
+    }
+    $messages[] = ['role' => 'user', 'content' => mb_substr($customerMessage, 0, 2000)];
     $ch = curl_init('https://api.deepseek.com/chat/completions');
     curl_setopt_array($ch, [
         CURLOPT_POST => true,
         CURLOPT_HTTPHEADER => ['Authorization: Bearer ' . $s['ai_api_key'], 'Content-Type: application/json'],
-        CURLOPT_POSTFIELDS => json_encode($payload, JSON_UNESCAPED_UNICODE),
+        CURLOPT_POSTFIELDS => json_encode(['model' => 'deepseek-chat', 'messages' => $messages, 'temperature' => 0.5, 'max_tokens' => 400], JSON_UNESCAPED_UNICODE),
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 25,
     ]);

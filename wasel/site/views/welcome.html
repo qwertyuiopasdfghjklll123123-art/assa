@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="/assets/ui.css?v=5">
+<link rel="stylesheet" href="/assets/ui.css?v=6">
 __GOOGLE_SCRIPT__
 <style>
   body{overflow-x:hidden}
@@ -36,7 +36,15 @@ __GOOGLE_SCRIPT__
   .art .ill{width:230px;height:150px;animation:float 6s ease-in-out infinite}
   @keyframes float{50%{transform:translateY(-8px)}}
   .cta small{display:block;margin-top:10px;color:var(--text3);font-size:12px;text-align:center}
-  .btn-start{height:58px;font-size:17px;width:100%}
+  .btn-start{height:62px;font-size:18px;width:100%;border-radius:20px;justify-content:space-between;padding:0 10px 0 8px}
+  .btn-start>span:first-child{flex:1;text-align:center;margin-right:40px}
+  .go-arr{width:46px;height:46px;border-radius:15px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;animation:nudge 1.6s ease-in-out infinite;position:relative;z-index:4}
+  @keyframes nudge{50%{transform:translateX(-5px)}}
+  .logo-halo{position:relative;width:150px;height:150px;margin:0 auto;display:flex;align-items:center;justify-content:center}
+  .logo-halo::before{content:"";position:absolute;inset:10px;border-radius:50%;background:radial-gradient(circle,rgba(10,157,178,.25),transparent 70%);animation:pulse 3s ease-in-out infinite}
+  @keyframes pulse{50%{transform:scale(1.12);opacity:.6}}
+  .orb{position:absolute;width:38px;height:38px;border-radius:13px;background:#fff;box-shadow:0 8px 18px rgba(3,79,92,.12);display:flex;align-items:center;justify-content:center;font-size:16px;animation:float 5s ease-in-out infinite}
+  .o1{top:6px;right:0;color:#16a34a}.o2{bottom:14px;left:-4px;color:#04788b;animation-delay:-1.5s}.o3{top:30px;left:-10px;color:#7c3aed;animation-delay:-3s}
   .l-card{margin-top:26px;border-radius:28px;padding:22px 20px}
   .l-card h4{font-size:18px;font-weight:800}
   .l-card .muted{font-size:12.5px;color:var(--text3)}
@@ -60,12 +68,13 @@ __GOOGLE_SCRIPT__
 <div class="stage">
   <!-- الترحيب -->
   <section class="screen" id="welcome">
-    <div class="bar"><span></span><button class="icon-btn" onclick="toggleTheme()" aria-label="المظهر"><i class="fa-regular fa-moon"></i></button></div>
-    <div class="head"><div class="logo-wrap">__LOGO_BIG__</div><h1>__SITE_NAME__</h1><p>منصة حملات ورسائل واتساب الذكية</p></div>
+    <div class="bar"><span class="pill pill-blue"><i class="fa-solid fa-shield-halved"></i> آمن وموثوق</span><span></span></div>
+    <div class="head"><div class="logo-halo"><div class="logo-wrap">__LOGO_BIG__</div><span class="orb o1"><i class="fa-brands fa-whatsapp"></i></span><span class="orb o2"><i class="fa-solid fa-paper-plane"></i></span><span class="orb o3"><i class="fa-solid fa-robot"></i></span></div>
+      <h1>__SITE_NAME__</h1><p>كل رسائل واتساب لعملك… بمكان واحد</p></div>
     <div class="feats stagger">
-      <div class="feat glass"><span class="row-ic"><i class="fa-solid fa-paper-plane"></i></span><div><b>حملات لآلاف الأرقام</b><small>نص، صورة، فيديو أو ملف - فوراً أو بموعد</small></div></div>
-      <div class="feat glass"><span class="row-ic"><i class="fa-solid fa-robot"></i></span><div><b>رد آلي ذكي</b><small>كلمات مفتاحية أو ذكاء اصطناعي</small></div></div>
-      <div class="feat glass"><span class="row-ic"><i class="fa-solid fa-user-clock"></i></span><div><b>تذكير المشتركين</b><small>رسائل تلقائية قبل انتهاء الاشتراك</small></div></div>
+      <div class="feat glass"><span class="row-ic ic-teal"><i class="fa-solid fa-paper-plane"></i></span><div><b>حملات لآلاف الأرقام</b><small>نص، صورة، فيديو أو ملف - فوراً أو بموعد</small></div></div>
+      <div class="feat glass"><span class="row-ic ic-purple"><i class="fa-solid fa-robot"></i></span><div><b>رد آلي ذكي يفهم المحادثة</b><small>يجاوب عملاءك حسب معلومات نشاطك</small></div></div>
+      <div class="feat glass"><span class="row-ic ic-orange"><i class="fa-solid fa-chart-pie"></i></span><div><b>تقارير دقيقة</b><small>مين استلم، مين شاهد، ومين رد</small></div></div>
     </div>
     <div class="art"><svg viewBox="0 0 220 150" class="ill" aria-hidden="true"><defs><linearGradient id="ig" x1="0" x2="1"><stop offset="0" stop-color="var(--ill1)"/><stop offset="1" stop-color="var(--ill2)"/></linearGradient></defs>
   <ellipse cx="110" cy="132" rx="74" ry="9" fill="var(--ill-shadow)"/><circle cx="110" cy="70" r="56" fill="var(--ill-bg)"/>
@@ -73,7 +82,7 @@ __GOOGLE_SCRIPT__
   <g transform="translate(104 34) rotate(8)"><path d="M0 34 L62 0 L46 64 L30 44 Z" fill="url(#ig)"/><path d="M30 44 L62 0 L22 40 Z" fill="#fff" opacity=".35"/><path d="M22 40 L30 44 L26 58 Z" fill="var(--ill1)" opacity=".8"/></g>
   <g fill="#fff"><ellipse cx="58" cy="44" rx="16" ry="8"/><ellipse cx="68" cy="40" rx="11" ry="9"/><ellipse cx="170" cy="96" rx="14" ry="7"/><ellipse cx="160" cy="93" rx="9" ry="8"/></g>
   <circle cx="176" cy="38" r="4" fill="var(--ill2)" opacity=".6"/><circle cx="44" cy="84" r="3" fill="var(--ill1)" opacity=".5"/></svg></div>
-    <div class="cta"><button class="btn btn-primary btn-start" onclick="goLogin()">ابدأ الآن <i class="fa-solid fa-arrow-left"></i></button><small id="trialNote">سجّل دخولك أو أنشئ حسابك في ثوانٍ</small></div>
+    <div class="cta"><button class="btn btn-primary btn-start shine" onclick="goLogin()"><span>ابدأ الآن</span><span class="go-arr"><i class="fa-solid fa-arrow-left"></i></span></button><small id="trialNote">سجّل دخولك أو أنشئ حسابك في ثوانٍ</small></div>
   </section>
 
   <!-- تسجيل الدخول -->
@@ -137,7 +146,7 @@ const B = __BOOT_JSON__;
 let waPhone = '', bootAcc = null, bootTimer = null;
 const $ = id => document.getElementById(id);
 
-try { if (localStorage.getItem('theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+try { localStorage.removeItem('theme'); } catch (e) {}
 function toggleTheme() {
   const d = document.documentElement.dataset.theme === 'dark' ? '' : 'dark';
   document.documentElement.dataset.theme = d;

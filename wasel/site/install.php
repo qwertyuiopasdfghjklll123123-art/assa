@@ -399,6 +399,8 @@ $phpBin = PHP_BINDIR . '/php';
     <p>بلوحة DirectAdmin ← <b>Cron Jobs</b>، أضف مهمة: Minute <code>*/5</code> والباقي <code>*</code>، والأمر:</p>
     <code><?= h($phpBin . ' ' . __DIR__ . '/cron.php') ?></code>
     <p class="hint">لو ما اشتغل، استخدم بدله: <code>curl -s "<?= h(base_url() . '/cron?key=' . CRON_KEY) ?>"</code></p>
+    <p style="margin-top:10px">أو الأسهل: افتح هذا الرابط مرة وحدة وراح يتنصّب تلقائياً:</p>
+    <a class="btn" href="<?= h(base_url() . '/cron/setup?key=' . CRON_KEY) ?>" target="_blank">تنصيب Cron تلقائياً</a>
   </div>
 
   <form method="post" class="card">

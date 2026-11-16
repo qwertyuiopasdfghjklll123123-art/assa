@@ -12,11 +12,10 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="/assets/ui.css?v=5">
+<link rel="stylesheet" href="/assets/ui.css?v=6">
 <style>
   .topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:calc(66px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 18px 0;display:flex;align-items:center;justify-content:space-between;transition:background .3s,box-shadow .3s}
   .topbar.scrolled{background:rgba(243,247,248,.72);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 1px 0 rgba(255,255,255,.9),0 8px 20px rgba(3,79,92,.05)}
-  [data-theme="dark"] .topbar.scrolled{background:rgba(6,25,29,.75)}
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;color:var(--text);cursor:pointer}
   .brand .top-logo{border-radius:11px;box-shadow:0 6px 14px var(--primary-glow)}
   .top-actions{display:flex;align-items:center;gap:8px}
@@ -28,12 +27,11 @@
   .page-head{display:flex;align-items:center;gap:12px;margin:0 2px 16px}
   .page-head h2{font-size:22px;font-weight:800;flex:1;letter-spacing:-.3px}
   .page-head .back{width:42px;height:42px;border-radius:14px;background:var(--card);border:1px solid var(--glass-line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--primary)}
-  .page{animation:pageIn .5s var(--ease) both}
-  @keyframes pageIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+  .page{animation:pageIn .28s var(--ease) both}
+  @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   /* منيو كبسولة: الصفحة المفتوحة تتوسع ويظهر اسمها */
   .bnav{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:0 16px calc(14px + env(safe-area-inset-bottom,0px));pointer-events:none}
   .bnav-in{pointer-events:auto;max-width:440px;margin:0 auto;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.78);border:1px solid #fff;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 18px 40px rgba(3,79,92,.16)}
-  [data-theme="dark"] .bnav-in{background:rgba(12,36,41,.85);border-color:rgba(255,255,255,.08)}
   .bnav-it{height:48px;min-width:48px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;color:#6b8a90;font-size:13px;font-weight:700;transition:padding .45s var(--ease),background .35s,color .3s,box-shadow .35s}
   .bnav-it i{font-size:18px;transition:transform .45s var(--ease)}
   .bnav-it .t{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transition:max-width .45s var(--ease),opacity .3s}
@@ -85,8 +83,17 @@
   <button class="btn btn-primary btn-block" id="pwaInstall"><i class="fa-solid fa-download"></i> تثبيت التطبيق</button>
   <button class="btn btn-ghost btn-block" style="margin-top:10px" onclick="closeInstall(true)">لاحقاً</button>
 </div>
+<!-- نافذة التأكيد: تطلع من الأسفل -->
+<div class="sheet-bg" id="cfBg"></div>
+<div class="sheet" id="cfSheet" role="dialog" aria-modal="true">
+  <div class="sheet-handle"></div>
+  <div class="confirm-ic ic-red" id="cfIc"><i class="fa-solid fa-triangle-exclamation"></i></div>
+  <h3 id="cfTitle">تأكيد</h3>
+  <p id="cfText"></p>
+  <div class="row-actions"><button class="btn btn-ghost" id="cfNo">إلغاء</button><button class="btn btn-danger" id="cfYes">تأكيد</button></div>
+</div>
 <div class="toast" id="toast"></div>
 <script>window.BOOT = __BOOT_JSON__;</script>
-<script src="/assets/app.js?v=5"></script>
+<script src="/assets/app.js?v=6"></script>
 </body>
 </html>

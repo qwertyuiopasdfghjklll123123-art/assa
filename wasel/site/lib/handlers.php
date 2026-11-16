@@ -670,7 +670,11 @@ function handle_start_campaign($accId): void
     if (!$numbers) {
         json_err('ما لقيت أي رقم صالح (اكتب أرقام أو ارفع ملف Excel)');
     }
-    $text = trim((string)($_POST['text'] ?? '')) ?: DEFAULT_MESSAGE;
+    $text = trim((string)($_POST['text'] ?? ''));
+    $hasMedia = !empty($_FILES['media_file']['name']);
+    if ($text === '' && !$hasMedia) {
+        json_err('اكتب رسالة أو أرفق صورة/فيديو/ملف');
+    }
     $sendAt = null;
     $raw = trim((string)($_POST['send_at'] ?? ''));
     if ($raw !== '') {
@@ -705,9 +709,13 @@ function handle_announcement($accId): void
 
 function history_public(array $h): array
 {
+    $sent = (int)$h['sent'];
     return [
-        'time' => $h['time'], 'total' => $h['total'], 'sent' => $h['sent'],
+        'id' => $h['id'], 'time' => $h['time'], 'total' => $h['total'], 'sent' => $sent,
         'failed' => $h['failed'], 'text' => $h['text'], 'account_name' => $h['account_name'],
+        'delivered' => (int)($h['delivered'] ?? 0), 'read' => (int)($h['read'] ?? 0), 'replied' => (int)($h['replied'] ?? 0),
+        'success_rate' => (int)$h['total'] ? (int)round($sent / (int)$h['total'] * 100) : 0,
+        'tracked' => !empty($h['campaign_id']),
     ];
 }
 
@@ -732,10 +740,25 @@ function handle_set_auto_reply($accId): void
     if ($enabled && empty($acc['auto_reply_enabled']) && !can_send(user_by_id($id))) {
         json_err('انتهت فترتك التجريبية، فعّل الاشتراك من قسم الإعدادات للمتابعة', 402, ['needs_subscription' => true]);
     }
+    // بطاقة تعليمات الذكاء الاصطناعي: إلزامية قبل تفعيل الرد الذكي
+    $profile = $acc['ai_profile'] ?? [];
+    if (isset($d['ai_profile']) && is_array($d['ai_profile'])) {
+        foreach (AI_PROFILE_FIELDS as $k => [, $max]) {
+            $profile[$k] = clean_text(mb_substr(trim((string)($d['ai_profile'][$k] ?? '')), 0, $max));
+        }
+    }
+    $aiOn = !empty($d['ai_enabled']);
+    if ($aiOn && ($missing = ai_profile_missing($profile))) {
+        json_err('لتفعيل الرد الذكي عبّي بطاقة التعليمات: ' . implode('، ', $missing), 400, ['missing' => $missing]);
+    }
+    if ($aiOn && empty(settings()['ai_api_key'])) {
+        json_err('الرد الذكي غير مفعّل من إدارة المنصة بعد');
+    }
     $acc = store_update('wa_accounts', $accId, fn($a) => array_merge($a, [
         'auto_reply_enabled' => $enabled,
-        'auto_reply_ai_enabled' => !empty($d['ai_enabled']),
+        'auto_reply_ai_enabled' => $aiOn,
         'auto_reply_rules' => $rules,
+        'ai_profile' => $profile,
     ]));
     engine_sync_account($acc);
     json_out(['ok' => true]);

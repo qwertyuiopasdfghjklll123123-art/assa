@@ -60,7 +60,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 3; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 4; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -212,8 +212,13 @@ async function startAccount(id) {
 
     sock.ev.on('messages.upsert', (ev) => {
       if (ev.type !== 'notify') return;
-      for (const m of ev.messages) handleIncoming(id, m).catch((e) => console.error('[رد آلي]', e.message));
+      for (const m of ev.messages) {
+        try { onIncomingForTracking(id, m); } catch { /* ignore */ }
+        handleIncoming(id, m).catch((e) => console.error('[رد آلي]', e.message));
+      }
     });
+    sock.ev.on('messages.update', (u) => { try { onStatusUpdate(u); } catch { /* ignore */ } });
+    sock.ev.on('message-receipt.update', (u) => { try { onReceipts(u); } catch { /* ignore */ } });
   } catch (e) {
     console.error(`[اتصال] فشل تشغيل ${id}:`, e.message);
     r.status = 'closed';
@@ -264,18 +269,21 @@ function sendTo(id, number, text, media = null, mediaDelay = DEFAULT_MEDIA_DELAY
     const [res] = (await sock.onWhatsApp(phone)) || [];
     if (!res?.exists) throw new Error('الرقم لا يستخدم واتساب');
     const jid = res.jid;
+    let sent;
     if (media && media.path && fs.existsSync(media.path)) {
       const content = mediaContent(media, text);
       const separate = content._separateText;
       delete content._separateText;
-      await sock.sendMessage(jid, content);
+      sent = await sock.sendMessage(jid, content);
       if (separate && text) {
         await sleep(Math.max(1, mediaDelay) * 1000);
         await sock.sendMessage(jid, { text });
       }
     } else {
-      await sock.sendMessage(jid, { text });
+      if (!text || !text.trim()) throw new Error('الرسالة فارغة');
+      sent = await sock.sendMessage(jid, { text });
     }
+    return { id: sent?.key?.id || null, jid };
   });
   r.sendChain = job.catch(() => {});
   return job;
@@ -296,6 +304,18 @@ function messageText(m) {
 }
 
 const lastReply = new Map(); // `${id}|${jid}` -> وقت آخر رد (يمنع حلقات الرد على بوت ثاني)
+/** ذاكرة المحادثة للرد الذكي: آخر 12 رسالة لكل محادثة (تنمسح بعد 6 ساعات سكوت) */
+const convo = new Map();
+function convoGet(key) {
+  const c = convo.get(key);
+  if (!c || Date.now() - c.t > 6 * 3600 * 1000) return [];
+  return c.msgs;
+}
+function convoPush(key, role, content) {
+  const msgs = convoGet(key).concat([{ role, content: String(content).slice(0, 1500) }]).slice(-12);
+  convo.set(key, { t: Date.now(), msgs });
+  if (convo.size > 5000) convo.delete(convo.keys().next().value);
+}
 
 async function handleIncoming(id, m) {
   const acc = registry[id];
@@ -316,19 +336,82 @@ async function handleIncoming(id, m) {
   for (const rule of ar.rules || []) {
     if (rule.keyword && text.includes(rule.keyword)) { reply = rule.reply; break; }
   }
+  const history = convoGet(key);
   if (!reply && ar.ai_enabled) {
-    const res = await hook({ type: 'ai_reply', owner: acc.owner, account_id: id, message: text }, 40000);
+    const res = await hook({ type: 'ai_reply', owner: acc.owner, account_id: id, message: text, history, customer: m.pushName || '' }, 40000);
     reply = res?.reply || null;
   }
   if (!reply) return;
+  convoPush(key, 'user', text);
+  convoPush(key, 'assistant', reply);
   const charge = await hook({ type: 'charge', owner: acc.owner, note: 'رد آلي' });
   if (!charge || !charge.ok) return;
   lastReply.set(key, Date.now());
   const chatName = m.pushName || digits(m.key.remoteJidAlt || jid.split('@')[0]);
-  const job = r.sendChain.then(() => r.sock?.sendMessage(jid, { text: reply }, { quoted: m }));
+  const job = r.sendChain.then(() => r.sock?.sendMessage(jid, { text: reply }));
   r.sendChain = job.catch(() => {});
   await job;
   addEvent(acc, 'رد تلقائي', `${chatName}: ${reply.slice(0, 60)}`, 'info');
+}
+
+// ---------------------------------------------------------------- تتبع الحملات (وصلت / قُرئت / رد)
+const TRACK_FILE = path.join(CFG.dataDir, 'tracking.json');
+/** campaign_id -> {owner, account_id, started, nums:{digits:1}, delivered:{digits:1}, read:{}, replied:{}} */
+let tracking = {};
+try { tracking = JSON.parse(fs.readFileSync(TRACK_FILE, 'utf8')); } catch { tracking = {}; }
+const msgIndex = new Map(); // معرف الرسالة -> [campaign_id, digits]
+for (const [cid, t] of Object.entries(tracking)) for (const [mid, d] of Object.entries(t.msgs || {})) msgIndex.set(mid, [cid, d]);
+let trackDirty = new Set();
+function trackSave() {
+  const cutoff = Date.now() - 10 * 86400 * 1000;
+  for (const [cid, t] of Object.entries(tracking)) if (t.started < cutoff) delete tracking[cid];
+  try { fs.writeFileSync(TRACK_FILE + '.tmp', JSON.stringify(tracking)); fs.renameSync(TRACK_FILE + '.tmp', TRACK_FILE); } catch { /* ignore */ }
+}
+function trackStats(cid) {
+  const t = tracking[cid];
+  return { campaign_id: cid, delivered: Object.keys(t.delivered).length, read: Object.keys(t.read).length, replied: Object.keys(t.replied).length };
+}
+function trackMark(cid, kind, d) {
+  const t = tracking[cid];
+  if (!t || !t.nums[d] || t[kind][d]) return;
+  t[kind][d] = 1;
+  if (kind === 'read' || kind === 'replied') t.delivered[d] = 1;
+  if (kind === 'replied') t.read[d] = 1;
+  trackDirty.add(cid);
+}
+// نرسل التحديثات لـ PHP كل 20 ثانية (مجمّعة)
+setInterval(() => {
+  if (!trackDirty.size) return;
+  const ids = [...trackDirty]; trackDirty = new Set();
+  trackSave();
+  for (const cid of ids) if (tracking[cid]) hook({ type: 'history_update', owner: tracking[cid].owner, ...trackStats(cid) });
+}, 20000);
+function onStatusUpdate(updates) {
+  for (const u of updates) {
+    const hit = msgIndex.get(u.key?.id);
+    if (!hit) continue;
+    const st = u.update?.status ?? 0;
+    if (st >= 3) trackMark(hit[0], 'delivered', hit[1]);
+    if (st >= 4) trackMark(hit[0], 'read', hit[1]);
+  }
+}
+function onReceipts(list) {
+  for (const r of list) {
+    const hit = msgIndex.get(r.key?.id);
+    if (!hit) continue;
+    trackMark(hit[0], 'delivered', hit[1]);
+    if (r.receipt?.readTimestamp || r.receipt?.playedTimestamp) trackMark(hit[0], 'read', hit[1]);
+  }
+}
+/** رسالة واردة: لو المرسل من أرقام حملة حديثة لنفس الحساب نحسبه «رد» */
+function onIncomingForTracking(id, m) {
+  if (m.key?.fromMe) return;
+  const cands = [m.key?.remoteJid, m.key?.remoteJidAlt, m.key?.participantAlt].filter(Boolean).map((j) => digits(String(j).split('@')[0].split(':')[0]));
+  const cutoff = Date.now() - 7 * 86400 * 1000;
+  for (const [cid, t] of Object.entries(tracking)) {
+    if (t.account_id !== id || t.started < cutoff) continue;
+    for (const d of cands) if (t.nums[d]) trackMark(cid, 'replied', d);
+  }
 }
 
 // ---------------------------------------------------------------- الحملات
@@ -340,7 +423,7 @@ function blankCampaign() {
     total: 0, sent: 0, failed: 0, running: false, failed_numbers: [], scheduled_for: null,
     pending_numbers: [], stop_requested: false, cancel_requested: false, paused: false,
     text: '', delay: DEFAULT_DELAY, media_path: null, media_mime: null, media_name: null,
-    media_delay: DEFAULT_MEDIA_DELAY, started_at: null,
+    media_delay: DEFAULT_MEDIA_DELAY, started_at: null, campaign_id: null,
   };
 }
 
@@ -377,6 +460,8 @@ async function runCampaign(id) {
   st.stop_requested = false;
   st.cancel_requested = false;
   st.started_at = st.started_at || fmt(now());
+  if (!st.campaign_id) st.campaign_id = crypto.randomBytes(6).toString('hex');
+  if (!tracking[st.campaign_id]) tracking[st.campaign_id] = { owner: acc.owner, account_id: id, started: Date.now(), nums: {}, msgs: {}, delivered: {}, read: {}, replied: {} };
   persistCampaign(id);
   addEvent(acc, 'بدأت حملة جديدة', `جارِ إرسال ${st.pending_numbers.length} رسالة`, 'info');
 
@@ -398,8 +483,14 @@ async function runCampaign(id) {
       }
       const number = st.pending_numbers.shift();
       try {
-        await sendTo(id, number, st.text, media, st.media_delay);
+        const res = await sendTo(id, number, st.text, media, st.media_delay);
         st.sent += 1;
+        const t = tracking[st.campaign_id];
+        if (t) {
+          const d = digits(String(res?.jid || number).split('@')[0]);
+          t.nums[d] = 1; t.nums[digits(number)] = 1;
+          if (res?.id) { t.msgs[res.id] = d; msgIndex.set(res.id, [st.campaign_id, d]); }
+        }
       } catch (e) {
         console.log(`[حملة] فشل الإرسال لـ ${number} (${acc.name}): ${e.message}`);
         st.failed += 1;
@@ -428,7 +519,9 @@ async function runCampaign(id) {
     return;
   }
   const cancelled = st.cancel_requested;
-  const entry = { time: st.started_at, total: st.total, sent: st.sent, failed: st.failed, text: st.text };
+  trackSave();
+  const entry = { time: st.started_at, total: st.total, sent: st.sent, failed: st.failed, text: st.text || (st.media_name ? '📎 ' + st.media_name : ''),
+    campaign_id: st.campaign_id, ...(tracking[st.campaign_id] ? trackStats(st.campaign_id) : {}) };
   hook({ type: 'history', owner: acc.owner, account_id: id, account_name: acc.name, entry });
   if (cancelled) {
     const skipped = st.total - st.sent - st.failed;
@@ -440,6 +533,7 @@ async function runCampaign(id) {
   st.started_at = null;
   st.pending_numbers = [];
   st.media_path = null;
+  st.campaign_id = null;
   persistCampaign(id);
 }
 
@@ -646,6 +740,7 @@ const routes = [
     if (st.running) return [400, { ok: false, error: 'فيه حملة شغالة أو مجدولة حالياً على هذا الحساب' }];
     const numbers = [...new Set((body.numbers || []).map(digits).filter((n) => n.length >= 8))];
     if (!numbers.length) return [400, { ok: false, error: 'ما لقيت أي رقم صالح' }];
+    if (!String(body.text || '').trim() && !body.media?.data) return [400, { ok: false, error: 'اكتب رسالة أو أرفق صورة/ملف' }];
     if (st.media_path) fs.rm(st.media_path, { force: true }, () => {});
     const media = saveMedia(body.media);
     Object.assign(st, blankCampaign(), {

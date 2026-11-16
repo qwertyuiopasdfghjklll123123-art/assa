@@ -74,6 +74,7 @@ function run_scheduled_tasks(): array
         return ['ok' => true, 'skipped' => 'already running'];
     }
     set_time_limit(600);
+    update_settings(['last_cron' => time()]);
     $report = ['ok' => true, 'plans_expired' => 0, 'reminders' => 0, 'expired_msgs' => 0];
     try {
         // 1) انتهاء خطط مستخدمي المنصة اللي فعّلها الأدمن بمدة محددة
@@ -146,6 +147,48 @@ function run_scheduled_tasks(): array
     return $report;
 }
 
+/** صفحة تنصيب المهام المجدولة: تحاول تضيف Cron تلقائياً، وإلا تشرح البديل */
+function cron_setup_page(): void
+{
+    $php = PHP_BINDIR . '/php';
+    $cmd = '*/5 * * * * ' . $php . ' ' . dirname(__DIR__) . '/cron.php >/dev/null 2>&1';
+    $done = false;
+    $msg = '';
+    $canExec = function_exists('exec') && !in_array('exec', array_map('trim', explode(',', (string)ini_get('disable_functions'))), true);
+    if ($canExec) {
+        @exec('crontab -l 2>/dev/null', $lines, $rc);
+        $lines = $lines ?? [];
+        if (array_filter($lines, fn($l) => strpos($l, 'cron.php') !== false && strpos($l, dirname(__DIR__)) !== false)) {
+            $done = true;
+            $msg = 'المهام المجدولة منصّبة مسبقاً ✅';
+        } else {
+            $lines[] = $cmd;
+            $tmp = tempnam(sys_get_temp_dir(), 'cr');
+            file_put_contents($tmp, implode("\n", $lines) . "\n");
+            @exec('crontab ' . escapeshellarg($tmp) . ' 2>&1', $out, $rc2);
+            @unlink($tmp);
+            if ($rc2 === 0) {
+                $done = true;
+                $msg = 'تم تنصيب المهام المجدولة بنجاح ✅ (كل 5 دقائق)';
+            }
+        }
+    }
+    $report = run_scheduled_tasks();
+    update_settings(['cron_installed' => $done ? 'crontab' : 'visits']);
+    $url = site_base_url() . '/cron?key=' . CRON_KEY;
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>المهام المجدولة</title>'
+        . '<style>body{font-family:system-ui,sans-serif;background:#f3f7f8;color:#0d2a30;margin:0;padding:24px}.c{max-width:520px;margin:auto;background:#fff;border-radius:24px;padding:24px;box-shadow:0 10px 30px rgba(3,79,92,.08)}h1{font-size:20px;color:#04788b}.ok{background:#e7f8f1;color:#0b6b4b;padding:12px;border-radius:14px}.w{background:#fff6e5;color:#8a5a06;padding:12px;border-radius:14px}code{display:block;direction:ltr;background:#05343c;color:#bdeef5;padding:10px;border-radius:10px;word-break:break-all;margin:8px 0;user-select:all}li{margin-bottom:8px}</style></head><body><div class="c">'
+        . '<h1>المهام المجدولة (Cron)</h1>'
+        . ($done ? '<p class="ok">' . htmlspecialchars($msg) . '</p>'
+            : '<p class="w">الاستضافة ما تسمح بالتنصيب التلقائي، لكن فعّلنا التشغيل التلقائي مع زيارات الموقع ✅. للأفضل اختر طريقة من هذي:</p>'
+              . '<ol><li>من DirectAdmin ← Cron Jobs، أضف مهمة كل 5 دقائق (<b>*/5</b>) بهذا الأمر:<code>' . htmlspecialchars($php . ' ' . dirname(__DIR__) . '/cron.php') . '</code></li>'
+              . '<li>أو مجاناً من موقع <b>cron-job.org</b>: أنشئ مهمة كل 5 دقائق على هذا الرابط:<code>' . htmlspecialchars($url) . '</code></li></ol>')
+        . '<p>آخر تشغيل: ' . date('Y-m-d H:i') . ' — المحرك: ' . htmlspecialchars((string)($report['engine'] ?? '-')) . '</p>'
+        . '<p><a href="/app">رجوع للمنصة</a></p></div></body></html>';
+    exit;
+}
+
 // ================================================================ رابط المحرك → PHP
 
 function handle_engine_hook(): void
@@ -170,6 +213,8 @@ function handle_engine_hook(): void
                 'time' => (string)($e['time'] ?? now_str()), 'total' => (int)($e['total'] ?? 0),
                 'sent' => (int)($e['sent'] ?? 0), 'failed' => (int)($e['failed'] ?? 0),
                 'text' => (string)($e['text'] ?? ''),
+                'campaign_id' => (string)($e['campaign_id'] ?? ''),
+                'delivered' => (int)($e['delivered'] ?? 0), 'read' => (int)($e['read'] ?? 0), 'replied' => (int)($e['replied'] ?? 0),
             ]);
             // آخر 20 حملة لكل حساب فقط
             store_update_all('history', function (array &$rows) use ($accId) {
@@ -186,7 +231,27 @@ function handle_engine_hook(): void
             if (!can_send($owner)) {
                 json_out(['reply' => null]);
             }
-            json_out(['reply' => ai_reply((string)($d['message'] ?? ''))]);
+            $acc = wa_account((string)($d['account_id'] ?? ''));
+            if (!$acc || empty($acc['auto_reply_ai_enabled'])) {
+                json_out(['reply' => null]);
+            }
+            json_out(['reply' => ai_reply((string)($d['message'] ?? ''), (array)($d['history'] ?? []), $acc['ai_profile'] ?? [], clean_text($d['customer'] ?? ''))]);
+            // no break
+        case 'history_update':
+            // تحديث إحصائيات حملة بعد انتهائها (وصلت / قُرئت / رد)
+            $cid = (string)($d['campaign_id'] ?? '');
+            if ($cid !== '') {
+                store_update_all('history', function (array &$rows) use ($cid, $d) {
+                    foreach ($rows as $k => $h) {
+                        if (($h['campaign_id'] ?? '') === $cid) {
+                            $rows[$k]['delivered'] = max((int)($h['delivered'] ?? 0), (int)($d['delivered'] ?? 0));
+                            $rows[$k]['read'] = max((int)($h['read'] ?? 0), (int)($d['read'] ?? 0));
+                            $rows[$k]['replied'] = max((int)($h['replied'] ?? 0), (int)($d['replied'] ?? 0));
+                        }
+                    }
+                });
+            }
+            json_out(['ok' => true]);
             // no break
         case 'charge':
             // المحرك يطلب خصم رسالة قبل إرسالها (حملات + رد آلي)

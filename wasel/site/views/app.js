@@ -37,12 +37,32 @@ function toast(msg, kind = '') {
   t.textContent = msg; t.className = 'toast show ' + kind;
   clearTimeout(toastT); toastT = setTimeout(() => t.className = 'toast ' + kind, 2800);
 }
-function busy(btn, on) { if (btn) { btn.classList.toggle('loading', on); btn.disabled = on; } }
-/** زر يحتاج ضغطتين للتأكيد (بدل نافذة منبثقة) */
-function confirmTap(btn, fn, label = 'اضغط مرة ثانية للتأكيد') {
-  if (btn.dataset.armed) { delete btn.dataset.armed; btn.innerHTML = btn.dataset.orig; fn(); return; }
-  btn.dataset.armed = 1; btn.dataset.orig = btn.innerHTML; btn.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${label}`;
-  setTimeout(() => { if (btn.dataset.armed) { delete btn.dataset.armed; btn.innerHTML = btn.dataset.orig; } }, 3500);
+function busy(btn, on) {
+  if (!btn) return;
+  btn.classList.toggle('loading', on); btn.disabled = on;
+  clearTimeout(btn._bt);
+  // أمان: الزر ما يبقى معلّق لو تأخر الرد
+  if (on) btn._bt = setTimeout(() => { btn.classList.remove('loading'); btn.disabled = false; }, 20000);
+}
+/** نافذة تأكيد تطلع من الأسفل - ترجع true لو أكّد */
+function confirmSheet({ title = 'هل أنت متأكد؟', text = '', ok = 'تأكيد', icon = 'fa-solid fa-triangle-exclamation', danger = true } = {}) {
+  return new Promise(res => {
+    const bg = document.getElementById('cfBg'), sh = document.getElementById('cfSheet');
+    document.getElementById('cfTitle').textContent = title;
+    document.getElementById('cfText').textContent = text;
+    const ic = document.getElementById('cfIc'); ic.className = 'confirm-ic ' + (danger ? 'ic-red' : 'ic-teal'); ic.innerHTML = `<i class="${icon}"></i>`;
+    const yes = document.getElementById('cfYes'), no = document.getElementById('cfNo');
+    yes.textContent = ok; yes.className = 'btn ' + (danger ? 'btn-danger' : 'btn-primary');
+    const close = v => { bg.classList.remove('show'); sh.classList.remove('show'); yes.onclick = no.onclick = bg.onclick = null; res(v); };
+    yes.onclick = () => close(true); no.onclick = () => close(false); bg.onclick = () => close(false);
+    bg.classList.add('show'); sh.classList.add('show');
+  });
+}
+/** زر يحتاج تأكيد: يفتح نافذة التأكيد السفلية */
+async function confirmTap(btn, fn, label = '', opts = {}) {
+  const action = (btn?.textContent || '').trim();
+  const ok = await confirmSheet({ title: opts.title || 'تأكيد الإجراء', text: opts.text || label || (action ? action + '؟' : ''), ok: opts.ok || action || 'تأكيد', icon: opts.icon, danger: opts.danger !== false });
+  if (ok) fn();
 }
 function every(ms, fn) { const t = setInterval(fn, ms); S.timers.push(t); return t; }
 function head(title, back = true, extra = '') {
@@ -83,7 +103,7 @@ async function refreshMe() {
 const PAGES = {
   home: { nav: 'home', slug: '' }, campaign: { nav: 'campaign', slug: 'campaign' }, accounts: { nav: 'accounts', slug: 'numbers' }, acc: { nav: 'accounts', slug: 'number' },
   wallet: { nav: 'wallet', slug: 'packages' }, pay: { nav: 'wallet', slug: 'pay' }, account: { nav: 'account', slug: 'me' }, notifications: { nav: 'account', slug: 'notifications' },
-  subscribers: { nav: 'account', slug: 'clients' }, apikeys: { nav: 'account', slug: 'api' }, tx: { nav: 'wallet', slug: 'transactions' }, profile: { nav: 'account', slug: 'profile' },
+  subscribers: { nav: 'account', slug: 'clients' }, reports: { nav: 'campaign', slug: 'reports' }, apikeys: { nav: 'account', slug: 'api' }, tx: { nav: 'wallet', slug: 'transactions' }, profile: { nav: 'account', slug: 'profile' },
   admin: { nav: 'account', admin: true, slug: 'dashboard' }, users: { nav: 'account', admin: true, slug: 'users' }, recharges: { nav: 'account', admin: true, slug: 'recharges' },
   payments: { nav: 'account', admin: true, slug: 'payments' }, plansAdmin: { nav: 'account', admin: true, slug: 'plans' }, settings: { nav: 'account', admin: true, slug: 'settings' },
   security: { nav: 'account', admin: true, slug: 'security' }, backup: { nav: 'account', admin: true, slug: 'backup' }, announce: { nav: 'account', admin: true, slug: 'announce' },
@@ -147,20 +167,20 @@ R.home = async (el) => {
   const planDays = ME.plan_active ? (ME.plan_days_left === null ? 'اشتراك دائم' : 'باقي ' + ME.plan_days_left + ' يوم') : ME.trial_active ? 'باقي ' + ME.trial_days_left + ' يوم' : '';
   el.innerHTML = `
     <div class="greet fade-in"><div><small>${hello}</small><h2>${esc(ME.name || 'صديقنا')}</h2></div><div class="avatar">${esc(first)}</div></div>
-    <div class="hero fade-in" onclick="go('wallet')" style="cursor:pointer">
+    <div class="hero shine fade-in" onclick="go('wallet')" style="cursor:pointer">
       <div class="hc-top"><span class="pill pill-white"><i class="fa-solid fa-gem"></i> ${planLbl}</span><span style="opacity:.8">${planDays}</span></div>
       <div style="margin-top:12px"><div class="hero-label">الرصيد</div><div class="hero-amount"><span class="num">${fmt(ME.balance)}</span> <span style="font-size:15px;font-weight:600;opacity:.85">د.ع</span></div></div>
       <div class="hero-stats" id="heroStats"><div><b>—</b><span>أرقام متصلة</span></div><div><b>—</b><span>رسالة مرسلة</span></div><div><b>—</b><span>نجاح</span></div></div>
     </div>
     <div class="qa stagger" style="margin-top:18px">
-      <button class="qa-item" onclick="go('campaign')"><span class="qa-ic"><i class="fa-solid fa-paper-plane"></i></span>حملة</button>
-      <button class="qa-item" onclick="go('accounts')"><span class="qa-ic"><i class="fa-brands fa-whatsapp"></i></span>أرقامي</button>
-      <button class="qa-item" onclick="go('subscribers')"><span class="qa-ic"><i class="fa-solid fa-user-clock"></i></span>مشتركين</button>
-      <button class="qa-item" onclick="go('apikeys')"><span class="qa-ic"><i class="fa-solid fa-code"></i></span>API</button>
+      <button class="qa-item" onclick="go('campaign')"><span class="qa-ic c1"><i class="fa-solid fa-paper-plane"></i></span>حملة</button>
+      <button class="qa-item" onclick="go('accounts')"><span class="qa-ic c2"><i class="fa-brands fa-whatsapp"></i></span>أرقامي</button>
+      <button class="qa-item" onclick="go('reports')"><span class="qa-ic c3"><i class="fa-solid fa-chart-pie"></i></span>التقارير</button>
+      <button class="qa-item" onclick="go('apikeys')"><span class="qa-ic c4"><i class="fa-solid fa-code"></i></span>API</button>
     </div>
-    ${ADMIN ? `<div class="list" style="margin-top:18px">${rowItem({ icon: 'fa-solid fa-gauge-high', title: 'لوحة الإدارة', sub: 'المستخدمين، الشحن، الباقات والأمان', onclick: "go('admin')" })}</div>` : ''}
+    ${ADMIN ? `<div class="list" style="margin-top:18px">${rowItem({ icon: 'fa-solid fa-gauge-high', ic: 'ic-pink', title: 'لوحة الإدارة', sub: 'المستخدمين، الشحن، الباقات والأمان', onclick: "go('admin')" })}</div>` : ''}
     <div id="running"></div>
-    <div class="section-head">آخر الحملات <a onclick="go('campaign')">عرض الكل</a></div>
+    <div class="section-head">آخر الحملات <a onclick="go('reports')">عرض الكل</a></div>
     <div id="recent"><div class="card"><div class="skel" style="height:60px"></div></div></div>`;
   const [st, run, recent] = await Promise.all([api('/dashboard/stats'), api('/dashboard/running_campaigns'), api('/dashboard/campaigns')]);
   if (st.accounts_total !== undefined) {
@@ -177,11 +197,41 @@ R.home = async (el) => {
     }).join('');
   }
   el.querySelector('#recent').innerHTML = Array.isArray(recent) && recent.length
-    ? '<div class="list mini-list">' + recent.slice(0, 6).map(x => rowItem({
-      icon: x.failed ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-check-double', ic: x.failed ? 'ic-red' : 'ic-green',
-      title: `${esc(x.account_name)} <span class="pill pill-gray num">${fmt(x.sent)}/${fmt(x.total)}</span>`, sub: `${esc(x.time)} · ${esc((x.text || '').slice(0, 40))}`, end: '',
-    })).join('') + '</div>'
+    ? recent.slice(0, 3).map(reportCard).join('')
     : `<div class="card">${empty('fa-solid fa-paper-plane', 'ما أرسلت أي حملة بعد', `<button class="btn btn-primary btn-sm" onclick="go('campaign')"><i class="fa-solid fa-plus"></i> حملة جديدة</button>`).replace('<b>', '<b>').replace('</b>', '</b><small style="display:block;margin-bottom:2px">أرسل أول رسالة لعملائك خلال دقيقة</small>')}</div>`;
+};
+
+// ---------------------------------------------------------------- تقارير الحملات
+function reportCard(x) {
+  const readOnly = Math.max(0, (x.read || 0) - (x.replied || 0));
+  return `<div class="card fade-in" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:14px">
+      <div class="ring" style="--p:${x.success_rate}"><b class="num">${x.success_rate}%</b></div>
+      <div style="flex:1;min-width:0"><b>${esc(x.account_name)}</b><div class="row-sub">${esc(x.time)} · ${esc((x.text || '').slice(0, 40)) || '—'}</div>
+        <div class="row-sub"><span class="num">${fmt(x.sent)}</span> من <span class="num">${fmt(x.total)}</span> وصلت بنجاح${x.failed ? ` · <span style="color:var(--red)">فشل ${fmt(x.failed)}</span>` : ''}</div></div>
+    </div>
+    ${x.tracked ? `<div class="rep-bars">
+      <div><b class="num" style="color:#0891b2">${fmt(x.delivered)}</b><span>استلموا</span></div>
+      <div><b class="num" style="color:#7c3aed">${fmt(x.read)}</b><span>شاهدوا</span></div>
+      <div><b class="num" style="color:#16a34a">${fmt(x.replied)}</b><span>ردّوا</span></div>
+      <div><b class="num" style="color:#d97706">${fmt(readOnly)}</b><span>شاهدوا بدون رد</span></div>
+    </div>` : ''}
+  </div>`;
+}
+R.reports = async (el) => {
+  el.innerHTML = head('تقارير الحملات') + '<div class="card"><div class="skel" style="height:90px"></div></div>';
+  const rows = await api('/dashboard/campaigns');
+  const list = Array.isArray(rows) ? rows : [];
+  const tot = list.reduce((a, x) => ({ sent: a.sent + x.sent, total: a.total + x.total, read: a.read + (x.read || 0), replied: a.replied + (x.replied || 0) }), { sent: 0, total: 0, read: 0, replied: 0 });
+  el.innerHTML = head('تقارير الحملات') + (list.length ? `
+    <div class="hero shine fade-in"><div class="hero-label">ملخص آخر ${list.length} حملة</div>
+      <div class="hero-stats">
+        <div><b class="num">${tot.total ? Math.round(tot.sent / tot.total * 100) : 0}%</b><span>نسبة النجاح</span></div>
+        <div><b class="num">${fmt(tot.read)}</b><span>شاهدوا</span></div>
+        <div><b class="num">${fmt(tot.replied)}</b><span>ردّوا</span></div>
+      </div></div>
+    <div class="note" style="margin:14px 0">«شاهدوا» تعتمد على إيصالات القراءة؛ اللي مطفّي إيصالات القراءة بواتساب ما ينحسب كمشاهدة إلا إذا رد. الإحصائيات تتحدث تلقائياً لمدة 7 أيام بعد الحملة.</div>
+    ${list.map(reportCard).join('')}` : `<div class="card">${empty('fa-solid fa-paper-plane', 'ما فيه حملات بعد', `<button class="btn btn-primary btn-sm" onclick="go('campaign')">أرسل أول حملة</button>`)}</div>`);
 };
 
 // ---------------------------------------------------------------- الحملات
@@ -203,10 +253,14 @@ R.campaign = async (el, p) => {
     <div class="card" id="cForm">
       <div class="card-title"><i class="fa-solid fa-address-book"></i> الأرقام <span class="spacer"></span><span class="pill pill-blue" id="numCount">0 رقم</span></div>
       <textarea class="textarea" id="numbers" placeholder="رقم بكل سطر أو مفصولة بفواصل&#10;07701234567&#10;9647709876543" dir="ltr" style="text-align:left"></textarea>
-      <label class="file-drop" style="margin-top:8px"><input type="file" id="numFile" accept=".xlsx,.csv,.txt"><span class="row-ic ic-green"><i class="fa-solid fa-file-excel"></i></span><span style="flex:1"><b style="font-size:13.5px">استيراد من Excel أو CSV</b><span class="row-sub" id="numFileName">الأرقام بالعمود الأول</span></span></label>
+      <div class="input-row" style="margin-top:8px">
+        <label class="file-drop" style="flex:1"><input type="file" id="numFile" accept=".xlsx,.csv,.txt,.vcf"><span class="row-ic ic-green"><i class="fa-solid fa-file-excel"></i></span><span style="flex:1;min-width:0"><b style="font-size:13px">Excel / CSV</b><span class="row-sub" id="numFileName">الأرقام بالعمود الأول</span></span></label>
+        <button class="file-drop" id="contactsBtn" style="flex:1"><span class="row-ic ic-blue"><i class="fa-solid fa-address-book"></i></span><span style="flex:1;min-width:0;text-align:right"><b style="font-size:13px">جهات الاتصال</b><span class="row-sub">من جوالك أو ملف vcf</span></span></button>
+        <input type="file" id="vcfFile" accept=".vcf,text/vcard,text/x-vcard" hidden>
+      </div>
       <div class="field" style="margin-top:12px"><label>رمز الدولة للأرقام المحلية</label><select class="select" id="cc">${ccOpts}</select></div>
       <div class="card-title" style="margin-top:6px"><i class="fa-solid fa-message"></i> الرسالة</div>
-      <textarea class="textarea" id="text" placeholder="اكتب رسالتك هنا..."></textarea>
+      <textarea class="textarea" id="text" placeholder="اكتب رسالتك هنا... (اختياري إذا أرفقت صورة أو ملف)"></textarea>
       <label class="file-drop" style="margin-top:8px"><input type="file" id="media" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xlsx,.zip"><span class="row-ic ic-purple"><i class="fa-solid fa-paperclip"></i></span><span style="flex:1"><b style="font-size:13.5px">إرفاق صورة / فيديو / ملف</b><span class="row-sub" id="mediaName">اختياري - ينرسل والنص تعليق عليه</span></span></label>
       <div class="input-row" style="margin-top:12px">
         <div class="field" style="flex:1"><label>الفاصل بين الرسائل (ثانية)</label><input class="input num" id="delay" type="number" min="1" value="15"></div>
@@ -215,8 +269,8 @@ R.campaign = async (el, p) => {
       <div class="note warn hidden" id="costNote"></div>
       <button class="btn btn-primary btn-block" id="sendBtn" style="margin-top:12px"><i class="fa-solid fa-paper-plane"></i> إرسال الحملة</button>
     </div>
-    <div class="section-head">سجل حملات هذا الرقم</div>
-    <div class="list mini-list" id="hist"></div>`;
+    <div class="section-head">تقارير حملات هذا الرقم <a onclick="go('reports')">كل التقارير</a></div>
+    <div id="hist"></div>`;
 
   let accId = sel.id;
   const numbersEl = $('#numbers');
@@ -232,8 +286,28 @@ R.campaign = async (el, p) => {
     return n;
   };
   numbersEl.addEventListener('input', count);
+  const addNums = (arr, label) => {
+    const clean = arr.map(x => String(x).replace(/[^\d+]/g, '').replace(/^\+/, '').replace(/^00/, '')).filter(x => x.length >= 8);
+    numbersEl.value = (numbersEl.value.trim() ? numbersEl.value.trim() + '\n' : '') + clean.join('\n');
+    toast(`تمت إضافة ${fmt(clean.length)} رقم ${label}`, 'ok'); count();
+  };
+  const parseVcf = txt => (txt.match(/^TEL[^:]*:(.+)$/gmi) || []).map(l => l.split(':').slice(1).join(':').trim());
+  $('#contactsBtn').addEventListener('click', async () => {
+    // متصفحات أندرويد (كروم) تدعم اختيار جهات الاتصال مباشرة
+    if ('contacts' in navigator && 'select' in navigator.contacts) {
+      try {
+        const picked = await navigator.contacts.select(['tel', 'name'], { multiple: true });
+        addNums(picked.flatMap(c => c.tel || []), 'من جهات الاتصال');
+        return;
+      } catch (e) { /* ألغى المستخدم أو غير مدعوم */ }
+    }
+    toast('صدّر جهات الاتصال كملف vcf من تطبيق جهات الاتصال ثم اختره');
+    $('#vcfFile').click();
+  });
+  $('#vcfFile').addEventListener('change', async e => { const f = e.target.files[0]; if (f) addNums(parseVcf(await f.text()), 'من الملف'); e.target.value = ''; });
   $('#numFile').addEventListener('change', async e => {
     const f = e.target.files[0]; if (!f) return;
+    if (/\.vcf$/i.test(f.name)) { addNums(parseVcf(await f.text()), 'من الملف'); return; }
     $('#numFileName').textContent = f.name;
     const fd = new FormData(); fd.append('numbers_file', f);
     const r = await api('/campaign/preview_numbers', { body: fd });
@@ -248,6 +322,7 @@ R.campaign = async (el, p) => {
   });
   $('#sendBtn').addEventListener('click', async () => {
     if (!count()) { toast('أضف أرقام أولاً', 'err'); return; }
+    if (!$('#text').value.trim() && !$('#media').files[0]) { toast('اكتب رسالة أو أرفق صورة/ملف', 'err'); return; }
     const fd = new FormData();
     fd.append('numbers_text', numbersEl.value); fd.append('country_code', $('#cc').value); fd.append('text', $('#text').value);
     fd.append('delay', $('#delay').value || 15);
@@ -293,11 +368,8 @@ R.campaign = async (el, p) => {
   async function loadHist() {
     const h = await api(`/accounts/${accId}/campaigns`);
     const box = el.querySelector('#hist'); if (!box) return;
-    box.innerHTML = Array.isArray(h) && h.length ? h.map(x => rowItem({
-      icon: x.failed ? 'fa-solid fa-triangle-exclamation' : 'fa-solid fa-check-double', ic: x.failed ? 'ic-orange' : 'ic-green',
-      title: `<span class="num">${fmt(x.sent)} / ${fmt(x.total)}</span> ${x.failed ? `<span class="pill pill-red">فشل ${fmt(x.failed)}</span>` : ''}`,
-      sub: `${esc(x.time)} · ${esc((x.text || '').slice(0, 50))}`, end: '',
-    })).join('') : empty('fa-regular fa-clock', 'ما فيه حملات سابقة لهذا الرقم');
+    box.classList.remove('list', 'mini-list');
+    box.innerHTML = Array.isArray(h) && h.length ? h.map(reportCard).join('') : `<div class="card">${empty('fa-regular fa-clock', 'ما فيه حملات سابقة لهذا الرقم')}</div>`;
   }
   loadStatus(); loadHist(); every(3500, loadStatus);
 };
@@ -335,7 +407,7 @@ R.acc = async (el, p) => {
     ${ADMIN ? `<div class="section-head">إعدادات المنصة</div><div class="card"><div style="display:flex;align-items:center;gap:12px"><span class="row-ic ic-blue"><i class="fa-solid fa-key"></i></span><div style="flex:1"><b>مرسل رموز التحقق</b><div class="row-sub">رموز الدخول برقم واتساب تنرسل من هذا الحساب</div></div><label class="switch"><input type="checkbox" id="otpSw" ${a.otp_sender ? 'checked' : ''}><span></span></label></div></div>` : ''}
     <div class="section-head">منطقة الخطر</div>
     <button class="btn btn-red btn-block" id="delBtn"><i class="fa-solid fa-trash"></i> حذف الحساب وفصل الرقم</button>`;
-  $('#delBtn').onclick = e => confirmTap(e.currentTarget, async () => { await api(`/accounts/${a.id}/logout`, { body: {} }); toast('تم حذف الحساب', 'ok'); go('accounts'); });
+  $('#delBtn').onclick = e => confirmTap(e.target.closest('button'), async () => { await api(`/accounts/${a.id}/logout`, { body: {} }); toast('تم حذف الحساب', 'ok'); go('accounts'); });
   if (ADMIN) $('#otpSw').onchange = async e => { const r = await api(`/accounts/${a.id}/otp_sender`, { body: { enabled: e.target.checked } }); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); };
 
   let mode = 'qr', connected = a.logged_in;
@@ -393,22 +465,42 @@ R.acc = async (el, p) => {
   // الرد الآلي
   const cfg = await api(`/accounts/${a.id}/auto_reply`);
   const rules = cfg.rules || [];
+  const prof = Object.assign({}, cfg.ai_profile || {});
+  const AI_HINTS = { business_name: 'مثال: متجر الأمل للإلكترونيات', business_type: 'مثال: متجر موبايلات وإكسسوارات', description: 'شنو تقدم؟ شنو يميزك؟ أي معلومات يحتاجها العميل...',
+    products: 'كل منتج أو خدمة بسطر مع سعره، مثال:\nآيفون 15 - 1,250,000 د.ع\nشاحن سريع - 25,000 د.ع', hours: 'مثال: يومياً من 10 صباحاً لـ 10 مساءً', location: 'مثال: بغداد - الكرادة، توصيل لكل المحافظات 5,000',
+    contact: 'مثال: الطلب برسالة هنا أو اتصال على 0770...', tone: 'مثال: ودود ومختصر', rules: 'مثال: إذا سأل عن خصم قل عندنا خصم 10% للطلبات فوق 100 ألف', forbidden: 'مثال: لا تعطي أرقام شخصية ولا تتكلم بالسياسة' };
   const ar = el.querySelector('#ar');
   function renderAr() {
     ar.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ic-green"><i class="fa-solid fa-robot"></i></span><div style="flex:1"><b>تفعيل الرد الآلي</b><div class="row-sub">يرد على الرسائل الواردة تلقائياً</div></div><label class="switch"><input type="checkbox" id="arOn" ${cfg.enabled ? 'checked' : ''}><span></span></label></div>
-      <div style="display:flex;align-items:center;gap:12px;margin-top:12px"><span class="row-ic ic-purple"><i class="fa-solid fa-wand-magic-sparkles"></i></span><div style="flex:1"><b>الرد بالذكاء الاصطناعي</b><div class="row-sub">لو ما طابقت أي كلمة مفتاحية</div></div><label class="switch"><input type="checkbox" id="arAi" ${cfg.ai_enabled ? 'checked' : ''}><span></span></label></div>
+      <div style="display:flex;align-items:center;gap:12px;margin-top:12px"><span class="row-ic ic-purple"><i class="fa-solid fa-wand-magic-sparkles"></i></span><div style="flex:1"><b>الرد بالذكاء الاصطناعي</b><div class="row-sub">${cfg.ai_available ? 'يفهم المحادثة ويرد حسب معلومات نشاطك' : 'غير متاح حالياً - تفعّله إدارة المنصة'}</div></div><label class="switch"><input type="checkbox" id="arAi" ${cfg.ai_enabled ? 'checked' : ''} ${cfg.ai_available ? '' : 'disabled'}><span></span></label></div>
+      <div id="aiCard" class="${cfg.ai_enabled ? '' : 'hidden'}" style="margin-top:14px;padding:16px;border-radius:20px;background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.12)">
+        <div class="card-title" style="margin-bottom:6px"><i class="fa-solid fa-clipboard-list" style="background:rgba(124,58,237,.1);color:#7c3aed"></i> بطاقة تعليمات المساعد الذكي</div>
+        <div class="hint" style="margin:0 0 12px">كل ما كانت المعلومات أدق، كان الرد أذكى. الحقول اللي عليها * إلزامية للتفعيل.</div>
+        ${Object.entries(cfg.ai_fields || {}).map(([k, f]) => `<div class="field"><label>${esc(f.label)}</label>${f.max > 300
+          ? `<textarea class="textarea" data-ai="${k}" maxlength="${f.max}" placeholder="${esc(AI_HINTS[k] || '')}" style="min-height:${k === 'products' ? 130 : 90}px">${esc(prof[k] || '')}</textarea>`
+          : `<input class="input" data-ai="${k}" maxlength="${f.max}" placeholder="${esc(AI_HINTS[k] || '')}" value="${esc(prof[k] || '')}">`}</div>`).join('')}
+      </div>
       <div class="divider">الكلمات المفتاحية</div>
       ${rules.map((r, i) => `<div class="input-row" style="margin-bottom:8px"><input class="input" data-k="${i}" value="${esc(r.keyword)}" placeholder="إذا احتوت" style="flex:1"><input class="input" data-r="${i}" value="${esc(r.reply)}" placeholder="الرد" style="flex:1.6"><button class="btn btn-red btn-sm" data-del="${i}" style="height:48px"><i class="fa-solid fa-trash"></i></button></div>`).join('')}
       <button class="btn btn-ghost btn-block btn-sm" id="arAdd"><i class="fa-solid fa-plus"></i> إضافة كلمة</button>
       <button class="btn btn-primary btn-block" id="arSave" style="margin-top:10px">حفظ الرد الآلي</button>`;
-    const sync = () => { ar.querySelectorAll('[data-k]').forEach(i => rules[i.dataset.k].keyword = i.value); ar.querySelectorAll('[data-r]').forEach(i => rules[i.dataset.r].reply = i.value); };
-    ar.querySelector('#arAdd').onclick = () => { sync(); rules.push({ keyword: '', reply: '' }); cfg.enabled = ar.querySelector('#arOn').checked; cfg.ai_enabled = ar.querySelector('#arAi').checked; renderAr(); };
+    const sync = () => {
+      ar.querySelectorAll('[data-k]').forEach(i => rules[i.dataset.k].keyword = i.value); ar.querySelectorAll('[data-r]').forEach(i => rules[i.dataset.r].reply = i.value);
+      ar.querySelectorAll('[data-ai]').forEach(i => prof[i.dataset.ai] = i.value);
+    };
+    ar.querySelector('#arAi').onchange = e => {
+      ar.querySelector('#aiCard').classList.toggle('hidden', !e.target.checked);
+      if (e.target.checked) { ar.querySelector('#aiCard').classList.add('fade-in'); ar.querySelector('#aiCard').scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    };
+    ar.querySelector('#arAdd').onclick = () => { sync(); rules.push({ keyword: '', reply: '' }); cfg.enabled = ar.querySelector('#arOn').checked; cfg.ai_enabled = ar.querySelector('#arAi').checked; cfg.ai_profile = prof; renderAr(); };
     ar.querySelectorAll('[data-del]').forEach(b => b.onclick = () => { sync(); rules.splice(+b.dataset.del, 1); renderAr(); });
     ar.querySelector('#arSave').onclick = async e => {
-      sync(); busy(e.currentTarget, true);
-      const r = await api(`/accounts/${a.id}/auto_reply`, { body: { enabled: ar.querySelector('#arOn').checked, ai_enabled: ar.querySelector('#arAi').checked, rules } });
-      busy(e.currentTarget, false); toast(r.ok ? 'تم حفظ الرد الآلي' : r.error, r.ok ? 'ok' : 'err');
+      sync(); busy(e.target.closest('button'), true);
+      const btn = e.target.closest('button');
+      const r = await api(`/accounts/${a.id}/auto_reply`, { body: { enabled: ar.querySelector('#arOn').checked, ai_enabled: ar.querySelector('#arAi').checked, rules, ai_profile: prof } });
+      busy(btn, false); toast(r.ok ? 'تم حفظ الرد الآلي' : r.error, r.ok ? 'ok' : 'err');
+      if (!r.ok && r.missing) ar.querySelectorAll('[data-ai]').forEach(i => { if (!i.value.trim() && /\*/.test(i.previousElementSibling?.textContent || '')) i.style.borderColor = 'var(--red)'; });
     };
   }
   renderAr();
@@ -431,7 +523,7 @@ R.wallet = async (el, p) => {
   if (chosen) {
     const enough = ME.balance >= chosen.price;
     el.innerHTML = head(esc(chosen.name)) + `
-      <div class="plan solid fade-in" style="cursor:default">
+      <div class="plan solid shine fade-in" style="cursor:default">
         <div class="plan-top"><span class="plan-name">${esc(chosen.name)}</span><span class="pill pill-white">${fmt(chosen.days)} يوم</span></div>
         <div class="plan-price"><span class="num">${fmt(chosen.price)}</span> <small>د.ع</small></div>
         <ul>${chosen.features_list.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
@@ -457,9 +549,10 @@ R.wallet = async (el, p) => {
         <div class="hero-sub">${ME.plan_active ? (ME.plan_days_left === null ? 'اشتراك دائم' : 'باقي ' + ME.plan_days_left + ' يوم') : ME.trial_active ? 'باقي ' + ME.trial_days_left + ' يوم' : 'اختر باقة أو اشحن رصيد للإرسال'}</div></div>
       <div style="text-align:left"><div class="hero-label">الرصيد</div><div style="font-size:22px;font-weight:800" class="num">${fmt(ME.balance)}</div><div class="hero-sub">د.ع</div></div></div></div>
     <div class="section-head">اختر باقتك</div>
-    <div class="stagger">${S.plans.map(pl => `<div class="plan ${pl.popular ? 'featured' : ''} ${ME.plan_active && ME.plan_name === pl.name ? 'current' : ''}" onclick="go('wallet',{plan:${pl.id}})">
-      <div class="plan-top"><span class="plan-name">${esc(pl.name)}</span>${pl.popular ? '<span class="plan-badge"><i class="fa-solid fa-star"></i> الأكثر طلباً</span>' : `<span class="pill pill-blue">${fmt(pl.days)} يوم</span>`}</div>
-      <div class="plan-price"><span class="num">${fmt(pl.price)}</span> <small>د.ع / ${fmt(pl.days)} يوم</small></div>
+    <div class="stagger">${S.plans.map((pl, i) => `<div class="plan ${pl.popular ? 'featured shine' : ''} ${ME.plan_active && ME.plan_name === pl.name ? 'current' : ''}" onclick="go('wallet',{plan:${pl.id}})">
+      <div class="plan-top"><div style="display:flex;align-items:center;gap:10px"><span class="plan-ic"><i class="fa-solid ${['fa-paper-plane', 'fa-rocket', 'fa-crown', 'fa-gem'][i % 4]}"></i></span><div><span class="plan-name">${esc(pl.name)}</span><div class="plan-days">${fmt(pl.days)} يوم</div></div></div>${pl.popular ? '<span class="plan-badge"><i class="fa-solid fa-star"></i> الأكثر طلباً</span>' : ME.plan_active && ME.plan_name === pl.name ? '<span class="pill pill-green">باقتك</span>' : ''}</div>
+      <div class="plan-price"><span class="num">${fmt(pl.price)}</span> <small>د.ع</small>${pl.days >= 60 ? `<span class="plan-per">≈ ${fmt(Math.round(pl.price / pl.days * 30))} د.ع شهرياً</span>` : ''}</div>
+      <div class="plan-sep"></div>
       <ul>${pl.features_list.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
       <span class="btn ${pl.popular ? 'btn-white' : 'btn-primary'}">${ME.plan_active && ME.plan_name === pl.name ? 'تجديد الباقة' : 'اشترك الآن'} <i class="fa-solid fa-arrow-left"></i></span></div>`).join('') || `<div class="card">${empty('fa-solid fa-gem', 'ما فيه باقات حالياً')}</div>`}</div>
     ${SET.message_price > 0 ? `<div class="section-head">أو ادفع حسب استخدامك</div>
@@ -501,7 +594,7 @@ R.pay = async (el, p) => {
       fd.append('method_id', m.id); fd.append('amount', body.querySelector('#amt').value); fd.append('ref', body.querySelector('#ref').value);
       if (plan) fd.append('plan_id', plan.id);
       if (body.querySelector('#rc').files[0]) fd.append('receipt', body.querySelector('#rc').files[0]);
-      busy(e.currentTarget, true); const r = await api('/api/recharge/manual', { body: fd }); busy(e.currentTarget, false);
+      busy(e.target.closest('button'), true); const r = await api('/api/recharge/manual', { body: fd }); busy(e.target.closest('button'), false);
       if (!r.ok) { toast(r.error, 'err'); return; }
       body.innerHTML = `<div class="card fade-in" style="text-align:center"><span class="row-ic ic-green" style="width:64px;height:64px;font-size:28px;margin:6px auto 12px"><i class="fa-solid fa-check"></i></span><b style="font-size:17px">تم إرسال طلبك</b><p style="color:var(--text3);font-size:13px;margin-top:6px">${esc(r.msg)}</p><button class="btn btn-soft btn-block" style="margin-top:14px" onclick="go('tx',{tab:'recharges'})">متابعة الطلب</button></div>`;
     };
@@ -520,9 +613,9 @@ R.pay = async (el, p) => {
       <div class="hint" style="text-align:center;margin-top:6px">يتم التحقق تلقائياً خلال ثواني</div></div>`;
     body.querySelector('#usd').oninput = e => { const v = parseFloat(e.target.value) || 0; body.querySelector('#eq').textContent = v ? `= ${fmt(Math.round(v * m.usd_rate))} د.ع تنضاف لرصيدك` : `سعر الصرف: 1$ = ${fmt(m.usd_rate)} د.ع`; };
     body.querySelector('#verify').onclick = async e => {
-      busy(e.currentTarget, true);
+      busy(e.target.closest('button'), true);
       const r = await api('/api/recharge/binance', { body: { amount_usd: body.querySelector('#usd').value, order_id: body.querySelector('#oid').value.trim(), plan_id: plan ? plan.id : null } });
-      busy(e.currentTarget, false);
+      busy(e.target.closest('button'), false);
       if (!r.ok) { toast(r.error, 'err'); return; }
       toast(r.msg, 'ok'); await refreshMe(); go('home');
     };
@@ -542,7 +635,7 @@ R.pay = async (el, p) => {
       body.querySelectorAll('.tier').forEach(t => t.onclick = () => { amount = +t.dataset.a; body.querySelectorAll('.tier').forEach(x => x.classList.toggle('on', x === t)); });
       body.querySelector('#start').onclick = async e => {
         if (!amount) { toast('اختر المبلغ', 'err'); return; }
-        busy(e.currentTarget, true); const r = await api('/api/recharge/asiacell/start', { body: { phone: body.querySelector('#ph').value, amount, plan_id: plan ? plan.id : null } }); busy(e.currentTarget, false);
+        busy(e.target.closest('button'), true); const r = await api('/api/recharge/asiacell/start', { body: { phone: body.querySelector('#ph').value, amount, plan_id: plan ? plan.id : null } }); busy(e.target.closest('button'), false);
         if (!r.ok) { toast(r.error, 'err'); return; }
         codeStep('verify', r.msg);
       };
@@ -554,7 +647,7 @@ R.pay = async (el, p) => {
         <button class="btn btn-primary btn-block" id="go" style="margin-top:12px"><i class="fa-solid fa-check"></i> ${step === 'verify' ? 'تحقق' : 'تأكيد التحويل'}</button>
         <button class="btn btn-ghost btn-block" id="cancel" style="margin-top:8px">إلغاء العملية</button></div>`;
       body.querySelector('#go').onclick = async e => {
-        busy(e.currentTarget, true); const r = await api('/api/recharge/asiacell/' + step, { body: { code: body.querySelector('#code').value } }); busy(e.currentTarget, false);
+        busy(e.target.closest('button'), true); const r = await api('/api/recharge/asiacell/' + step, { body: { code: body.querySelector('#code').value } }); busy(e.target.closest('button'), false);
         if (!r.ok) { toast(r.error, 'err'); return; }
         if (step === 'verify' || r.done === false) { codeStep('confirm', r.msg); return; }
         await refreshMe();
@@ -598,12 +691,9 @@ R.tx = async (el, p) => {
 
 // ---------------------------------------------------------------- حسابي
 R.account = async (el) => {
-  await refreshMe();
   const first = (ME.name || '؟').trim()[0] || '؟';
   const contact = ME.email || (ME.phone ? '+' + ME.phone : '');
-  const st = await api('/dashboard/stats');
-  let pending = 0;
-  if (ADMIN) { const s = await api('/api/admin/stats'); pending = s.pending_recharges || 0; }
+  const dev = SET.dev;
   el.innerHTML = `
     <div class="card" style="display:flex;align-items:center;gap:12px">
       <div class="avatar" style="background:var(--btn);color:#fff;position:relative;box-shadow:0 8px 18px var(--primary-glow)">${esc(first)}</div>
@@ -613,40 +703,46 @@ R.account = async (el) => {
       <button class="chev" onclick="go('profile')" style="width:38px;height:38px"><i class="fa-solid fa-pen"></i></button>
     </div>
     <div class="stats three stagger" style="margin-top:12px">
-      <div class="stat" onclick="go('wallet')"><span class="stat-ic ic-blue"><i class="fa-solid fa-wallet"></i></span><span class="stat-v num">${fmt(ME.balance)}</span><span class="stat-l">الرصيد (د.ع)</span></div>
-      <div class="stat" onclick="go('wallet')"><span class="stat-ic ic-orange"><i class="fa-solid fa-crown"></i></span><span class="stat-v">${ME.plan_active ? (ME.plan_days_left === null ? 'دائم' : ME.plan_days_left + ' يوم') : ME.trial_active ? ME.trial_days_left + ' يوم' : '—'}</span><span class="stat-l">${ME.plan_active ? esc(ME.plan_name || 'الباقة') : ME.trial_active ? 'التجربة' : 'بدون باقة'}</span></div>
-      <div class="stat" onclick="go('home')"><span class="stat-ic ic-green"><i class="fa-solid fa-paper-plane"></i></span><span class="stat-v num">${fmt(st.messages_sent || 0)}</span><span class="stat-l">رسائل مرسلة</span></div>
+      <div class="stat" onclick="go('wallet')" style="cursor:pointer"><span class="stat-ic ic-teal"><i class="fa-solid fa-wallet"></i></span><span class="stat-v num">${fmt(ME.balance)}</span><span class="stat-l">الرصيد (د.ع)</span></div>
+      <div class="stat" onclick="go('wallet')" style="cursor:pointer"><span class="stat-ic ic-orange"><i class="fa-solid fa-crown"></i></span><span class="stat-v">${ME.plan_active ? (ME.plan_days_left === null ? 'دائم' : ME.plan_days_left + ' يوم') : ME.trial_active ? ME.trial_days_left + ' يوم' : '—'}</span><span class="stat-l">${ME.plan_active ? esc(ME.plan_name || 'الباقة') : ME.trial_active ? 'التجربة' : 'بدون باقة'}</span></div>
+      <div class="stat" onclick="go('reports')" style="cursor:pointer"><span class="stat-ic ic-green"><i class="fa-solid fa-paper-plane"></i></span><span class="stat-v num" id="msgCount">…</span><span class="stat-l">رسائل مرسلة</span></div>
     </div>
     <div class="section-head">حسابي</div>
     <div class="list stagger">
-      ${rowItem({ icon: 'fa-solid fa-user-clock', ic: 'ic-purple', title: 'اشتراكات عملائي', sub: 'تذكير تلقائي قبل انتهاء الاشتراك', onclick: "go('subscribers')" })}
+      ${rowItem({ icon: 'fa-solid fa-chart-pie', ic: 'ic-purple', title: 'تقارير الحملات', sub: 'النجاح، المشاهدة والردود', onclick: "go('reports')" })}
       ${rowItem({ icon: 'fa-solid fa-code', ic: 'ic-orange', title: 'ربط API', sub: 'أرسل رسائل ورموز تحقق من موقعك', onclick: "go('apikeys')" })}
       ${rowItem({ icon: 'fa-solid fa-clock-rotate-left', ic: 'ic-cyan', title: 'السجل المالي', sub: 'حركات الرصيد وطلبات الشحن', onclick: "go('tx')" })}
-      ${rowItem({ icon: 'fa-solid fa-bell', title: 'الإشعارات', sub: 'تنبيهات الحملات والشحن', onclick: "go('notifications')" })}
-    </div>
-    <div class="section-head">التطبيق</div>
-    <div class="list">
+      ${rowItem({ icon: 'fa-solid fa-bell', ic: 'ic-pink', title: 'الإشعارات', sub: 'تنبيهات الحملات والشحن', onclick: "go('notifications')" })}
       ${rowItem({ icon: 'fa-solid fa-mobile-screen-button', ic: 'ic-blue', title: 'تثبيت التطبيق', sub: 'أضفه لشاشتك الرئيسية', onclick: 'installApp()' })}
-      ${rowItem({ icon: 'fa-solid fa-circle-half-stroke', ic: 'ic-purple', title: 'الوضع الليلي', end: `<label class="switch" onclick="event.stopPropagation()"><input type="checkbox" id="darkSw" ${document.documentElement.dataset.theme === 'dark' ? 'checked' : ''}><span></span></label>` })}
-      ${rowItem({ icon: 'fa-brands fa-whatsapp', ic: 'ic-wa', title: 'الدعم الفني', sub: 'تواصل معنا على واتساب', onclick: `window.open('https://wa.me/${esc(SET.support_number)}','_blank')` })}
+      ${rowItem({ icon: 'fa-solid fa-headset', ic: 'ic-wa', title: 'الدعم الفني', sub: 'تواصل معنا على واتساب', onclick: `window.open('https://wa.me/${esc(SET.support_number)}','_blank')` })}
     </div>
     ${ADMIN ? `<div class="section-head">الإدارة <span class="pill pill-blue">أدمن</span></div>
     <div class="list stagger">
       ${rowItem({ icon: 'fa-solid fa-gauge-high', ic: 'ic-pink', title: 'لوحة الإدارة', sub: 'نظرة عامة على المنصة', onclick: "go('admin')" })}
       ${rowItem({ icon: 'fa-solid fa-users', ic: 'ic-blue', title: 'المستخدمين', sub: 'الاشتراكات، الفترات المجانية، الأرصدة', onclick: "go('users')" })}
-      ${rowItem({ icon: 'fa-solid fa-list-check', ic: 'ic-green', title: 'طلبات الشحن', sub: 'مراجعة التحويلات اليدوية', end: `${pending ? `<span class="pill pill-red">${pending}</span>` : ''}<span class="chev"><i class="fa-solid fa-chevron-left"></i></span>`, onclick: "go('recharges')" })}
-      ${rowItem({ icon: 'fa-solid fa-gem', ic: 'ic-purple', title: 'الباقات', sub: 'الأسعار والمدد والمزايا والألوان', onclick: "go('plansAdmin')" })}
+      ${rowItem({ icon: 'fa-solid fa-list-check', ic: 'ic-green', title: 'طلبات الشحن', sub: 'مراجعة التحويلات اليدوية', end: `<span id="pendBadge"></span><span class="chev"><i class="fa-solid fa-chevron-left"></i></span>`, onclick: "go('recharges')" })}
+      ${rowItem({ icon: 'fa-solid fa-gem', ic: 'ic-purple', title: 'الباقات', sub: 'الأسعار والمدد والمزايا', onclick: "go('plansAdmin')" })}
       ${rowItem({ icon: 'fa-solid fa-credit-card', ic: 'ic-orange', title: 'طرق الدفع', sub: 'آسياسيل، Binance، سوبر كي، اليدوي', onclick: "go('payments')" })}
-      ${rowItem({ icon: 'fa-solid fa-sliders', ic: 'ic-purple', title: 'الإعدادات', sub: 'الأسعار، الشعار، تسجيل الدخول', onclick: "go('settings')" })}
+      ${rowItem({ icon: 'fa-solid fa-sliders', ic: 'ic-indigo', title: 'الإعدادات', sub: 'الأسعار، الشعار، المطور، Cron', onclick: "go('settings')" })}
       ${rowItem({ icon: 'fa-solid fa-shield-halved', ic: 'ic-red', title: 'مركز الأمان', sub: 'سجل الدخول والحظر والجلسات', onclick: "go('security')" })}
       ${rowItem({ icon: 'fa-brands fa-telegram', ic: 'ic-cyan', title: 'النسخ الاحتياطي', sub: 'تصدير واستيراد JSON عبر بوت تيليجرام', onclick: "go('backup')" })}
       ${rowItem({ icon: 'fa-solid fa-bullhorn', ic: 'ic-wa', title: 'إعلان جماعي', sub: 'رسالة واتساب لكل المستخدمين', onclick: "go('announce')" })}
     </div>` : ''}
+    ${dev ? `<div class="section-head">المطوّر</div>
+    <div class="dev-card shine fade-in">
+      ${dev.photo ? `<img class="dev-photo glow" src="${esc(dev.photo)}" alt="">` : `<span class="dev-photo glow">${esc((dev.name || 'م')[0])}</span>`}
+      <div style="min-width:0"><small>${esc(dev.title)}</small><b>${esc(dev.name)}</b></div>
+      <a class="dev-wa" href="https://wa.me/${esc(dev.phone)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp" style="font-size:18px"></i> تواصل</a>
+    </div>` : ''}
     <button class="btn btn-red btn-block" style="margin-top:18px" id="logout"><i class="fa-solid fa-right-from-bracket"></i> تسجيل الخروج</button>`;
-  el.querySelector('#darkSw').onchange = e => { const d = e.target.checked ? 'dark' : ''; document.documentElement.dataset.theme = d; try { localStorage.setItem('theme', d); } catch (x) {} };
-  el.querySelector('#logout').onclick = e => confirmTap(e.currentTarget, () => {
+  el.querySelector('#logout').onclick = async () => {
+    if (!await confirmSheet({ title: 'تسجيل الخروج', text: 'راح تطلع من حسابك على هذا الجهاز. تقدر ترجع تدخل بأي وقت.', ok: 'تسجيل الخروج', icon: 'fa-solid fa-right-from-bracket' })) return;
     const f = document.createElement('form'); f.method = 'POST'; f.action = '/logout'; document.body.appendChild(f); f.submit();
-  }, 'اضغط مرة ثانية للخروج');
+  };
+  // البيانات الثانوية تنجلب بعد العرض (حتى الصفحة تفتح فوراً)
+  api('/dashboard/stats').then(st => { const m = el.querySelector('#msgCount'); if (m) m.textContent = fmt(st.messages_sent || 0); });
+  if (ADMIN) api('/api/admin/stats').then(s => { const b = el.querySelector('#pendBadge'); if (b && s.pending_recharges) b.innerHTML = `<span class="pill pill-red">${s.pending_recharges}</span>`; });
+  refreshMe();
 };
 
 R.profile = async (el) => {
@@ -658,25 +754,47 @@ R.profile = async (el) => {
     <button class="btn btn-primary btn-block" id="save" style="margin-top:12px">حفظ</button></div>
     <div class="section-head">منطقة الخطر</div>
     <button class="btn btn-red btn-block" id="wipe"><i class="fa-solid fa-trash"></i> حذف كل أرقام واتساب المربوطة وسجلها</button>`;
-  el.querySelector('#save').onclick = async e => { busy(e.currentTarget, true); const r = await api('/api/me', { body: { name: el.querySelector('#nm').value } }); busy(e.currentTarget, false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); refreshMe(); };
-  el.querySelector('#wipe').onclick = e => confirmTap(e.currentTarget, async () => { const r = await api('/settings/delete_my_data', { body: {} }); toast(`تم حذف ${r.deleted || 0} حساب`, 'ok'); });
+  el.querySelector('#save').onclick = async e => { busy(e.target.closest('button'), true); const r = await api('/api/me', { body: { name: el.querySelector('#nm').value } }); busy(e.target.closest('button'), false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); refreshMe(); };
+  el.querySelector('#wipe').onclick = e => confirmTap(e.target.closest('button'), async () => { const r = await api('/settings/delete_my_data', { body: {} }); toast(`تم حذف ${r.deleted || 0} حساب`, 'ok'); });
 };
 
 R.notifications = async (el) => {
-  el.innerHTML = head('الإشعارات', true, `<button class="btn btn-ghost btn-sm" id="readAll"><i class="fa-solid fa-check-double"></i> قراءة الكل</button>`) + '<div id="nl"></div>';
-  const KIND = { success: ['fa-solid fa-circle-check', 'ic-green'], warning: ['fa-solid fa-triangle-exclamation', 'ic-orange'], info: ['fa-solid fa-circle-info', 'ic-blue'] };
-  async function load() {
-    const ev = await api('/events?since=0');
-    const list = (Array.isArray(ev) ? ev : []).reverse();
-    el.querySelector('#nl').innerHTML = list.length ? '<div class="list mini-list">' + list.map(e => {
-      const [ic, cls] = KIND[e.kind] || KIND.info;
-      return `<div class="row" style="${e.read ? 'opacity:.65' : ''}"><span class="row-ic ${cls}"><i class="${ic}"></i></span><span class="row-body"><span class="row-title">${esc(e.title)}</span><span class="row-sub" style="white-space:normal">${e.account ? esc(e.account) + ': ' : ''}${esc(e.body)}</span></span><span class="row-end"><small class="num">${esc(e.time)}</small><button class="chev" data-del="${e.id}"><i class="fa-solid fa-xmark"></i></button></span></div>`;
-    }).join('') + '</div>' : `<div class="card">${empty('fa-regular fa-bell', 'ما فيه إشعارات')}</div>`;
-    el.querySelectorAll('[data-del]').forEach(b => b.onclick = async () => { await api('/events/' + b.dataset.del, { method: 'DELETE' }); load(); });
+  el.innerHTML = head('الإشعارات', true, `<button class="btn btn-ghost btn-sm" id="readAll"><i class="fa-solid fa-check-double"></i> قراءة الكل</button>`) + '<div id="nl"><div class="card"><div class="skel" style="height:70px"></div></div></div>';
+  const KIND = { success: ['fa-solid fa-circle-check', 'ic-green'], warning: ['fa-solid fa-triangle-exclamation', 'ic-orange'], info: ['fa-solid fa-bell', 'ic-blue'] };
+  let list = [];
+  const btnFor = e => e.read
+    ? `<button class="btn btn-red btn-xs" data-del="${e.id}"><i class="fa-solid fa-trash"></i> حذف</button>`
+    : `<button class="btn btn-soft btn-xs" data-read="${e.id}"><i class="fa-solid fa-check"></i> تمت القراءة</button>`;
+  function render() {
+    const box = el.querySelector('#nl');
+    if (!list.length) { box.innerHTML = `<div class="card">${empty('fa-regular fa-bell', 'ما فيه إشعارات جديدة')}</div>`; return; }
+    const unread = list.filter(e => !e.read), read = list.filter(e => e.read);
+    const card = e => { const [ic, cls] = KIND[e.kind] || KIND.info; return `<div class="notif ${e.read ? '' : 'unread'}" id="n${e.id}">
+      <span class="row-ic ${cls}"><i class="${ic}"></i></span>
+      <div class="n-body"><div class="n-title">${esc(e.title)}</div><div class="n-text">${e.account ? `<b>${esc(e.account)}</b>: ` : ''}${esc(e.body)}</div>
+        <div class="n-foot"><span class="num"><i class="fa-regular fa-clock"></i> ${esc(e.time)}</span>${btnFor(e)}</div></div></div>`; };
+    box.innerHTML = (unread.length ? `<div class="group-label">جديدة (${unread.length})</div>` + unread.map(card).join('') : '')
+      + (read.length ? `<div class="group-label">مقروءة</div>` + read.map(card).join('') : '');
   }
-  el.querySelector('#readAll').onclick = async () => { await api('/events/read_all', { body: {} }); document.getElementById('bellDot').classList.add('hidden'); load(); };
-  await load();
-  api('/events/read_all', { body: {} }); document.getElementById('bellDot').classList.add('hidden');
+  el.querySelector('#nl').addEventListener('click', async ev => {
+    const r = ev.target.closest('[data-read]'), d = ev.target.closest('[data-del]');
+    if (r) {
+      const e = list.find(x => x.id == r.dataset.read); if (e) e.read = true;
+      r.outerHTML = btnFor(e); el.querySelector('#n' + e.id)?.classList.remove('unread');
+      api('/events/' + e.id + '/read', { body: {} });
+      if (!list.some(x => !x.read)) document.getElementById('bellDot').classList.add('hidden');
+    }
+    if (d) {
+      const node = el.querySelector('#n' + d.dataset.del);
+      if (node) { node.style.opacity = 0; node.style.transform = 'translateX(-20px)'; }
+      await api('/events/' + d.dataset.del, { method: 'DELETE' });
+      list = list.filter(x => x.id != d.dataset.del); setTimeout(render, 220);
+    }
+  });
+  el.querySelector('#readAll').onclick = async () => { list.forEach(e => e.read = true); render(); document.getElementById('bellDot').classList.add('hidden'); await api('/events/read_all', { body: {} }); };
+  const ev = await api('/events?since=0');
+  list = (Array.isArray(ev) ? ev : []).reverse();
+  render();
 };
 
 // ---------------------------------------------------------------- اشتراكات العملاء
@@ -705,9 +823,9 @@ R.subscribers = async (el) => {
     el.querySelectorAll('[data-del]').forEach(b => b.onclick = () => confirmTap(b, async () => { await api(`/subscribers/${b.dataset.del}/delete`, { body: {} }); loadList(); }, 'تأكيد'));
   }
   el.querySelector('#sadd').onclick = async e => {
-    busy(e.currentTarget, true);
+    busy(e.target.closest('button'), true);
     const r = await api('/subscribers', { body: { name: el.querySelector('#sn').value, phone: el.querySelector('#sp').value, subscribed_at: el.querySelector('#sd').value, duration_days: el.querySelector('#sdur').value } });
-    busy(e.currentTarget, false);
+    busy(e.target.closest('button'), false);
     if (!r.ok) { toast(r.error, 'err'); return; }
     toast('تمت الإضافة وإرسال رسالة البداية', 'ok'); el.querySelector('#sn').value = ''; el.querySelector('#sp').value = ''; loadList();
   };
@@ -720,9 +838,9 @@ R.subscribers = async (el) => {
     <div class="hint" style="margin-bottom:10px">استخدم {name} لاسم المشترك و {days} لعدد الأيام</div>
     <button class="btn btn-primary btn-block" id="csave">حفظ الإعدادات</button>`;
   el.querySelector('#csave').onclick = async e => {
-    busy(e.currentTarget, true);
+    busy(e.target.closest('button'), true);
     const r = await api('/subscription_settings', { body: { default_duration_days: el.querySelector('#c1').value, reminder_days_before: el.querySelector('#c2').value, start_message: el.querySelector('#c3').value, reminder_message: el.querySelector('#c4').value, expired_message: el.querySelector('#c5').value } });
-    busy(e.currentTarget, false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err');
+    busy(e.target.closest('button'), false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err');
   };
   loadList();
 };
@@ -751,9 +869,9 @@ R.apikeys = async (el) => {
   -d '{"phone":"9647701234567","message":"أهلاً بك"}'</div>
       <div class="hint">الحد: 20 طلب بالدقيقة لكل مفتاح. ${SET.message_price > 0 ? `بدون اشتراك تنخصم ${fmt(SET.message_price)} د.ع لكل رسالة.` : ''}</div></div>`;
   el.querySelector('#kgen').onclick = async e => {
-    busy(e.currentTarget, true);
+    busy(e.target.closest('button'), true);
     const r = await api('/api_keys', { body: { account_id: el.querySelector('#kacc').value, label: el.querySelector('#klabel').value } });
-    busy(e.currentTarget, false);
+    busy(e.target.closest('button'), false);
     if (!r.ok) { toast(r.error, 'err'); return; }
     el.querySelector('#knew').innerHTML = `<div class="note ok fade-in" style="margin-top:12px"><b>انسخ المفتاح الآن - ما راح يظهر مرة ثانية:</b><div class="copy-box" style="margin-top:8px"><span class="v" style="font-size:13px">${esc(r.key)}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(r.key)}')">نسخ</button></div></div>`;
   };
@@ -894,10 +1012,10 @@ R.payments = async (el) => {
         const tiers = [...c.querySelectorAll('[data-tier]')].map(i => ({ iqd: +i.dataset.tier, bonus: +i.value || 0 }));
         if (tiers.length) body.tiers = tiers;
         if (logo) body.image = logo; if (rmLogo) body.remove_image = true; if (qr) body.qr = qr;
-        busy(e.currentTarget, true); const r = await api('/api/admin/payment-methods/' + id, { body }); busy(e.currentTarget, false);
+        busy(e.target.closest('button'), true); const r = await api('/api/admin/payment-methods/' + id, { body }); busy(e.target.closest('button'), false);
         toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); if (r.ok) load();
       };
-      c.querySelector('[data-del]').onclick = e => confirmTap(e.currentTarget, async () => { await api('/api/admin/payment-methods/' + id, { method: 'DELETE' }); load(); }, 'تأكيد');
+      c.querySelector('[data-del]').onclick = e => confirmTap(e.target.closest('button'), async () => { await api('/api/admin/payment-methods/' + id, { method: 'DELETE' }); load(); }, 'تأكيد');
     });
     el.querySelector('#addPm').onclick = async () => { const r = await api('/api/admin/payment-methods', { body: { type: el.querySelector('#newType').value, active: false } }); if (r.ok) { toast('تمت الإضافة - اضبطها وفعّلها', 'ok'); load(); } };
   }
@@ -931,20 +1049,36 @@ R.settings = async (el) => {
       ${f('admin_email', 'بريد الأدمن (حساب كوكل)', s.admin_email, 'email', 'من يدخل بهذا البريد عبر كوكل يصير أدمن تلقائياً')}
       <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ic-wa"><i class="fa-brands fa-whatsapp"></i></span><div style="flex:1"><b>تسجيل الدخول برقم واتساب</b><div class="row-sub">يحتاج رقم مفعّل كمرسل رموز</div></div><label class="switch"><input type="checkbox" data-k="whatsapp_login" ${s.whatsapp_login ? 'checked' : ''}><span></span></label></div>
     </div>
+    <div class="section-head">بطاقة المطوّر (تظهر بقسم حسابي)</div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span class="dev-photo glow" id="devPrev" style="width:58px;height:58px">${s.dev_photo ? `<img src="/dev-photo?t=${Date.now()}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">` : '<i class="fa-solid fa-user"></i>'}</span>
+        <label class="btn btn-soft btn-sm"><input type="file" accept="image/*" id="devIn" hidden><i class="fa-solid fa-camera"></i> صورة المطور</label></div>
+      <div class="input-row">${f('dev_name', 'اسم المطور', s.dev_name)}${f('dev_title', 'الوصف', s.dev_title, 'text', 'مثال: مطوّر المنصة')}</div>
+      ${f('dev_phone', 'رقم واتساب المطور', s.dev_phone, 'text', 'اتركه فارغ لإخفاء البطاقة')}
+    </div>
+    <div class="section-head">المهام المجدولة (Cron)</div>
+    <div class="card">
+      <div class="kv"><span>آخر تشغيل</span><b class="num">${esc(s.last_cron || 'لم يعمل بعد')}</b></div>
+      <div class="hint" style="margin:8px 0 10px">افتح الرابط مرة وحدة بالمتصفح حتى يتنصّب Cron تلقائياً (أو يعطيك البديل لو الاستضافة ما تسمح)</div>
+      <div class="copy-box"><span class="v" style="font-size:12px">${esc(s.cron_url)}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(s.cron_url)}')">نسخ</button></div>
+      <a class="btn btn-primary btn-block shine" style="margin-top:10px" href="${esc(s.cron_url)}" target="_blank"><i class="fa-solid fa-clock"></i> تنصيب Cron الآن</a>
+    </div>
     <div class="section-head">الذكاء الاصطناعي (DeepSeek)</div>
     <div class="card">
       ${f('ai_api_key', 'مفتاح DeepSeek ' + (s.ai_key_set ? '(محفوظ)' : ''), '', 'password')}
       <div class="field"><label>معلومات المتجر/الخدمة للرد الذكي</label><textarea class="textarea" data-k="ai_knowledge_base">${esc(s.ai_knowledge_base)}</textarea></div>
     </div>
     <button class="btn btn-primary btn-block" id="saveSet" style="margin-top:14px"><i class="fa-solid fa-check"></i> حفظ كل الإعدادات</button>`;
-  let logo;
+  let logo, devPhoto;
+  el.querySelector('#devIn').onchange = async e => { const fl = e.target.files[0]; if (!fl) return; devPhoto = await fileToDataUrl(fl); el.querySelector('#devPrev').innerHTML = `<img src="${devPhoto}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`; };
   el.querySelector('#logoIn').onchange = async e => { const fl = e.target.files[0]; if (!fl) return; logo = await fileToDataUrl(fl); el.querySelector('#logoPrev').innerHTML = `<img src="${logo}">`; };
   const rm = el.querySelector('#logoRm'); if (rm) rm.onclick = () => { logo = ''; el.querySelector('#logoPrev').innerHTML = '<i class="fa-solid fa-image"></i>'; };
   el.querySelector('#saveSet').onclick = async e => {
     const body = {};
     el.querySelectorAll('[data-k]').forEach(i => body[i.dataset.k] = i.type === 'checkbox' ? i.checked : i.value);
     if (logo !== undefined) body.logo = logo;
-    busy(e.currentTarget, true); const r = await api('/api/admin/settings', { body }); busy(e.currentTarget, false);
+    if (devPhoto) body.dev_photo = devPhoto;
+    busy(e.target.closest('button'), true); const r = await api('/api/admin/settings', { body }); busy(e.target.closest('button'), false);
     toast(r.ok ? 'تم حفظ الإعدادات' : r.error, r.ok ? 'ok' : 'err');
     if (r.ok) { await refreshMe(); if (body.site_name) document.getElementById('brandName').textContent = body.site_name; }
   };
@@ -973,8 +1107,8 @@ R.security = async (el) => {
       icon: M[l.method] || 'fa-solid fa-right-to-bracket', ic: l.ok ? 'ic-green' : 'ic-red',
       title: `${esc(l.user || l.note || 'غير معروف')} ${l.ok ? '' : '<span class="pill pill-red">فشل</span>'}`, sub: `<span class="num">${esc(l.time)} · ${esc(l.ip)}</span> · ${esc((l.ua || '').slice(0, 40))}`, end: '',
     })).join('') : empty('fa-solid fa-list', 'السجل فارغ')}</div>`;
-  el.querySelector('#lo').onclick = e => { e.stopPropagation(); confirmTap(e.currentTarget, async () => { const r = await api('/api/admin/security', { body: { action: 'logout_all' } }); toast(r.msg || r.error, r.ok ? 'ok' : 'err'); }, 'تأكيد'); };
-  el.querySelector('#cl').onclick = e => { e.stopPropagation(); confirmTap(e.currentTarget, async () => { await api('/api/admin/security', { body: { action: 'clear_log' } }); go('security', {}, false); }, 'تأكيد'); };
+  el.querySelector('#lo').onclick = e => { e.stopPropagation(); confirmTap(e.target.closest('button'), async () => { const r = await api('/api/admin/security', { body: { action: 'logout_all' } }); toast(r.msg || r.error, r.ok ? 'ok' : 'err'); }, 'تأكيد'); };
+  el.querySelector('#cl').onclick = e => { e.stopPropagation(); confirmTap(e.target.closest('button'), async () => { await api('/api/admin/security', { body: { action: 'clear_log' } }); go('security', {}, false); }, 'تأكيد'); };
 };
 
 R.backup = async (el) => {
@@ -1001,9 +1135,9 @@ R.backup = async (el) => {
     const r = await api('/api/admin/backup/import', { body: fd });
     toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err');
   };
-  el.querySelector('#tgs').onclick = async e => { busy(e.currentTarget, true); const r = await api('/api/admin/settings', { body: { tg_token: el.querySelector('#tgt').value, tg_chat_id: el.querySelector('#tgc').value, tg_auto_backup: el.querySelector('#tga').checked } }); busy(e.currentTarget, false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); };
-  el.querySelector('#tgn').onclick = async e => { busy(e.currentTarget, true); const r = await api('/api/admin/backup/telegram', { body: {} }); busy(e.currentTarget, false); toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err'); };
-  el.querySelector('#tgw').onclick = async e => { busy(e.currentTarget, true); const r = await api('/api/admin/telegram/webhook', { body: {} }); busy(e.currentTarget, false); toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err'); };
+  el.querySelector('#tgs').onclick = async e => { busy(e.target.closest('button'), true); const r = await api('/api/admin/settings', { body: { tg_token: el.querySelector('#tgt').value, tg_chat_id: el.querySelector('#tgc').value, tg_auto_backup: el.querySelector('#tga').checked } }); busy(e.target.closest('button'), false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); };
+  el.querySelector('#tgn').onclick = async e => { busy(e.target.closest('button'), true); const r = await api('/api/admin/backup/telegram', { body: {} }); busy(e.target.closest('button'), false); toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err'); };
+  el.querySelector('#tgw').onclick = async e => { busy(e.target.closest('button'), true); const r = await api('/api/admin/telegram/webhook', { body: {} }); busy(e.target.closest('button'), false); toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err'); };
 };
 
 R.plansAdmin = async (el) => {
@@ -1032,9 +1166,9 @@ R.plansAdmin = async (el) => {
       c.querySelectorAll('[data-color]').forEach(b => b.onclick = () => { color = b.dataset.color; c.querySelectorAll('[data-color]').forEach(x => x.classList.toggle('on', x === b)); });
       c.querySelector('[data-save]').onclick = async e => {
         const body = { popular: c.querySelector('[data-popular]').checked }; c.querySelectorAll('[data-f]').forEach(i => body[i.dataset.f] = i.value); if (color) body.color = color;
-        busy(e.currentTarget, true); const r = await api('/api/admin/plans/' + id, { body }); busy(e.currentTarget, false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); if (r.ok) load();
+        busy(e.target.closest('button'), true); const r = await api('/api/admin/plans/' + id, { body }); busy(e.target.closest('button'), false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); if (r.ok) load();
       };
-      c.querySelector('[data-del]').onclick = e => confirmTap(e.currentTarget, async () => { await api('/api/admin/plans/' + id, { method: 'DELETE' }); load(); }, 'تأكيد');
+      c.querySelector('[data-del]').onclick = e => confirmTap(e.target.closest('button'), async () => { await api('/api/admin/plans/' + id, { method: 'DELETE' }); load(); }, 'تأكيد');
     });
     el.querySelector('#addPl').onclick = async () => { await api('/api/admin/plans', { body: { name: 'باقة جديدة', price: 10000, days: 30, color: 'sky', active: false } }); toast('تمت الإضافة - عدّلها وفعّلها', 'ok'); load(); };
   }
@@ -1051,7 +1185,7 @@ R.announce = async (el) => {
     <button class="btn btn-primary btn-block" id="as"><i class="fa-solid fa-bullhorn"></i> إرسال الإعلان</button></div>`;
   el.querySelector('#as').onclick = async e => {
     const fd = new FormData(); fd.append('text', el.querySelector('#at').value); fd.append('delay', el.querySelector('#ad').value);
-    busy(e.currentTarget, true); const r = await api('/admin/announcement/' + el.querySelector('#aa').value, { body: fd }); busy(e.currentTarget, false);
+    busy(e.target.closest('button'), true); const r = await api('/admin/announcement/' + el.querySelector('#aa').value, { body: fd }); busy(e.target.closest('button'), false);
     toast(r.ok ? `بدأ الإرسال لـ ${r.total} مستخدم` : r.error, r.ok ? 'ok' : 'err');
   };
 };
@@ -1070,7 +1204,7 @@ async function pollEvents() {
 }
 
 // ================================================================ الإقلاع
-try { if (localStorage.getItem('theme') === 'dark') document.documentElement.dataset.theme = 'dark'; } catch (e) {}
+try { localStorage.removeItem('theme'); } catch (e) {}
 document.getElementById('balChip').textContent = fmt(ME.balance);
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 setTimeout(() => { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); }, 4000);

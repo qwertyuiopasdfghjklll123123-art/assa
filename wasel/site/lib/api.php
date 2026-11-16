@@ -29,6 +29,8 @@ function public_settings(): array
         'plan_name' => PLAN_NAME, 'plan_price' => plan_price(), 'plan_days' => plan_days(),
         'message_price' => message_price(), 'usd_rate' => usd_rate(), 'trial_days' => trial_days(),
         'support_number' => $s['whatsapp_support_number'] ?: WHATSAPP_PAY_NUMBER,
+        'dev' => $s['dev_phone'] !== '' ? ['name' => $s['dev_name'] ?: 'المطوّر', 'title' => $s['dev_title'] ?: 'مطوّر المنصة',
+            'phone' => $s['dev_phone'], 'photo' => !empty($s['dev_photo']) && is_file(DATA_DIR . '/dev.bin') ? '/dev-photo?v=' . (int)filemtime(DATA_DIR . '/dev.bin') : null] : null,
     ];
 }
 
@@ -395,6 +397,8 @@ function api_routes(): array
                 'tg_auto_backup' => !empty($s['tg_auto_backup']), 'tg_last_backup' => $s['tg_last_backup'],
                 'ai_key_set' => $s['ai_api_key'] !== '', 'ai_knowledge_base' => $s['ai_knowledge_base'],
                 'google_client_id' => GOOGLE_CLIENT_ID,
+                'dev_name' => $s['dev_name'], 'dev_title' => $s['dev_title'], 'dev_phone' => $s['dev_phone'], 'dev_photo' => !empty($s['dev_photo']),
+                'cron_url' => site_base_url() . '/cron/setup?key=' . CRON_KEY, 'last_cron' => $s['last_cron'] ? date('Y-m-d H:i', (int)$s['last_cron']) : null,
             ]]);
         }],
         ['POST', '#^/api/admin/settings$#', function () {
@@ -462,6 +466,26 @@ function api_routes(): array
                 }
                 @unlink(DATA_DIR . '/pwa-192.png');
                 @unlink(DATA_DIR . '/pwa-512.png');
+            }
+            foreach (['dev_name' => 40, 'dev_title' => 60] as $k => $max) {
+                if (array_key_exists($k, $d)) {
+                    $f[$k] = clean_text(mb_substr(trim((string)$d[$k]), 0, $max));
+                }
+            }
+            if (array_key_exists('dev_phone', $d)) {
+                $f['dev_phone'] = digits_only($d['dev_phone']);
+            }
+            if (array_key_exists('dev_photo', $d)) {
+                if ($d['dev_photo'] && preg_match('#^data:image/(png|jpeg|webp|gif);base64,(.+)$#s', (string)$d['dev_photo'], $m) && strlen($m[2]) < 3000000) {
+                    $raw = base64_decode($m[2], true);
+                    if ($raw !== false && @getimagesizefromstring($raw)) {
+                        file_put_contents(DATA_DIR . '/dev.bin', $raw);
+                        $f['dev_photo'] = true;
+                    }
+                } elseif (!$d['dev_photo']) {
+                    @unlink(DATA_DIR . '/dev.bin');
+                    $f['dev_photo'] = false;
+                }
             }
             if (array_key_exists('google_client_id', $d)) {
                 $cfgPath = DATA_DIR . '/config.json';
