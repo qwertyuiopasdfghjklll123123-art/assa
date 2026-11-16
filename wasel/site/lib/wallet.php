@@ -282,7 +282,11 @@ function verify_binance_order(array $pm, string $orderId, float $expectedUsd): a
         if (!in_array($ccy, ['USDT', 'USD', 'USDC', 'FDUSD'], true)) {
             return [false, "عملة العملية غير مدعومة ($ccy) - أرسل USDT"];
         }
-        $amount = abs((float)($row['amount'] ?? 0));
+        // (19) لازم تكون دفعة واردة (موجبة) - الدفعات اللي أرسلها صاحب الحساب تنرفض
+        $amount = (float)($row['amount'] ?? 0);
+        if ($amount <= 0) {
+            return [false, 'هذي العملية مو دفعة واردة'];
+        }
         if (abs($amount - $expectedUsd) > 0.0001) {
             return [false, 'المبلغ غير مطابق: المتوقع $' . $expectedUsd . ' والمستلم $' . $amount];
         }

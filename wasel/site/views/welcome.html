@@ -2,17 +2,17 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#f3f7f8">
 <title>__SITE_NAME__ — منصة رسائل واتساب</title>
-<link rel="manifest" href="/manifest.json">
+<link rel="manifest" href="/app.webmanifest">
 <link rel="apple-touch-icon" href="/pwa-192.png">
 <link rel="icon" type="image/png" href="/pwa-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="/assets/ui.css?v=6">
+<link rel="stylesheet" href="/assets/ui.css?v=8">
 __GOOGLE_SCRIPT__
 <style>
   body{overflow-x:hidden}
@@ -62,6 +62,14 @@ __GOOGLE_SCRIPT__
   .trust{display:flex;justify-content:center;gap:16px;margin-top:16px;color:var(--text3);font-size:11.5px}
   .trust span{display:flex;align-items:center;gap:5px}.trust i{color:var(--primary)}
   .foot{text-align:center;font-size:11px;color:var(--text3);margin-top:8px}
+  .foot a{color:var(--primary);font-weight:700}
+  .cc-row .cc-pick{height:54px}
+  .dev-mini{position:relative;overflow:hidden;display:flex;align-items:center;gap:10px;margin:8px auto 12px;padding:8px 14px 8px 10px;width:fit-content;max-width:100%;border-radius:999px;background:rgba(255,255,255,.85);border:1px solid #fff;box-shadow:0 8px 20px rgba(3,79,92,.1);color:var(--text)}
+  .dev-mini img,.dev-mini .dm-av{width:36px;height:36px;border-radius:50%;object-fit:cover;flex:none;box-shadow:0 0 0 2px #fff,0 0 0 4px rgba(10,157,178,.35),0 0 16px rgba(10,157,178,.5);animation:glow 2.8s ease-in-out infinite;display:flex;align-items:center;justify-content:center;background:var(--btn);color:#fff;font-weight:800}
+  .dm-t{display:flex;flex-direction:column;line-height:1.25}
+  .dm-t small{font-size:10.5px;color:var(--text3)}
+  .dm-t b{font-size:13px}
+  .dev-mini .fa-whatsapp{color:#16a34a;font-size:20px;margin-right:4px}
 </style>
 </head>
 <body>
@@ -82,6 +90,7 @@ __GOOGLE_SCRIPT__
   <g transform="translate(104 34) rotate(8)"><path d="M0 34 L62 0 L46 64 L30 44 Z" fill="url(#ig)"/><path d="M30 44 L62 0 L22 40 Z" fill="#fff" opacity=".35"/><path d="M22 40 L30 44 L26 58 Z" fill="var(--ill1)" opacity=".8"/></g>
   <g fill="#fff"><ellipse cx="58" cy="44" rx="16" ry="8"/><ellipse cx="68" cy="40" rx="11" ry="9"/><ellipse cx="170" cy="96" rx="14" ry="7"/><ellipse cx="160" cy="93" rx="9" ry="8"/></g>
   <circle cx="176" cy="38" r="4" fill="var(--ill2)" opacity=".6"/><circle cx="44" cy="84" r="3" fill="var(--ill1)" opacity=".5"/></svg></div>
+    <div id="devMini"></div>
     <div class="cta"><button class="btn btn-primary btn-start shine" onclick="goLogin()"><span>ابدأ الآن</span><span class="go-arr"><i class="fa-solid fa-arrow-left"></i></span></button><small id="trialNote">سجّل دخولك أو أنشئ حسابك في ثوانٍ</small></div>
   </section>
 
@@ -102,7 +111,7 @@ __GOOGLE_SCRIPT__
       <div id="stPhone" class="step hidden">
         <div class="field">
           <label>رقم واتساب</label>
-          <div class="cc-row"><div class="cc" id="ccLabel"></div><input class="input" id="phone" type="tel" inputmode="numeric" placeholder="7701234567" autocomplete="tel"></div>
+          <div class="cc-row"><button type="button" class="cc-pick" id="ccPick"><span class="num" id="ccLabel"></span><i class="fa-solid fa-chevron-down"></i></button><input class="input" id="phone" type="tel" inputmode="numeric" placeholder="7701234567" autocomplete="tel"></div>
           <div class="hint">راح يوصلك رمز تحقق على واتساب</div>
         </div>
         <button class="btn btn-primary btn-block" id="sendBtn" onclick="sendCode()"><i class="fa-solid fa-paper-plane"></i> إرسال الرمز</button>
@@ -136,7 +145,7 @@ __GOOGLE_SCRIPT__
   <g transform="translate(104 34) rotate(8)"><path d="M0 34 L62 0 L46 64 L30 44 Z" fill="url(#ig)"/><path d="M30 44 L62 0 L22 40 Z" fill="#fff" opacity=".35"/><path d="M22 40 L30 44 L26 58 Z" fill="var(--ill1)" opacity=".8"/></g>
   <g fill="#fff"><ellipse cx="58" cy="44" rx="16" ry="8"/><ellipse cx="68" cy="40" rx="11" ry="9"/><ellipse cx="170" cy="96" rx="14" ry="7"/><ellipse cx="160" cy="93" rx="9" ry="8"/></g>
   <circle cx="176" cy="38" r="4" fill="var(--ill2)" opacity=".6"/><circle cx="44" cy="84" r="3" fill="var(--ill1)" opacity=".5"/></svg></div>
-    <div class="foot">بتسجيل الدخول فإنك توافق على شروط الاستخدام وسياسة الخصوصية</div>
+    <div class="foot">بتسجيل الدخول فإنك توافق على <a href="/privacy" target="_blank">شروط الاستخدام وسياسة الخصوصية</a></div>
   </section>
 </div>
 <div class="toast" id="toast"></div>
@@ -154,6 +163,19 @@ function toggleTheme() {
 }
 if (B.trial_days > 0) $('trialNote').textContent = 'سجّل الآن واحصل على ' + B.trial_days + ' أيام تجربة مجانية';
 $('ccLabel').textContent = B.cc_label;
+// بطاقة المطور الصغيرة فوق زر البدء
+if (B.dev) $('devMini').innerHTML = `<a class="dev-mini shine" href="https://wa.me/${B.dev.phone}" target="_blank" rel="noopener">${B.dev.photo ? `<img src="${B.dev.photo}" alt="">` : `<span class="dm-av">${(B.dev.name || 'م')[0]}</span>`}<span class="dm-t"><small>${B.dev.title.replace(/[<>&"']/g, '')}</small><b>${B.dev.name.replace(/[<>&"']/g, '')}</b></span><i class="fa-brands fa-whatsapp"></i></a>`;
+// اختيار رمز الدولة
+const ccSheetHtml = `<div class="sheet-bg" id="ccBg"></div><div class="sheet cc-sheet" id="ccSh"><div class="sheet-handle"></div><h3 style="margin:0 0 12px">اختر رمز الدولة</h3><input class="input" id="ccQ" placeholder="ابحث بالرمز... مثل 964"><div class="cc-list" id="ccList"></div></div>`;
+document.body.insertAdjacentHTML('beforeend', ccSheetHtml);
+$('ccPick').onclick = () => {
+  const draw = () => { const t = $('ccQ').value.replace(/\D/g, ''); $('ccList').innerHTML = B.country_codes.filter(([c]) => !t || c.startsWith(t)).map(([c, l]) => `<button class="cc-item ${c === B.cc ? 'on' : ''}" data-c="${c}"><span class="num">${l}</span></button>`).join(''); };
+  const close = () => { $('ccBg').classList.remove('show'); $('ccSh').classList.remove('show'); };
+  $('ccQ').value = ''; draw(); $('ccQ').oninput = draw;
+  $('ccList').onclick = e => { const b = e.target.closest('[data-c]'); if (!b) return; B.cc = b.dataset.c; $('ccLabel').textContent = B.country_codes.find(x => x[0] === B.cc)[1]; close(); };
+  $('ccBg').onclick = close;
+  $('ccBg').classList.add('show'); $('ccSh').classList.add('show');
+};
 if (!B.whatsapp) { $('waBtn').classList.add('hidden'); $('orLine').classList.add('hidden'); }
 
 // انتقال متحرك بين الشاشتين (مع زر الرجوع بالجوال)
@@ -183,7 +205,7 @@ function showStep(st) {
 }
 async function post(url, data) {
   try {
-    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    const r = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'wasel' }, body: JSON.stringify(data) });
     return await r.json();
   } catch (e) { return { ok: false, error: 'تعذر الاتصال بالسيرفر' }; }
 }
@@ -254,6 +276,16 @@ async function saveName() {
 ['phone', 'code', 'name'].forEach(id => $(id).addEventListener('keydown', e => {
   if (e.key === 'Enter') ({ phone: sendCode, code: verifyCode, name: saveName })[id]();
 }));
+
+// منع التكبير بالأصابع ومنع نسخ النصوص (عدا حقول الكتابة)
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
+let lastTouch = 0;
+document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTouch < 300 && !e.target.closest('input,textarea')) e.preventDefault(); lastTouch = n; }, { passive: false });
+const editable = t => t && t.closest && t.closest('input,textarea,[contenteditable],.selectable,.code-block,.copy-box');
+['copy', 'cut'].forEach(t => document.addEventListener(t, e => { if (!editable(e.target) && !editable(document.getSelection()?.anchorNode?.parentElement)) e.preventDefault(); }));
+document.addEventListener('contextmenu', e => { if (!editable(e.target)) e.preventDefault(); });
+document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
+
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
 </script>
 </body>

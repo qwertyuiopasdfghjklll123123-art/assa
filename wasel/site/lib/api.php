@@ -88,11 +88,15 @@ function api_routes(): array
         }],
         ['POST', '#^/api/recharge/manual$#', function () {
             $id = require_login();
+            rate_limit_or_fail('recharge_manual', 6, 3600);
             $pm = store_find('payment_methods', (int)($_POST['method_id'] ?? 0));
             if (!$pm || empty($pm['active']) || !in_array($pm['type'], ['manual', 'superkey'], true)) {
                 json_err('طريقة الدفع غير متاحة');
             }
             $amount = (int)($_POST['amount'] ?? 0);
+            if ($amount > 50000000) {
+                json_err('المبلغ غير منطقي');
+            }
             if ($amount < max(1, (int)($pm['min_amount'] ?? 0))) {
                 json_err('أقل مبلغ للشحن ' . number_format(max(1, (int)$pm['min_amount'])) . ' د.ع');
             }
@@ -115,6 +119,7 @@ function api_routes(): array
         }],
         ['POST', '#^/api/recharge/binance$#', function () {
             $id = require_login();
+            rate_limit_or_fail('binance', 8, 600);
             $d = request_json();
             $pm = store_first('payment_methods', fn($m) => $m['type'] === 'binance' && !empty($m['active']));
             if (!$pm) {
@@ -122,21 +127,27 @@ function api_routes(): array
             }
             $usd = round((float)($d['amount_usd'] ?? 0), 2);
             $order = trim((string)($d['order_id'] ?? ''));
-            if ($usd <= 0) {
+            if ($usd <= 0 || $usd > 10000) {
                 json_err('أدخل المبلغ بالدولار');
             }
             if (!preg_match('/^\d{6,30}$/', $order)) {
                 json_err('أدخل رقم العملية (Order ID) بشكل صحيح');
             }
+            // قفل حتى ما ينستخدم نفس رقم العملية بطلبين بنفس اللحظة
+            $lk = fopen(DATA_DIR . '/binance.lock', 'c');
+            flock($lk, LOCK_EX);
             if (store_first('recharges', fn($r) => ($r['ref'] ?? '') === $order && $r['method_type'] === 'binance')) {
+                flock($lk, LOCK_UN);
                 json_err('رقم العملية هذا مستخدم مسبقاً');
             }
             [$ok, $res] = verify_binance_order($pm, $order, $usd);
             if (!$ok) {
+                flock($lk, LOCK_UN);
                 json_err($res);
             }
             $iqd = (int)round($usd * usd_rate());
             record_recharge($id, $pm, $iqd, 'approved', ['ref' => $order, 'orig_amount' => $usd, 'currency' => 'USD']);
+            flock($lk, LOCK_UN);
             $bal = wallet_add($id, $iqd, 'recharge', "Binance Pay \${$usd}");
             apply_recharge_plan($id, $d['plan_id'] ?? null);
             $bal = wallet_balance($id);
@@ -192,6 +203,7 @@ function api_routes(): array
             $d = request_json();
             $action = (string)($d['action'] ?? '');
             $val = (int)($d['value'] ?? 0);
+            admin_log('user_' . $action, '#' . $uidT . ' value=' . $val);
             switch ($action) {
                 case 'balance_add':
                     if ($val === 0) {
@@ -256,6 +268,7 @@ function api_routes(): array
             }
             $amount = isset($d['amount']) && (int)$d['amount'] > 0 ? (int)$d['amount'] : (int)$r['amount'];
             $note = clean_text(mb_substr(trim((string)($d['note'] ?? '')), 0, 200));
+            admin_log('recharge_' . $act, '#' . $rid . ' amount=' . $amount);
             store_update('recharges', $rid, fn($x) => array_merge($x, [
                 'status' => $act === 'approve' ? 'approved' : 'rejected', 'amount' => $amount, 'admin_note' => $note, 'reviewed_at' => now_str(),
             ]));
@@ -494,6 +507,7 @@ function api_routes(): array
                 file_put_contents($cfgPath, json_encode($cfg, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT));
             }
             update_settings($f);
+            admin_log('settings_saved', implode(',', array_keys($f)));
             json_out(['ok' => true]);
         }],
 
@@ -514,13 +528,23 @@ function api_routes(): array
                 'banned' => array_values(array_map(fn($u) => ['id' => $u['id'], 'name' => $u['name'] ?: ($u['email'] ?: $u['phone'])], store_where('users', fn($u) => !empty($u['banned'])))),
                 'admins' => array_values(array_map(fn($u) => ['id' => $u['id'], 'name' => $u['name'] ?: ($u['email'] ?: $u['phone'])], store_where('users', fn($u) => !empty($u['is_admin'])))),
                 'whatsapp_login' => !empty(settings()['whatsapp_login']),
-                'https' => (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https'),
+                'https' => is_https(), 'force_https' => !empty(settings()['force_https']),
+                'events' => array_slice(array_reverse(store_all('security_log')), 0, 60),
                 'data_protected' => true,
             ]);
         }],
         ['POST', '#^/api/admin/security$#', function () {
             require_admin();
             $act = (string)(request_json()['action'] ?? '');
+            admin_log('security_' . $act);
+            if ($act === 'force_https') {
+                $on = !empty(request_json()['on']);
+                if ($on && !is_https()) {
+                    json_err('افتح لوحة الإدارة عبر https:// أولاً حتى تتأكد أن الشهادة شغّالة');
+                }
+                update_settings(['force_https' => $on]);
+                json_out(['ok' => true]);
+            }
             if ($act === 'logout_all') {
                 $epoch = (int)(settings()['session_epoch'] ?? 1) + 1;
                 update_settings(['session_epoch' => $epoch]);
@@ -549,6 +573,10 @@ function api_routes(): array
             if (!$f || $f['error'] !== UPLOAD_ERR_OK) {
                 json_err('اختر ملف JSON');
             }
+            if ($f['size'] > 40 * 1024 * 1024) {
+                json_err('الملف كبير جداً');
+            }
+            admin_log('backup_import', $f['name']);
             [$ok, $m] = backup_import((string)file_get_contents($f['tmp_name']));
             $ok ? json_out(['ok' => true, 'msg' => $m]) : json_err($m);
         }],
@@ -626,6 +654,7 @@ function handle_asiacell($step): void
     }
 
     if ($step === 'start') {
+        rate_limit_or_fail('asiacell_start', 5, 900);
         if ($flow && ($flow['paid'] ?? 0) > 0) {
             json_err('عندك عملية آسياسيل غير مكتملة - أكملها أو ألغها');
         }
@@ -659,6 +688,7 @@ function handle_asiacell($step): void
     if (!$flow) {
         json_err('انتهت صلاحية العملية، ابدأ من جديد');
     }
+    rate_limit_or_fail('asiacell_code', 12, 900);
     $code = digits_only($d['code'] ?? '');
     if (!preg_match('/^\d{4,6}$/', $code)) {
         json_err('الرمز لازم يكون من 4 إلى 6 أرقام');

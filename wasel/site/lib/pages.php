@@ -98,6 +98,7 @@ function render_welcome_page(): string
         'site' => html_entity_decode($siteName), 'cc' => $cc, 'cc_label' => $ccLabel,
         'google' => GOOGLE_CLIENT_ID, 'whatsapp' => !empty(settings()['whatsapp_login']) || users_count() === 0,
         'trial_days' => trial_days(), 'message_price' => message_price(), 'plan_price' => plan_price(),
+        'dev' => public_settings()['dev'], 'country_codes' => COUNTRY_CODES,
     ];
     return strtr(view_file('welcome.html'), [
         '__SITE_NAME__' => $siteName,

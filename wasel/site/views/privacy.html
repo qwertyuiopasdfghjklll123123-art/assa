@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f3f7f8">
+<title>الخصوصية والأمان - __SITE_NAME__</title>
+<link rel="icon" type="image/png" href="/pwa-192.png">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="stylesheet" href="/assets/ui.css?v=8">
+<style>
+  main{max-width:680px;margin:0 auto;padding:calc(20px + env(safe-area-inset-top,0px)) 18px 40px}
+  .top{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+  .top h1{font-size:22px;flex:1}
+  .back{width:42px;height:42px;border-radius:14px;background:#fff;border:1px solid var(--glass-line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--primary)}
+  .toc{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+  .toc a{padding:7px 14px;border-radius:12px;background:#fff;border:1px solid var(--glass-line);font-size:13px;font-weight:700;box-shadow:var(--shadow)}
+  .card h2{font-size:17px;display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .card h2 i{width:34px;height:34px;border-radius:11px;display:inline-flex;align-items:center;justify-content:center;font-size:14px}
+  .card p,.card li{font-size:13.5px;color:var(--text2);line-height:1.95}
+  .card ul{padding-right:18px;margin-top:4px}
+  .card+.card{margin-top:14px}
+  .upd{font-size:12px;color:var(--text3);text-align:center;margin-top:18px}
+</style>
+</head>
+<body>
+<main>
+  <div class="top"><a class="back" href="/"><i class="fa-solid fa-arrow-right"></i></a><h1>الخصوصية والأمان</h1></div>
+  <div class="hero shine"><div style="display:flex;align-items:center;gap:14px"><span class="hero-icon"><i class="fa-solid fa-user-shield"></i></span>
+    <div><div style="font-weight:800;font-size:18px">بياناتك أمانة عندنا</div><div class="hero-sub">نوضّح هنا شنو نجمع، وليش، وشلون نحميه، وشروط استخدام __SITE_NAME__</div></div></div></div>
+  <div class="toc"><a href="#privacy">سياسة الخصوصية</a><a href="#security">الأمان</a><a href="#terms">شروط الاستخدام</a><a href="#rights">حقوقك</a></div>
+
+  <section class="card" id="privacy">
+    <h2><i class="ic-teal fa-solid fa-eye-slash"></i> سياسة الخصوصية</h2>
+    <p><b>البيانات اللي نجمعها:</b></p>
+    <ul>
+      <li>بيانات الحساب: الاسم والبريد (عند الدخول بـ Google) أو رقم واتساب (عند الدخول برمز واتساب).</li>
+      <li>أرقام واتساب اللي تربطها بالمنصة، والأرقام اللي تضيفها لحملاتك، ونصوص رسائلك.</li>
+      <li>سجل الحملات وإحصائياتها (وصلت، شوهدت، رد عليها) وحركات الرصيد وطلبات الشحن.</li>
+      <li>معلومات تقنية للأمان فقط: عنوان IP ونوع المتصفح وأوقات الدخول.</li>
+    </ul>
+    <p><b>شلون نستخدمها:</b> لتشغيل الخدمة فقط - إرسال رسائلك، والرد الآلي، وإظهار التقارير، وحماية حسابك. <b>ما نبيع بياناتك ولا نشاركها</b> مع أي جهة إعلانية.</p>
+    <p><b>الرد الذكي:</b> لما تفعّل الرد بالذكاء الاصطناعي، تنرسل رسالة العميل ومعلومات نشاطك اللي كتبتها لمزوّد الذكاء الاصطناعي حتى يكتب الرد، وما نرسل أي بيانات ثانية.</p>
+    <p><b>المدفوعات:</b> صور الإيصالات تنحفظ بشكل محمي ويشوفها الأدمن فقط. ما نحفظ أي بيانات بطاقات بنكية، ورموز آسياسيل تُستخدم لحظة التحويل فقط وما تنحفظ.</p>
+  </section>
+
+  <section class="card" id="security">
+    <h2><i class="ic-indigo fa-solid fa-shield-halved"></i> كيف نحمي حسابك</h2>
+    <ul>
+      <li>دخول بدون كلمة مرور: عبر Google أو رمز تحقق لمرة وحدة على واتساب (صالح 10 دقائق، 5 محاولات كحد أقصى).</li>
+      <li>الاتصال مشفّر (HTTPS) والجلسات محمية (HttpOnly / Secure / SameSite) وتنتهي تلقائياً.</li>
+      <li>رموز التحقق وكلمات مرور الطوارئ تنحفظ مشفّرة (Argon2id) - ما تنحفظ كنص أبداً.</li>
+      <li>مفاتيح API تنحفظ كبصمة SHA-256 فقط، ومحدودة بـ 20 طلب بالدقيقة.</li>
+      <li>حماية من الطلبات المزوّرة (CSRF) والحقن (XSS)، وترويسات أمان على كل الصفحات.</li>
+      <li>تحديد عدد المحاولات لكل جهاز، وتنبيه الإدارة عند محاولات دخول مشبوهة.</li>
+      <li>ملفات البيانات محجوبة بالكامل عن الإنترنت، ونسخ احتياطية دورية.</li>
+    </ul>
+  </section>
+
+  <section class="card" id="terms">
+    <h2><i class="ic-orange fa-solid fa-file-contract"></i> شروط الاستخدام</h2>
+    <ul>
+      <li>تستخدم المنصة لمراسلة عملائك ومشتركيك اللي وافقوا على استلام رسائلك.</li>
+      <li><b>ممنوع</b> الإزعاج (Spam)، أو الاحتيال، أو المحتوى المخالف للقانون، أو انتحال جهات ثانية.</li>
+      <li>إرسال رسائل كثيرة لأرقام ما تعرفك قد يسبب حظر رقمك من واتساب - استخدم فواصل مناسبة بين الرسائل وأرسل لمن يعرفك.</li>
+      <li>الباقات والرصيد غير قابلة للاسترجاع بعد الاستخدام، والرصيد غير المستخدم يبقى بحسابك.</li>
+      <li>يحق للإدارة إيقاف أي حساب يخالف هذه الشروط.</li>
+      <li>واتساب علامة تجارية لشركة Meta، والمنصة خدمة مستقلة غير تابعة لها.</li>
+    </ul>
+  </section>
+
+  <section class="card" id="rights">
+    <h2><i class="ic-green fa-solid fa-hand-holding-heart"></i> حقوقك</h2>
+    <ul>
+      <li>تقدر تعدّل اسمك من «حسابي ← الملف الشخصي».</li>
+      <li>تقدر تحذف كل أرقام واتساب المربوطة وسجلها بأي وقت من «الملف الشخصي».</li>
+      <li>لحذف حسابك بالكامل أو طلب نسخة من بياناتك تواصل مع الدعم.</li>
+    </ul>
+  </section>
+  <div class="upd">آخر تحديث: __UPDATED__</div>
+</main>
+</body>
+</html>

@@ -62,6 +62,12 @@ function clean_text($s): string
     return strtr((string)$s, ['<' => '‹', '>' => '›', '"' => '”', "'" => '’', '`' => '‘']);
 }
 
+/** (5) تشفير كلمات المرور ورموز التحقق: Argon2id إذا متوفر، وإلا bcrypt */
+function pw_hash(string $plain): string
+{
+    return password_hash($plain, defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT);
+}
+
 function digits_only($s): string
 {
     return preg_replace('/\D/', '', (string)$s);
@@ -132,9 +138,13 @@ function start_session(): void
     if (!is_dir($dir)) {
         @mkdir($dir, 0700, true);
     }
-    $life = 365 * 24 * 3600; // الجلسة ما تنتهي إلا بتسجيل خروج صريح (تقريباً)
+    $life = 60 * 24 * 3600; // (15) الجلسة تبقى 60 يوم ثم يلزم تسجيل دخول من جديد
     ini_set('session.gc_maxlifetime', (string)$life);
     ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.use_trans_sid', '0');
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.sid_length', '48');
     if (is_dir($dir) && is_writable($dir)) {
         session_save_path($dir);
     }
@@ -142,7 +152,7 @@ function start_session(): void
     session_set_cookie_params([
         'lifetime' => $life,
         'path' => '/',
-        'secure' => !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off',
+        'secure' => function_exists('is_https') ? is_https() : (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off'),
         'httponly' => true,
         'samesite' => 'Lax',
     ]);
@@ -202,11 +212,15 @@ function log_login(?int $userId, string $method, bool $ok, string $note = ''): v
             'ip' => client_ip_addr(), 'ua' => clean_text(mb_substr((string)($_SERVER['HTTP_USER_AGENT'] ?? ''), 0, 160)),
             'time' => now_str(),
         ];
+        unset($r);
         if (count($rows) > 300) {
             ksort($rows, SORT_NUMERIC);
             $rows = array_slice($rows, -300, null, true);
         }
     });
+    if (!$ok && function_exists('failed_login_alert')) {
+        failed_login_alert();
+    }
 }
 
 /** يطلّع الجلسة لو المستخدم محظور أو الأدمن أنهى كل الجلسات */

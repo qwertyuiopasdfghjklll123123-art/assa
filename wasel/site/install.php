@@ -15,10 +15,12 @@ require __DIR__ . '/lib/tasks.php';
 require __DIR__ . '/lib/wallet.php';
 require __DIR__ . '/lib/backup.php';
 require __DIR__ . '/lib/api.php';
+require __DIR__ . '/lib/security.php';
 
 if (!is_dir(DATA_DIR)) {
     @mkdir(DATA_DIR, 0755, true);
 }
+security_bootstrap();
 start_session();
 
 // ---------------------------------------------------------------- أدوات
@@ -145,6 +147,16 @@ function engine_check(): array
 // ---------------------------------------------------------------- معالجة الطلبات
 
 $isAdmin = APP_INSTALLED && !empty($_SESSION['is_admin']) && uid() && user_by_id(uid());
+
+// (9/23) بعد التنصيب: الصفحة مقفولة تماماً - تظهر 404 لأي أحد مو أدمن، إلا برابط الطوارئ السري
+$recoveryKey = (string)(read_cfg()['RECOVERY_KEY'] ?? CRON_KEY);
+$hasRecovery = $recoveryKey !== '' && hash_equals($recoveryKey, (string)($_GET['recovery'] ?? $_POST['recovery'] ?? ''));
+if (APP_INSTALLED && !$isAdmin && !$hasRecovery) {
+    security_log('install_denied', (string)($_SERVER['REQUEST_URI'] ?? ''));
+    http_response_code(404);
+    header('Content-Type: text/plain; charset=utf-8');
+    exit('الصفحة غير موجودة');
+}
 $errors = [];
 $notice = '';
 $action = $_POST['action'] ?? '';
@@ -182,6 +194,7 @@ if ($action === 'install' && !APP_INSTALLED) {
             'ENGINE_SECRET' => bin2hex(random_bytes(24)),
             'ENGINE_PORT' => random_int(20000, 39999),
             'CRON_KEY' => bin2hex(random_bytes(12)),
+            'RECOVERY_KEY' => bin2hex(random_bytes(16)),
             'MASTER_ADMIN_PHONE' => '',
             'MASTER_ADMIN_CODE' => '',
             'TIMEZONE' => 'Asia/Baghdad',
@@ -191,10 +204,13 @@ if ($action === 'install' && !APP_INSTALLED) {
         } else {
             write_engine_cfg($cfg);
             $user = user_by('email', $email) ?? create_user([
-                'email' => $email, 'name' => clean_text($name), 'password_hash' => password_hash($pass, PASSWORD_DEFAULT),
+                'email' => $email, 'name' => clean_text($name), 'password_hash' => pw_hash($pass),
             ], true);
             // الأدمن عنده اشتراك دائم (بدون فترة تجربة)
             update_user((int)$user['id'], ['is_admin' => true, 'plan_active' => true, 'plan_ends_at' => null]);
+            if (is_https()) {
+                update_settings(['force_https' => true]);
+            }
             update_settings(array_filter([
                 'site_name' => $siteName !== '' ? clean_text(mb_substr($siteName, 0, 60)) : null,
                 'admin_email' => $email,
@@ -239,6 +255,7 @@ if ($isAdmin && $action === 'start_engine') {
 }
 
 if ($action === 'admin_login' && APP_INSTALLED && !$isAdmin) {
+    rate_limit_or_fail('install_login', 6, 900);
     $email = strtolower(trim((string)($_POST['email'] ?? '')));
     $u = user_by('email', $email);
     if (!login_throttle()) {
@@ -257,6 +274,7 @@ if ($action === 'admin_login' && APP_INSTALLED && !$isAdmin) {
 
 if (isset($_GET['done'])) {
     $notice = 'تم التنصيب بنجاح! حسابك صار أدمن المنصة. كمّل الخطوات بالأسفل لتشغيل واتساب.';
+    $showRecovery = base_url() . '/install.php?recovery=' . (read_cfg()['RECOVERY_KEY'] ?? '');
 }
 if (isset($_GET['saved'])) {
     $notice = 'تم حفظ الإعدادات';
@@ -317,13 +335,15 @@ $phpBin = PHP_BINDIR . '/php';
 
   <?php foreach ($errors as $e): ?><div class="msg bad"><?= h($e) ?></div><?php endforeach; ?>
   <?php if ($notice): ?><div class="msg ok"><?= h($notice) ?></div><?php endif; ?>
+  <?php if (!empty($showRecovery)): ?><div class="msg warn">احفظ رابط الطوارئ هذا بمكان آمن (يفتح صفحة التنصيب لو تعطّل دخول كوكل) - ما راح يظهر مرة ثانية:<br><code><?= h($showRecovery) ?></code></div><?php endif; ?>
 
   <?php if (APP_INSTALLED && !$isAdmin): ?>
     <div class="card">
       <h2>المنصة منصّبة</h2>
-      <p>هذه الصفحة للأدمن فقط. سجّل دخولك بكوكل (ببريد الأدمن) من الموقع، أو استخدم دخول الطوارئ بكلمة المرور اللي حددتها وقت التنصيب:</p>
+      <p>دخول الطوارئ للأدمن بكلمة المرور اللي حددتها وقت التنصيب:</p>
       <form method="post">
         <input type="hidden" name="action" value="admin_login">
+        <input type="hidden" name="recovery" value="<?= h($_GET['recovery'] ?? $_POST['recovery'] ?? '') ?>">
         <input type="hidden" name="csrf" value="<?= h($_SESSION['install_csrf']) ?>">
         <label>بريد الأدمن</label><input name="email" type="email" dir="ltr" required>
         <label>كلمة المرور</label><input name="password" type="password" dir="ltr" required>

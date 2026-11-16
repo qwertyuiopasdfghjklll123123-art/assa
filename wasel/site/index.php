@@ -15,6 +15,7 @@ require __DIR__ . '/lib/tasks.php';
 require __DIR__ . '/lib/wallet.php';
 require __DIR__ . '/lib/backup.php';
 require __DIR__ . '/lib/api.php';
+require __DIR__ . '/lib/security.php';
 
 if (!is_dir(DATA_DIR)) {
     @mkdir(DATA_DIR, 0700, true);
@@ -29,16 +30,9 @@ if ($base !== '' && strpos($path, $base) === 0) {
 }
 $path = '/' . trim($path, '/');
 
-// ------------------------------------------------ حماية: ترويسات أمان على كل الردود
-header('X-Content-Type-Options: nosniff');
-header('X-Frame-Options: SAMEORIGIN');
-header('Referrer-Policy: strict-origin-when-cross-origin');
-header('Permissions-Policy: geolocation=(), microphone=(), camera=(), payment=()');
-header('Cross-Origin-Opener-Policy: same-origin-allow-popups');
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-    header('Strict-Transport-Security: max-age=31536000');
-}
-header_remove('X-Powered-By');
+// ------------------------------------------------ حماية: أخطاء عامة، HTTPS، ترويسات أمان، CSRF
+security_bootstrap();
+csrf_check($method, $path);
 
 // مهام مجدولة تلقائية مع زيارات الموقع (بديل Cron): كل 5 دقائق كحد أقصى، بعد إرسال الرد للزائر
 if (APP_INSTALLED && $method === 'GET' && function_exists('fastcgi_finish_request')) {
@@ -87,20 +81,11 @@ if ($path === '/dev-photo') {
     readfile($f);
     exit;
 }
-// حماية من طلبات مزوّرة من مواقع ثانية (CSRF): أي طلب تعديل لازم يجي من نفس الموقع
-if (in_array($method, ['POST', 'DELETE', 'PUT'], true) && strpos($path, '/telegram/webhook/') !== 0) {
-    $origin = (string)($_SERVER['HTTP_ORIGIN'] ?? $_SERVER['HTTP_REFERER'] ?? '');
-    $host = (string)($_SERVER['HTTP_HOST'] ?? '');
-    if ($origin !== '' && parse_url($origin, PHP_URL_HOST) . (parse_url($origin, PHP_URL_PORT) ? ':' . parse_url($origin, PHP_URL_PORT) : '') !== $host) {
-        json_err('طلب مرفوض', 403);
-    }
-}
-
 start_session();
 enforce_session();
 
 // الموقع لسا ما تنصّب: كل الصفحات تروح لصفحة التنصيب
-if (!APP_INSTALLED && $method === 'GET' && !preg_match('#^/(branding/logo|icon\.svg|pwa-\d+\.png|manifest\.json|sw\.js|assets/.+)$#', $path)) {
+if (!APP_INSTALLED && $method === 'GET' && !preg_match('#^/(branding/logo|icon\.svg|pwa-\d+\.png|manifest\.json|app\.webmanifest|sw\.js|assets/.+)$#', $path)) {
     redirect_to(($base ?: '') . '/install.php');
 }
 
@@ -119,6 +104,11 @@ $routes = [
         echo render_welcome_page();
     }],
     ['GET', '#^/(login|signup)$#', fn() => redirect_to('/')],
+    ['GET', '#^/(privacy|terms|security-policy)$#', function () {
+        [$siteName] = branding_context();
+        header('Content-Type: text/html; charset=utf-8');
+        echo strtr(view_file('privacy.html'), ['__SITE_NAME__' => $siteName, '__UPDATED__' => date('Y-m-d', (int)filemtime(__DIR__ . '/views/privacy.html'))]);
+    }],
     ['GET', '#^/app(?:/([a-z0-9-]+))?$#', function ($section = '') {
         if (!uid() || !user_by_id(uid())) {
             $_SESSION = [];
@@ -145,7 +135,7 @@ $routes = [
         session_destroy();
         redirect_to('/');
     }],
-    ['GET', '#^/manifest\.json$#', function () {
+    ['GET', '#^/(?:manifest\.json|app\.webmanifest)$#', function () {
         [$siteName] = branding_context();
         $name = html_entity_decode($siteName);
         header('Content-Type: application/manifest+json; charset=utf-8');
@@ -488,6 +478,9 @@ $routes = [
     ['GET', '#^/accounts/([\w-]+)/auto_reply$#', function ($accId) {
         require_login();
         $a = owned_account($accId);
+        if (!$a) {
+            json_err('حساب غير موجود', 404);
+        }
         json_out([
             'enabled' => !empty($a['auto_reply_enabled']),
             'ai_enabled' => !empty($a['auto_reply_ai_enabled']),

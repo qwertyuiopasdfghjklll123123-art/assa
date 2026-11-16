@@ -1,6 +1,24 @@
 # منصة واصل - كل الطلبات تروح لـ index.php
 DirectoryIndex index.php
 
+# (23) منع فتح الملفات المخفية والحساسة من المتصفح (.user.ini، .git، README، ملفات json...)
+<FilesMatch "^\.">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Deny from all
+    </IfModule>
+</FilesMatch>
+<FilesMatch "\.(md|json|lock|sh|log|bak|old|orig|sql|sqlite|db|ini|env|tmp|swp|dist|yml|yaml|zip|tar|gz)$">
+    <IfModule mod_authz_core.c>
+        Require all denied
+    </IfModule>
+    <IfModule !mod_authz_core.c>
+        Deny from all
+    </IfModule>
+</FilesMatch>
+
 <IfModule mod_rewrite.c>
 RewriteEngine On
 
@@ -10,6 +28,11 @@ RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 
 # مسار محرك واتساب (تطبيق Node.js من Setup Node.js App) - لا نلمسه
 RewriteRule ^engine(/|$) - [L]
+
+# (4) HTTPS إجباري (لو الاستضافة تعطي شهادة) - مفعّل من PHP حسب إعداد «HTTPS إجباري»
+# (23) منع مجلد .git وأي مسار مخفي
+RewriteCond %{REQUEST_URI} !^/\.well-known/
+RewriteRule (^|/)\. - [F,L]
 
 # منع الوصول المباشر لملفات البيانات والكود
 RewriteRule ^(data|lib|views|tools|wasel-engine)(/|$) - [F,L]

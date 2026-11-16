@@ -16,7 +16,7 @@ const $ = s => view.querySelector(s);
 const $$ = s => [...view.querySelectorAll(s)];
 
 async function api(url, opt = {}) {
-  const init = { method: opt.method || (opt.body !== undefined ? 'POST' : 'GET'), headers: {} };
+  const init = { method: opt.method || (opt.body !== undefined ? 'POST' : 'GET'), headers: { 'X-Requested-With': 'wasel' } };
   if (opt.body instanceof FormData) init.body = opt.body;
   else if (opt.body !== undefined) { init.body = JSON.stringify(opt.body); init.headers['Content-Type'] = 'application/json'; }
   try {
@@ -64,6 +64,33 @@ async function confirmTap(btn, fn, label = '', opts = {}) {
   const ok = await confirmSheet({ title: opts.title || 'تأكيد الإجراء', text: opts.text || label || (action ? action + '؟' : ''), ok: opts.ok || action || 'تأكيد', icon: opts.icon, danger: opts.danger !== false });
   if (ok) fn();
 }
+// ---------------- اختيار رمز الدولة (بطاقة صغيرة لامعة + قائمة بحث من الأسفل)
+const ccLabel = c => (B.country_codes.find(x => x[0] === c) || [c, '+' + c])[1];
+function ccButton(id, val = B.cc) {
+  return `<button type="button" class="cc-pick" id="${id}" data-cc="${esc(val)}"><span class="num">${esc(ccLabel(val))}</span><i class="fa-solid fa-chevron-down"></i></button>`;
+}
+function ccSheet(current) {
+  return new Promise(res => {
+    let bg = document.getElementById('ccBg'), sh = document.getElementById('ccSh');
+    if (!sh) {
+      document.body.insertAdjacentHTML('beforeend', `<div class="sheet-bg" id="ccBg"></div><div class="sheet cc-sheet" id="ccSh"><div class="sheet-handle"></div><h3 style="margin:0 0 12px">اختر رمز الدولة</h3><input class="input" id="ccQ" placeholder="ابحث بالرمز... مثل 964"><div class="cc-list" id="ccList"></div></div>`);
+      bg = document.getElementById('ccBg'); sh = document.getElementById('ccSh');
+    }
+    const list = document.getElementById('ccList'), q = document.getElementById('ccQ');
+    const draw = () => { const t = q.value.replace(/\D/g, ''); list.innerHTML = B.country_codes.filter(([c]) => !t || c.startsWith(t)).map(([c, l]) => `<button class="cc-item ${c === current ? 'on' : ''}" data-c="${c}"><span class="num">${esc(l)}</span>${c === current ? '<i class="fa-solid fa-check"></i>' : ''}</button>`).join(''); };
+    const close = v => { bg.classList.remove('show'); sh.classList.remove('show'); res(v); };
+    q.value = ''; draw(); q.oninput = draw;
+    list.onclick = e => { const b = e.target.closest('[data-c]'); if (b) close(b.dataset.c); };
+    bg.onclick = () => close(null);
+    bg.classList.add('show'); sh.classList.add('show');
+  });
+}
+document.addEventListener('click', async e => {
+  const b = e.target.closest('.cc-pick'); if (!b) return;
+  const c = await ccSheet(b.dataset.cc);
+  if (c) { b.dataset.cc = c; b.querySelector('span').textContent = ccLabel(c); b.dispatchEvent(new Event('change', { bubbles: true })); }
+});
+
 function every(ms, fn) { const t = setInterval(fn, ms); S.timers.push(t); return t; }
 function head(title, back = true, extra = '') {
   return `<div class="page-head">${back ? `<button class="back" onclick="goBack()"><i class="fa-solid fa-arrow-right"></i></button>` : ''}<h2>${title}</h2>${extra}</div>`;
@@ -245,7 +272,6 @@ R.campaign = async (el, p) => {
     return;
   }
   const sel = accs.find(a => a.id === p.acc) || accs.find(a => a.logged_in) || accs[0];
-  const ccOpts = B.country_codes.map(([c, l]) => `<option value="${c}" ${c === B.cc ? 'selected' : ''}>${esc(l)}</option>`).join('');
   const payPerMsg = !ME.plan_active && !ME.trial_active && SET.message_price > 0 && !ADMIN;
   el.innerHTML = head('حملة جديدة', false, `<span class="pill pill-blue">${accs.filter(a => a.logged_in).length}/${accs.length} متصل</span>`) + `
     <div class="chips" id="accChips" style="margin-bottom:12px">${accs.map(a => `<button class="chip ${a.id === sel.id ? 'on' : ''}" data-id="${esc(a.id)}"><span class="status-dot ${a.logged_in ? 'on' : ''}"></span> ${esc(a.name)}</button>`).join('')}</div>
@@ -258,7 +284,7 @@ R.campaign = async (el, p) => {
         <button class="file-drop" id="contactsBtn" style="flex:1"><span class="row-ic ic-blue"><i class="fa-solid fa-address-book"></i></span><span style="flex:1;min-width:0;text-align:right"><b style="font-size:13px">جهات الاتصال</b><span class="row-sub">من جوالك أو ملف vcf</span></span></button>
         <input type="file" id="vcfFile" accept=".vcf,text/vcard,text/x-vcard" hidden>
       </div>
-      <div class="field" style="margin-top:12px"><label>رمز الدولة للأرقام المحلية</label><select class="select" id="cc">${ccOpts}</select></div>
+      <div class="field" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px"><label style="margin:0">رمز الدولة للأرقام المحلية</label>${ccButton('cc')}</div>
       <div class="card-title" style="margin-top:6px"><i class="fa-solid fa-message"></i> الرسالة</div>
       <textarea class="textarea" id="text" placeholder="اكتب رسالتك هنا... (اختياري إذا أرفقت صورة أو ملف)"></textarea>
       <label class="file-drop" style="margin-top:8px"><input type="file" id="media" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xlsx,.zip"><span class="row-ic ic-purple"><i class="fa-solid fa-paperclip"></i></span><span style="flex:1"><b style="font-size:13.5px">إرفاق صورة / فيديو / ملف</b><span class="row-sub" id="mediaName">اختياري - ينرسل والنص تعليق عليه</span></span></label>
@@ -324,7 +350,7 @@ R.campaign = async (el, p) => {
     if (!count()) { toast('أضف أرقام أولاً', 'err'); return; }
     if (!$('#text').value.trim() && !$('#media').files[0]) { toast('اكتب رسالة أو أرفق صورة/ملف', 'err'); return; }
     const fd = new FormData();
-    fd.append('numbers_text', numbersEl.value); fd.append('country_code', $('#cc').value); fd.append('text', $('#text').value);
+    fd.append('numbers_text', numbersEl.value); fd.append('country_code', $('#cc').dataset.cc); fd.append('text', $('#text').value);
     fd.append('delay', $('#delay').value || 15);
     if ($('#sendAt').value) fd.append('send_at', $('#sendAt').value);
     if ($('#media').files[0]) fd.append('media_file', $('#media').files[0]);
@@ -429,7 +455,7 @@ R.acc = async (el, p) => {
           <div class="numbered"><b>3</b><span>وجّه الكاميرا على الباركود</span></div>
         </div>` : `
         <div id="pairBox">
-          <div class="field"><label>رقم واتساب اللي تريد تربطه (مع رمز الدولة)</label><input class="input num" id="pairPhone" inputmode="numeric" placeholder="${B.cc}7701234567" style="direction:ltr;text-align:left"></div>
+          <div class="field"><label>رقم واتساب اللي تريد تربطه</label><div class="input-row">${ccButton('pairCc')}<input class="input num" id="pairPhone" inputmode="numeric" placeholder="7701234567" style="direction:ltr;text-align:left;flex:1"></div></div>
           <button class="btn btn-primary btn-block" id="pairBtn"><i class="fa-solid fa-hashtag"></i> توليد رمز الربط</button>
         </div>
         <div style="margin-top:12px">
@@ -446,7 +472,9 @@ R.acc = async (el, p) => {
     }
     const pb = link.querySelector('#pairBtn');
     if (pb) pb.onclick = async () => {
-      let ph = link.querySelector('#pairPhone').value.replace(/\D/g, '');
+      let ph = link.querySelector('#pairPhone').value.replace(/\D/g, '').replace(/^0+/, '');
+      const pcc = link.querySelector('#pairCc').dataset.cc;
+      if (!ph.startsWith(pcc) || ph.length < 11) ph = pcc + ph;
       if (ph.startsWith('0')) ph = B.cc + ph.slice(1);
       busy(pb, true);
       const r = await api(`/accounts/${a.id}/pair`, { body: { phone: ph } });
@@ -578,15 +606,16 @@ R.pay = async (el, p) => {
     body.innerHTML = `<div class="card">
       <div class="numbered"><b>1</b><span>حوّل المبلغ للرقم التالي</span></div>
       <div class="copy-box"><span class="v">${esc(m.number || '—')}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(m.number)}')"><i class="fa-regular fa-copy"></i> نسخ</button></div>
-      <div class="numbered" style="margin-top:14px"><b>2</b><span>اكتب المبلغ اللي حوّلته وارفع صورة الإيصال</span></div>
-      <input class="input big num" id="amt" type="number" inputmode="numeric" placeholder="0" min="${m.min_amount}" value="${need || ''}">
-      <div class="chips" style="margin-top:8px;justify-content:center">${quick.map(q => `<button class="chip num" data-q="${q}">${fmt(q)}</button>`).join('')}</div>
+      <div class="numbered" style="margin-top:14px"><b>2</b><span>${plan ? 'حوّل المبلغ المحدد بالضبط وارفع صورة الإيصال' : 'اكتب المبلغ اللي حوّلته وارفع صورة الإيصال'}</span></div>
+      ${plan ? `<div class="fixed-amt"><span>المبلغ المطلوب</span><b class="num">${fmt(need)}</b><small>د.ع</small><input type="hidden" id="amt" value="${need}"></div>`
+      : `<input class="input big num" id="amt" type="number" inputmode="numeric" placeholder="0" min="${m.min_amount}">
+      <div class="chips" style="margin-top:8px;justify-content:center">${quick.map(q => `<button class="chip num" data-q="${q}">${fmt(q)}</button>`).join('')}</div>`}
       <div class="field" style="margin-top:12px"><label>رقم العملية / ملاحظة (اختياري)</label><input class="input" id="ref"></div>
       <label class="file-drop"><input type="file" id="rc" accept="image/*"><span class="row-ic ic-blue"><i class="fa-solid fa-receipt"></i></span><span style="flex:1"><b style="font-size:13.5px">صورة الإيصال</b><span class="row-sub" id="rcName">اضغط لاختيار صورة</span></span></label>
       <img id="rcPrev" class="receipt hidden" style="margin-top:10px">
       <div class="numbered" style="margin-top:14px"><b>3</b><span>نراجع الطلب ونضيف الرصيد لحسابك</span></div>
       <button class="btn btn-primary btn-block" id="submit"><i class="fa-solid fa-paper-plane"></i> إرسال طلب الشحن</button>
-      ${m.min_amount ? `<div class="hint" style="text-align:center">أقل مبلغ ${fmt(m.min_amount)} د.ع</div>` : ''}</div>`;
+      ${m.min_amount && !plan ? `<div class="hint" style="text-align:center">أقل مبلغ ${fmt(m.min_amount)} د.ع</div>` : ''}</div>`;
     body.querySelectorAll('[data-q]').forEach(c => c.onclick = () => { body.querySelector('#amt').value = c.dataset.q; body.querySelectorAll('[data-q]').forEach(x => x.classList.toggle('on', x === c)); });
     body.querySelector('#rc').onchange = async e => { const f = e.target.files[0]; if (!f) return; body.querySelector('#rcName').textContent = f.name; const im = body.querySelector('#rcPrev'); im.src = await fileToDataUrl(f); im.classList.remove('hidden'); };
     body.querySelector('#submit').onclick = async e => {
@@ -606,12 +635,13 @@ R.pay = async (el, p) => {
       <div class="copy-box"><span class="v">${esc(m.number || '—')}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(m.number)}')"><i class="fa-regular fa-copy"></i> نسخ</button></div>
       ${m.qr ? `<div class="qr-frame" style="margin-top:10px"><img src="${esc(m.qr)}" style="width:200px;height:200px;object-fit:contain"></div>` : ''}
       <div class="numbered" style="margin-top:14px"><b>2</b><span>اكتب المبلغ بالدولار ورقم العملية (Order ID)</span></div>
-      <input class="input big num" id="usd" type="number" step="0.01" inputmode="decimal" placeholder="$0.00" value="${need ? (Math.ceil(need / m.usd_rate * 100) / 100) : ''}">
+      ${plan ? `<div class="fixed-amt"><span>أرسل بالضبط</span><b class="num">$${(Math.ceil(need / m.usd_rate * 100) / 100).toFixed(2)}</b><small>USDT</small><input type="hidden" id="usd" value="${Math.ceil(need / m.usd_rate * 100) / 100}"></div>`
+      : `<input class="input big num" id="usd" type="number" step="0.01" inputmode="decimal" placeholder="$0.00">`}
       <div class="hint" style="text-align:center" id="eq">سعر الصرف: 1$ = ${fmt(m.usd_rate)} د.ع</div>
       <div class="field" style="margin-top:10px"><label>رقم العملية Order ID</label><input class="input num" id="oid" inputmode="numeric" style="direction:ltr;text-align:left"></div>
       <button class="btn btn-primary btn-block" id="verify"><i class="fa-solid fa-shield-check"></i> تحقق وأضف الرصيد</button>
       <div class="hint" style="text-align:center;margin-top:6px">يتم التحقق تلقائياً خلال ثواني</div></div>`;
-    body.querySelector('#usd').oninput = e => { const v = parseFloat(e.target.value) || 0; body.querySelector('#eq').textContent = v ? `= ${fmt(Math.round(v * m.usd_rate))} د.ع تنضاف لرصيدك` : `سعر الصرف: 1$ = ${fmt(m.usd_rate)} د.ع`; };
+    if (!plan) body.querySelector('#usd').oninput = e => { const v = parseFloat(e.target.value) || 0; body.querySelector('#eq').textContent = v ? `= ${fmt(Math.round(v * m.usd_rate))} د.ع تنضاف لرصيدك` : `سعر الصرف: 1$ = ${fmt(m.usd_rate)} د.ع`; };
     body.querySelector('#verify').onclick = async e => {
       busy(e.target.closest('button'), true);
       const r = await api('/api/recharge/binance', { body: { amount_usd: body.querySelector('#usd').value, order_id: body.querySelector('#oid').value.trim(), plan_id: plan ? plan.id : null } });
@@ -632,7 +662,13 @@ R.pay = async (el, p) => {
         <input class="input num" id="ph" inputmode="numeric" placeholder="07701234567" style="direction:ltr;text-align:left;font-size:17px">
         <button class="btn btn-primary btn-block" id="start" style="margin-top:12px"><i class="fa-solid fa-message"></i> إرسال رمز التحقق</button>
         <div class="note" style="margin-top:12px">راح يوصلك رمز SMS من آسياسيل، وبعدها رمز ثاني لتأكيد التحويل. الرصيد ينضاف تلقائياً بعد التأكيد.</div></div>`;
-      body.querySelectorAll('.tier').forEach(t => t.onclick = () => { amount = +t.dataset.a; body.querySelectorAll('.tier').forEach(x => x.classList.toggle('on', x === t)); });
+      body.querySelectorAll('.tier').forEach(t => t.onclick = () => { if (plan) return; amount = +t.dataset.a; body.querySelectorAll('.tier').forEach(x => x.classList.toggle('on', x === t)); });
+      if (plan) {
+        const opts = (m.tiers || []).map(t => +t.iqd).sort((a, b) => a - b);
+        amount = opts.find(v => v >= need) || opts[opts.length - 1];
+        body.querySelectorAll('.tier').forEach(x => { const on = +x.dataset.a === amount; x.classList.toggle('on', on); if (!on) x.style.opacity = .35; });
+        if (amount < need) body.querySelector('.tier-grid').insertAdjacentHTML('afterend', `<div class="note warn" style="margin-top:8px">أقصى مبلغ بآسياسيل ${fmt(amount)} د.ع - كرر العملية حتى يكتمل مبلغ الباقة، والباقة تتفعّل تلقائياً.</div>`);
+      }
       body.querySelector('#start').onclick = async e => {
         if (!amount) { toast('اختر المبلغ', 'err'); return; }
         busy(e.target.closest('button'), true); const r = await api('/api/recharge/asiacell/start', { body: { phone: body.querySelector('#ph').value, amount, plan_id: plan ? plan.id : null } }); busy(e.target.closest('button'), false);
@@ -712,8 +748,7 @@ R.account = async (el) => {
       ${rowItem({ icon: 'fa-solid fa-chart-pie', ic: 'ic-purple', title: 'تقارير الحملات', sub: 'النجاح، المشاهدة والردود', onclick: "go('reports')" })}
       ${rowItem({ icon: 'fa-solid fa-code', ic: 'ic-orange', title: 'ربط API', sub: 'أرسل رسائل ورموز تحقق من موقعك', onclick: "go('apikeys')" })}
       ${rowItem({ icon: 'fa-solid fa-clock-rotate-left', ic: 'ic-cyan', title: 'السجل المالي', sub: 'حركات الرصيد وطلبات الشحن', onclick: "go('tx')" })}
-      ${rowItem({ icon: 'fa-solid fa-bell', ic: 'ic-pink', title: 'الإشعارات', sub: 'تنبيهات الحملات والشحن', onclick: "go('notifications')" })}
-      ${rowItem({ icon: 'fa-solid fa-mobile-screen-button', ic: 'ic-blue', title: 'تثبيت التطبيق', sub: 'أضفه لشاشتك الرئيسية', onclick: 'installApp()' })}
+      ${rowItem({ icon: 'fa-solid fa-user-shield', ic: 'ic-indigo', title: 'الخصوصية والأمان', sub: 'كيف نحمي بياناتك وشروط الاستخدام', onclick: "window.open('/privacy','_blank')" })}
       ${rowItem({ icon: 'fa-solid fa-headset', ic: 'ic-wa', title: 'الدعم الفني', sub: 'تواصل معنا على واتساب', onclick: `window.open('https://wa.me/${esc(SET.support_number)}','_blank')` })}
     </div>
     ${ADMIN ? `<div class="section-head">الإدارة <span class="pill pill-blue">أدمن</span></div>
@@ -759,39 +794,78 @@ R.profile = async (el) => {
 };
 
 R.notifications = async (el) => {
-  el.innerHTML = head('الإشعارات', true, `<button class="btn btn-ghost btn-sm" id="readAll"><i class="fa-solid fa-check-double"></i> قراءة الكل</button>`) + '<div id="nl"><div class="card"><div class="skel" style="height:70px"></div></div></div>';
+  el.innerHTML = head('الإشعارات', true, `<button class="btn btn-ghost btn-sm" id="bulkBtn"></button>`) + `<div class="swipe-hint"><i class="fa-solid fa-hand-pointer"></i> اسحب الإشعار يمين أو يسار لحذفه</div><div id="nl"><div class="card"><div class="skel" style="height:70px"></div></div></div>`;
   const KIND = { success: ['fa-solid fa-circle-check', 'ic-green'], warning: ['fa-solid fa-triangle-exclamation', 'ic-orange'], info: ['fa-solid fa-bell', 'ic-blue'] };
   let list = [];
-  const btnFor = e => e.read
-    ? `<button class="btn btn-red btn-xs" data-del="${e.id}"><i class="fa-solid fa-trash"></i> حذف</button>`
-    : `<button class="btn btn-soft btn-xs" data-read="${e.id}"><i class="fa-solid fa-check"></i> تمت القراءة</button>`;
+  const bulk = el.querySelector('#bulkBtn');
+  function setBulk() {
+    const anyUnread = list.some(e => !e.read);
+    bulk.className = 'btn btn-sm ' + (anyUnread ? 'btn-ghost' : 'btn-red') + (list.length ? '' : ' hidden');
+    bulk.innerHTML = anyUnread ? '<i class="fa-solid fa-check-double"></i> قراءة الكل' : '<i class="fa-solid fa-trash"></i> حذف الكل';
+  }
   function render() {
     const box = el.querySelector('#nl');
-    if (!list.length) { box.innerHTML = `<div class="card">${empty('fa-regular fa-bell', 'ما فيه إشعارات جديدة')}</div>`; return; }
-    const unread = list.filter(e => !e.read), read = list.filter(e => e.read);
-    const card = e => { const [ic, cls] = KIND[e.kind] || KIND.info; return `<div class="notif ${e.read ? '' : 'unread'}" id="n${e.id}">
+    setBulk();
+    el.querySelector('.swipe-hint').classList.toggle('hidden', !list.length);
+    if (!list.length) { box.innerHTML = `<div class="card">${empty('fa-regular fa-bell', 'ما فيه إشعارات')}</div>`; return; }
+    const card = e => { const [ic, cls] = KIND[e.kind] || KIND.info; return `<div class="notif-wrap" data-id="${e.id}"><div class="notif-bg"></div><div class="notif ${e.read ? '' : 'unread'}">
       <span class="row-ic ${cls}"><i class="${ic}"></i></span>
-      <div class="n-body"><div class="n-title">${esc(e.title)}</div><div class="n-text">${e.account ? `<b>${esc(e.account)}</b>: ` : ''}${esc(e.body)}</div>
-        <div class="n-foot"><span class="num"><i class="fa-regular fa-clock"></i> ${esc(e.time)}</span>${btnFor(e)}</div></div></div>`; };
-    box.innerHTML = (unread.length ? `<div class="group-label">جديدة (${unread.length})</div>` + unread.map(card).join('') : '')
-      + (read.length ? `<div class="group-label">مقروءة</div>` + read.map(card).join('') : '');
+      <div class="n-body"><div class="n-head"><span class="n-title">${esc(e.title)}</span><span class="n-time num">${esc(e.time)}</span></div>
+        <div class="n-text">${e.account ? `<b>${esc(e.account)}</b> · ` : ''}${esc(e.body)}</div></div></div></div>`; };
+    const unread = list.filter(e => !e.read), read = list.filter(e => e.read);
+    box.innerHTML = (unread.length ? `<div class="group-label">جديدة · ${unread.length}</div>` + unread.map(card).join('') : '')
+      + (read.length ? `<div class="group-label">سابقة</div>` + read.map(card).join('') : '');
+    box.querySelectorAll('.notif-wrap').forEach(bindSwipe);
   }
-  el.querySelector('#nl').addEventListener('click', async ev => {
-    const r = ev.target.closest('[data-read]'), d = ev.target.closest('[data-del]');
-    if (r) {
-      const e = list.find(x => x.id == r.dataset.read); if (e) e.read = true;
-      r.outerHTML = btnFor(e); el.querySelector('#n' + e.id)?.classList.remove('unread');
-      api('/events/' + e.id + '/read', { body: {} });
-      if (!list.some(x => !x.read)) document.getElementById('bellDot').classList.add('hidden');
+  function dropNotif(id) {
+    list = list.filter(x => x.id != id);
+    api('/events/' + id, { method: 'DELETE' });
+    setTimeout(render, 260);
+  }
+  function markRead(id) {
+    const e = list.find(x => x.id == id); if (!e || e.read) return;
+    e.read = true; api('/events/' + id + '/read', { body: {} }); render();
+  }
+  // سحب لليمين أو اليسار لحذف الإشعار، وضغطة عادية تعلّمه مقروء
+  function bindSwipe(w) {
+    const card = w.querySelector('.notif'); let x0 = null, dx = 0, y0 = 0, horiz = null;
+    const start = (x, y) => { x0 = x; y0 = y; dx = 0; horiz = null; card.style.transition = 'none'; };
+    const move = (x, y, ev) => {
+      if (x0 === null) return;
+      dx = x - x0; const dy = y - y0;
+      if (horiz === null && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) horiz = Math.abs(dx) > Math.abs(dy);
+      if (!horiz) return;
+      if (ev && ev.cancelable) ev.preventDefault();
+      card.style.transform = `translateX(${dx}px)`; card.style.opacity = 1 - Math.min(Math.abs(dx) / 260, .6);
+      w.querySelector('.notif-bg').style.opacity = Math.min(Math.abs(dx) / 90, 1);
+    };
+    const end = () => {
+      if (x0 === null) return;
+      card.style.transition = 'transform .25s, opacity .25s';
+      if (horiz && Math.abs(dx) > 90) {
+        card.style.transform = `translateX(${dx > 0 ? 120 : -120}%)`; card.style.opacity = 0;
+        w.style.transition = 'max-height .3s .15s, margin .3s .15s'; w.style.maxHeight = '0px'; w.style.marginTop = '0';
+        dropNotif(w.dataset.id);
+      } else { card.style.transform = ''; card.style.opacity = ''; w.querySelector('.notif-bg').style.opacity = 0; if (!horiz) markRead(w.dataset.id); }
+      x0 = null;
+    };
+    w.addEventListener('touchstart', e => start(e.touches[0].clientX, e.touches[0].clientY), { passive: true });
+    w.addEventListener('touchmove', e => move(e.touches[0].clientX, e.touches[0].clientY, e), { passive: false });
+    w.addEventListener('touchend', end);
+    w.addEventListener('mousedown', e => start(e.clientX, e.clientY));
+    w.addEventListener('mousemove', e => move(e.clientX, e.clientY));
+    w.addEventListener('mouseup', end);
+    w.addEventListener('mouseleave', end);
+  }
+  bulk.onclick = async () => {
+    if (list.some(e => !e.read)) {
+      list.forEach(e => e.read = true); render(); document.getElementById('bellDot').classList.add('hidden');
+      await api('/events/read_all', { body: {} });
+    } else if (await confirmSheet({ title: 'حذف كل الإشعارات', text: `راح ينحذف ${list.length} إشعار نهائياً`, ok: 'حذف الكل', icon: 'fa-solid fa-trash' })) {
+      const ids = list.map(e => e.id); list = []; render();
+      for (const id of ids) api('/events/' + id, { method: 'DELETE' });
     }
-    if (d) {
-      const node = el.querySelector('#n' + d.dataset.del);
-      if (node) { node.style.opacity = 0; node.style.transform = 'translateX(-20px)'; }
-      await api('/events/' + d.dataset.del, { method: 'DELETE' });
-      list = list.filter(x => x.id != d.dataset.del); setTimeout(render, 220);
-    }
-  });
-  el.querySelector('#readAll').onclick = async () => { list.forEach(e => e.read = true); render(); document.getElementById('bellDot').classList.add('hidden'); await api('/events/read_all', { body: {} }); };
+  };
   const ev = await api('/events?since=0');
   list = (Array.isArray(ev) ? ev : []).reverse();
   render();
@@ -847,35 +921,93 @@ R.subscribers = async (el) => {
 
 // ---------------------------------------------------------------- مفاتيح API
 R.apikeys = async (el) => {
-  el.innerHTML = head('ربط API') + '<div id="ak"><div class="card"><div class="skel" style="height:80px"></div></div></div>';
+  el.innerHTML = head('ربط API') + '<div class="card"><div class="skel" style="height:120px"></div></div>';
   const [d, accs] = await Promise.all([api('/api_keys'), loadAccounts()]);
   const origin = location.origin;
-  el.querySelector('#ak').innerHTML = `
-    <div class="card"><div class="card-title"><i class="fa-solid fa-key"></i> مفتاح جديد</div>
-      <div class="field"><label>رقم واتساب اللي ينرسل منه</label><select class="select" id="kacc">${accs.filter(a => a.logged_in).map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('') || '<option value="">اربط رقم متصل أولاً</option>'}</select></div>
-      <div class="field"><label>اسم المفتاح (مثل: موقعي)</label><input class="input" id="klabel"></div>
-      <button class="btn btn-primary btn-block" id="kgen"><i class="fa-solid fa-plus"></i> توليد مفتاح</button>
-      <div id="knew"></div></div>
-    <div class="section-head">مفاتيحك</div>
-    <div class="list mini-list">${(d.keys || []).length ? d.keys.map(k => `<div class="row"><span class="row-ic ${k.revoked ? 'ic-red' : 'ic-orange'}"><i class="fa-solid fa-key"></i></span><span class="row-body"><span class="row-title">${esc(k.label || 'بدون اسم')} ${k.revoked ? '<span class="pill pill-red">ملغى</span>' : k.account_connected ? '<span class="pill pill-green">يعمل</span>' : '<span class="pill pill-orange">الرقم غير متصل</span>'}</span><span class="row-sub num" style="text-align:right">${esc(k.key_prefix)}… · آخر استخدام ${esc(k.last_used_at || '—')}</span></span>${k.revoked ? '' : `<span class="row-end"><button class="btn btn-red btn-xs" data-rev="${k.id}">إلغاء</button></span>`}</div>`).join('') : empty('fa-solid fa-key', 'ما فيه مفاتيح')}</div>
-    <div class="section-head">طريقة الاستخدام</div>
-    <div class="card"><p style="font-size:13px;color:var(--text2);margin-bottom:10px">أرسل طلب POST من موقعك (رمز تحقق أو رسالة):</p>
-      <div class="code-block">curl -X POST ${esc(origin)}/api/v1/send \\
-  -H "X-API-Key: wsl_xxxxxxxx" \\
-  -H "Content-Type: application/json" \\
-  -d '{"phone":"9647701234567","code":"123456"}'
+  const url = origin + '/api/v1/send';
+  const ex = {
+    curl: `curl -X POST ${url} \\\n  -H "X-API-Key: wsl_xxxxxxxx" \\\n  -H "Content-Type: application/json" \\\n  -d '{"phone":"9647701234567","code":"482913"}'`,
+    php: `<?php\n$ch = curl_init('${url}');\ncurl_setopt_array($ch, [\n  CURLOPT_POST => true,\n  CURLOPT_RETURNTRANSFER => true,\n  CURLOPT_HTTPHEADER => [\n    'X-API-Key: wsl_xxxxxxxx',\n    'Content-Type: application/json',\n  ],\n  CURLOPT_POSTFIELDS => json_encode([\n    'phone' => '9647701234567',\n    'code'  => '482913',\n  ]),\n]);\n$res = json_decode(curl_exec($ch), true);\nif (!empty($res['ok'])) { /* تم الإرسال */ }`,
+    js: `// Node.js 18+ (من السيرفر حقك - مو من المتصفح)\nconst res = await fetch('${url}', {\n  method: 'POST',\n  headers: {\n    'X-API-Key': process.env.WASEL_API_KEY,\n    'Content-Type': 'application/json',\n  },\n  body: JSON.stringify({ phone: '9647701234567', code: '482913' }),\n});\nconst data = await res.json();\nif (data.ok) console.log('تم الإرسال');`,
+    py: `import os, requests\n\nr = requests.post(\n    '${url}',\n    headers={'X-API-Key': os.environ['WASEL_API_KEY']},\n    json={'phone': '9647701234567', 'message': 'طلبك جاهز للاستلام ✅'},\n    timeout=60,\n)\nprint(r.json())`,
+  };
+  el.innerHTML = head('ربط API') + `
+    <div class="hero shine fade-in"><div style="display:flex;align-items:center;gap:14px">
+      <span class="hero-icon"><i class="fa-solid fa-plug"></i></span>
+      <div><div style="font-weight:800;font-size:18px">اربط موقعك بواتساب</div><div class="hero-sub">أرسل رموز تحقق وإشعارات طلبات من موقعك أو تطبيقك عبر رقمك المربوط</div></div></div></div>
 
-# أو رسالة كاملة:
-  -d '{"phone":"9647701234567","message":"أهلاً بك"}'</div>
-      <div class="hint">الحد: 20 طلب بالدقيقة لكل مفتاح. ${SET.message_price > 0 ? `بدون اشتراك تنخصم ${fmt(SET.message_price)} د.ع لكل رسالة.` : ''}</div></div>`;
+    <div class="section-head">شلون يشتغل؟</div>
+    <div class="card stagger">
+      <div class="numbered"><b>1</b><span><b>اربط رقم واتساب</b> من قسم «أرقامي» وتأكد إنه متصل.</span></div>
+      <div class="numbered"><b>2</b><span><b>ولّد مفتاح API</b> من الأسفل واختار الرقم اللي تنرسل منه الرسائل. المفتاح يظهر مرة وحدة فقط.</span></div>
+      <div class="numbered"><b>3</b><span><b>احفظ المفتاح بسيرفر موقعك</b> (متغير بيئة) - لا تحطه بكود الواجهة أو الجافاسكربت اللي يشتغل بالمتصفح.</span></div>
+      <div class="numbered"><b>4</b><span><b>أرسل طلب POST</b> فيه رقم المستلم والرمز أو الرسالة، ويوصل للعميل على واتساب خلال ثواني.</span></div>
+    </div>
+
+    <div class="section-head">مفتاح جديد</div>
+    <div class="card">
+      <div class="field"><label>رقم واتساب اللي ينرسل منه</label><select class="select" id="kacc">${accs.filter(a => a.logged_in).map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('') || '<option value="">اربط رقم متصل أولاً</option>'}</select></div>
+      <div class="field"><label>اسم المفتاح (مثل: متجري)</label><input class="input" id="klabel" maxlength="60"></div>
+      <button class="btn btn-primary btn-block shine" id="kgen"><i class="fa-solid fa-key"></i> توليد مفتاح</button>
+      <div id="knew"></div>
+    </div>
+
+    <div class="section-head">مفاتيحك</div>
+    <div class="list mini-list">${(d.keys || []).length ? d.keys.map(k => `<div class="row"><span class="row-ic ${k.revoked ? 'ic-red' : 'ic-orange'}"><i class="fa-solid fa-key"></i></span><span class="row-body"><span class="row-title">${esc(k.label || 'بدون اسم')} ${k.revoked ? '<span class="pill pill-red">ملغى</span>' : k.account_connected ? '<span class="pill pill-green">يعمل</span>' : '<span class="pill pill-orange">الرقم غير متصل</span>'}</span><span class="row-sub num" style="text-align:right">${esc(k.key_prefix)}… · آخر استخدام ${esc(k.last_used_at || '—')}</span></span>${k.revoked ? '' : `<span class="row-end"><button class="btn btn-red btn-xs" data-rev="${k.id}">إلغاء</button></span>`}</div>`).join('') : empty('fa-solid fa-key', 'ما فيه مفاتيح بعد')}</div>
+
+    <div class="section-head">الطلب</div>
+    <div class="card">
+      <div class="kv"><span>الرابط</span><b class="num selectable" style="font-size:12px">POST ${esc(url)}</b></div>
+      <div class="kv"><span>المصادقة</span><b class="num" style="font-size:12px">X-API-Key: مفتاحك</b></div>
+      <div class="kv"><span>أو</span><b class="num" style="font-size:12px">Authorization: Bearer مفتاحك</b></div>
+      <div class="kv"><span>نوع البيانات</span><b class="num" style="font-size:12px">application/json</b></div>
+      <div class="api-fields">
+        <div><code>phone</code><span class="pill pill-red">إلزامي</span><p>رقم المستلم مع رمز الدولة بدون + أو أصفار (مثل 9647701234567)</p></div>
+        <div><code>code</code><span class="pill pill-gray">اختياري</span><p>رمز تحقق؛ تنرسل رسالة جاهزة: «رمز التحقق الخاص بك: 482913 - صالح لمدة 10 دقائق»</p></div>
+        <div><code>message</code><span class="pill pill-gray">اختياري</span><p>نص رسالة كاملة بدل الرمز (لإشعارات الطلبات وغيرها). لازم ترسل code أو message.</p></div>
+      </div>
+    </div>
+
+    <div class="section-head">أمثلة جاهزة</div>
+    <div class="card">
+      <div class="tabs" id="exTabs"><button class="tab on" data-x="curl">cURL</button><button class="tab" data-x="php">PHP</button><button class="tab" data-x="js">Node.js</button><button class="tab" data-x="py">Python</button></div>
+      <div class="code-block" id="exCode"></div>
+      <button class="btn btn-soft btn-sm btn-block" id="exCopy" style="margin-top:10px"><i class="fa-regular fa-copy"></i> نسخ المثال</button>
+    </div>
+
+    <div class="section-head">الردود</div>
+    <div class="card api-codes">
+      <div><span class="pill pill-green num">200</span><p><code>{"ok":true}</code> انرسلت الرسالة</p></div>
+      <div><span class="pill pill-orange num">400</span><p>الرقم ناقص، أو ما أرسلت code/message، أو رقمك غير متصل</p></div>
+      <div><span class="pill pill-red num">401</span><p>المفتاح مفقود أو غلط أو ملغى</p></div>
+      <div><span class="pill pill-orange num">402</span><p>ما عندك باقة فعّالة ورصيدك ما يكفي</p></div>
+      <div><span class="pill pill-red num">429</span><p>تعديت الحد: 20 طلب بالدقيقة لكل مفتاح</p></div>
+      <div><span class="pill pill-red num">502</span><p>فشل الإرسال (مثلاً الرقم ما يستخدم واتساب)</p></div>
+      <div class="hint" style="margin-top:6px">كل الردود JSON وفيها <code>error</code> بالعربي يشرح السبب.</div>
+    </div>
+
+    <div class="section-head">نصائح أمان</div>
+    <div class="card stagger">
+      <div class="numbered"><b><i class="fa-solid fa-lock"></i></b><span>المفتاح مثل كلمة السر: لا ترسله لأحد ولا ترفعه على GitHub.</span></div>
+      <div class="numbered"><b><i class="fa-solid fa-server"></i></b><span>اطلب الـ API من سيرفرك فقط؛ الطلبات من المتصفح تكشف المفتاح.</span></div>
+      <div class="numbered"><b><i class="fa-solid fa-rotate"></i></b><span>إذا تسرّب المفتاح ألغه فوراً من «مفاتيحك» وولّد واحد جديد.</span></div>
+      <div class="numbered"><b><i class="fa-solid fa-coins"></i></b><span>${SET.message_price > 0 ? `بدون باقة تنخصم ${fmt(SET.message_price)} د.ع لكل رسالة من رصيدك.` : 'الإرسال يحتاج باقة فعّالة.'}</span></div>
+    </div>`;
+  const code = el.querySelector('#exCode');
+  let cur = 'curl';
+  const show = x => { cur = x; code.textContent = ex[x]; el.querySelectorAll('#exTabs .tab').forEach(t => t.classList.toggle('on', t.dataset.x === x)); };
+  el.querySelectorAll('#exTabs .tab').forEach(t => t.onclick = () => show(t.dataset.x));
+  el.querySelector('#exCopy').onclick = () => copy(ex[cur]);
+  show('curl');
   el.querySelector('#kgen').onclick = async e => {
-    busy(e.target.closest('button'), true);
+    const btn = e.target.closest('button');
+    busy(btn, true);
     const r = await api('/api_keys', { body: { account_id: el.querySelector('#kacc').value, label: el.querySelector('#klabel').value } });
-    busy(e.target.closest('button'), false);
+    busy(btn, false);
     if (!r.ok) { toast(r.error, 'err'); return; }
     el.querySelector('#knew').innerHTML = `<div class="note ok fade-in" style="margin-top:12px"><b>انسخ المفتاح الآن - ما راح يظهر مرة ثانية:</b><div class="copy-box" style="margin-top:8px"><span class="v" style="font-size:13px">${esc(r.key)}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(r.key)}')">نسخ</button></div></div>`;
   };
-  el.querySelectorAll('[data-rev]').forEach(b => b.onclick = () => confirmTap(b, async () => { await api('/api_keys/' + b.dataset.rev, { method: 'DELETE' }); go('apikeys', {}, false); }, 'تأكيد'));
+  el.querySelectorAll('[data-rev]').forEach(b => b.onclick = () => confirmTap(b, async () => { await api('/api_keys/' + b.dataset.rev, { method: 'DELETE' }); go('apikeys', {}, false); }, 'المواقع المربوطة بهذا المفتاح راح توقف فوراً', { title: 'إلغاء المفتاح', ok: 'إلغاء المفتاح' }));
 };
 
 // ================================================================ الإدارة
@@ -1025,7 +1157,6 @@ R.payments = async (el) => {
 R.settings = async (el) => {
   el.innerHTML = head('الإعدادات') + '<div class="card"><div class="skel" style="height:200px"></div></div>';
   const { settings: s } = await api('/api/admin/settings');
-  const cc = B.country_codes.map(([c, l]) => `<option value="${c}" ${c === s.default_country_code ? 'selected' : ''}>${esc(l)}</option>`).join('');
   const f = (id, label, val, type = 'text', hint = '') => `<div class="field"><label>${label}</label><input class="input ${type === 'number' ? 'num' : ''}" data-k="${id}" type="${type}" value="${esc(val ?? '')}" ${type !== 'text' || /email|client|token|chat/.test(id) ? 'style="direction:ltr;text-align:left"' : ''}>${hint ? `<div class="hint">${hint}</div>` : ''}</div>`;
   el.innerHTML = head('الإعدادات') + `
     <div class="section-head">الأسعار والفترات</div>
@@ -1040,7 +1171,7 @@ R.settings = async (el) => {
         <label class="btn btn-soft btn-sm"><input type="file" accept="image/*" id="logoIn" hidden><i class="fa-solid fa-upload"></i> رفع شعار</label>${s.has_logo ? '<button class="btn btn-red btn-sm" id="logoRm">حذف</button>' : ''}</div>
       <div class="hint" style="margin-bottom:12px">الشعار يظهر بالموقع ويصير أيقونة التطبيق (PWA)</div>
       ${f('site_name', 'اسم الموقع', s.site_name)}
-      <div class="field"><label>رمز الدولة الافتراضي</label><select class="select" data-k="default_country_code">${cc}</select></div>
+      <div class="field" style="display:flex;align-items:center;justify-content:space-between"><label style="margin:0">رمز الدولة الافتراضي</label>${ccButton('defCc', s.default_country_code)}</div>
       ${f('whatsapp_support_number', 'رقم واتساب الدعم', s.whatsapp_support_number)}
     </div>
     <div class="section-head">تسجيل الدخول</div>
@@ -1076,6 +1207,7 @@ R.settings = async (el) => {
   el.querySelector('#saveSet').onclick = async e => {
     const body = {};
     el.querySelectorAll('[data-k]').forEach(i => body[i.dataset.k] = i.type === 'checkbox' ? i.checked : i.value);
+    body.default_country_code = el.querySelector('#defCc').dataset.cc;
     if (logo !== undefined) body.logo = logo;
     if (devPhoto) body.dev_photo = devPhoto;
     busy(e.target.closest('button'), true); const r = await api('/api/admin/settings', { body }); busy(e.target.closest('button'), false);
@@ -1097,16 +1229,27 @@ R.security = async (el) => {
     </div>
     <div class="section-head">إجراءات</div>
     <div class="list">
+      ${rowItem({ icon: 'fa-solid fa-lock', ic: 'ic-green', title: 'HTTPS إجباري', sub: s.https ? 'يحوّل كل زيارة http إلى https تلقائياً' : 'افتح اللوحة عبر https أولاً لتفعيله', end: `<label class="switch" onclick="event.stopPropagation()"><input type="checkbox" id="fh" ${s.force_https ? 'checked' : ''}><span></span></label>` })}
       ${rowItem({ icon: 'fa-solid fa-right-from-bracket', ic: 'ic-red', title: 'إنهاء جلسات كل المستخدمين', sub: 'الكل يحتاج يسجل دخول من جديد (أنت تبقى)', end: '<button class="btn btn-red btn-xs" id="lo">تنفيذ</button>' })}
       ${rowItem({ icon: 'fa-solid fa-server', ic: 'ic-blue', title: 'فحص السيرفر والمحرك', sub: 'صفحة install.php', onclick: "location.href='/install.php'" })}
       ${rowItem({ icon: 'fa-solid fa-broom', ic: 'ic-orange', title: 'مسح سجل الدخول', end: '<button class="btn btn-ghost btn-xs" id="cl">مسح</button>' })}
     </div>
     <div class="note" style="margin-top:12px"><b>الحماية المفعّلة:</b> ملفات البيانات محجوبة عن المتصفح، رموز التحقق محدودة بـ 5 محاولات، تأخير 45 ثانية بين طلبات الرمز، مفاتيح API مخزنة كبصمة SHA-256، حد 20 طلب/دقيقة لكل مفتاح، والجلسات تنتهي فوراً عند الحظر.</div>
+    <div class="section-head">أحداث الأمان وعمليات الأدمن</div>
+    <div class="list mini-list">${(s.events || []).length ? s.events.slice(0, 30).map(ev => rowItem({
+      icon: ev.action.startsWith('admin:') ? 'fa-solid fa-user-gear' : 'fa-solid fa-shield-virus', ic: ev.action.startsWith('admin:') ? 'ic-indigo' : 'ic-orange',
+      title: esc(({ csrf_blocked: 'طلب مزوّر انمنع', rate_limited: 'تجاوز حد الطلبات', suspicious_logins: 'محاولات دخول مشبوهة', install_denied: 'محاولة فتح صفحة التنصيب' })[ev.action] || ev.action.replace('admin:', 'أدمن: ')),
+      sub: `<span class="num">${esc(ev.time)} · ${esc(ev.ip)}</span> ${ev.detail ? '· ' + esc(ev.detail) : ''}`, end: '',
+    })).join('') : empty('fa-solid fa-shield-halved', 'ما فيه أحداث')}</div>
     <div class="section-head">سجل الدخول</div>
     <div class="list mini-list">${s.log.length ? s.log.map(l => rowItem({
       icon: M[l.method] || 'fa-solid fa-right-to-bracket', ic: l.ok ? 'ic-green' : 'ic-red',
       title: `${esc(l.user || l.note || 'غير معروف')} ${l.ok ? '' : '<span class="pill pill-red">فشل</span>'}`, sub: `<span class="num">${esc(l.time)} · ${esc(l.ip)}</span> · ${esc((l.ua || '').slice(0, 40))}`, end: '',
     })).join('') : empty('fa-solid fa-list', 'السجل فارغ')}</div>`;
+  el.querySelector('#fh').onchange = async e => {
+    const r = await api('/api/admin/security', { body: { action: 'force_https', on: e.target.checked } });
+    if (!r.ok) { e.target.checked = !e.target.checked; toast(r.error, 'err'); } else toast(e.target.checked ? 'تم تفعيل HTTPS الإجباري' : 'تم الإيقاف', 'ok');
+  };
   el.querySelector('#lo').onclick = e => { e.stopPropagation(); confirmTap(e.target.closest('button'), async () => { const r = await api('/api/admin/security', { body: { action: 'logout_all' } }); toast(r.msg || r.error, r.ok ? 'ok' : 'err'); }, 'تأكيد'); };
   el.querySelector('#cl').onclick = e => { e.stopPropagation(); confirmTap(e.target.closest('button'), async () => { await api('/api/admin/security', { body: { action: 'clear_log' } }); go('security', {}, false); }, 'تأكيد'); };
 };
@@ -1202,6 +1345,16 @@ async function pollEvents() {
     if (ev.some(e => /رصيد|شحن|اشتراك/.test(e.title))) refreshMe();
   }
 }
+
+
+// منع التكبير بالأصابع ومنع نسخ النصوص (عدا حقول الكتابة)
+['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
+let lastTouch = 0;
+document.addEventListener('touchend', e => { const n = Date.now(); if (n - lastTouch < 300 && !e.target.closest('input,textarea')) e.preventDefault(); lastTouch = n; }, { passive: false });
+const editable = t => t && t.closest && t.closest('input,textarea,[contenteditable],.selectable,.code-block,.copy-box');
+['copy', 'cut'].forEach(t => document.addEventListener(t, e => { if (!editable(e.target) && !editable(document.getSelection()?.anchorNode?.parentElement)) e.preventDefault(); }));
+document.addEventListener('contextmenu', e => { if (!editable(e.target)) e.preventDefault(); });
+document.addEventListener('wheel', e => { if (e.ctrlKey) e.preventDefault(); }, { passive: false });
 
 // ================================================================ الإقلاع
 try { localStorage.removeItem('theme'); } catch (e) {}

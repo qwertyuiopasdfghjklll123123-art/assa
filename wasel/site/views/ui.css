@@ -283,3 +283,41 @@ img{-webkit-user-drag:none}
 .plan.featured .plan-sep{background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent)}
 .btn-primary.shine::after{z-index:1}
 .sheet:not(.show){visibility:hidden;transition:transform .55s var(--ease),visibility 0s linear .55s}
+
+/* ---------- اختيار رمز الدولة: بطاقة صغيرة لامعة ---------- */
+.cc-pick{position:relative;overflow:hidden;flex:none;height:52px;padding:0 14px;border-radius:16px;display:inline-flex;align-items:center;gap:8px;font-weight:800;font-size:15px;color:var(--primary-deep);background:linear-gradient(150deg,#fff,#eef8fa);border:1px solid #fff;box-shadow:0 8px 18px rgba(4,120,139,.12),inset 0 1px 0 #fff;direction:ltr}
+.cc-pick::after{content:"";position:absolute;top:-50%;bottom:-50%;width:40%;left:-60%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.8),transparent);transform:skewX(-18deg);animation:sweep 6s ease-in-out infinite}
+.cc-pick i{font-size:11px;color:var(--text3)}
+.cc-sheet{max-height:78vh;display:flex;flex-direction:column}
+.cc-list{overflow:auto;margin-top:10px;display:grid;gap:6px;padding-bottom:6px}
+.cc-item{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:14px;background:rgba(3,79,92,.04);font-weight:700;font-size:15px;direction:ltr}
+.cc-item.on{background:var(--primary-bg);color:var(--primary)}
+
+/* ---------- منع التكبير ونسخ النصوص ---------- */
+html{touch-action:manipulation}
+body{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+
+/* ---------- الإشعارات (سحب للحذف) ---------- */
+.swipe-hint{font-size:11.5px;color:var(--text3);text-align:center;margin:-6px 0 6px}
+.notif-wrap{position:relative;max-height:260px;overflow:hidden;border-radius:22px}
+.notif-wrap+.notif-wrap{margin-top:10px}
+.notif-bg{position:absolute;inset:0;border-radius:22px;background:linear-gradient(90deg,#f0627a,#d63a54);color:#fff;display:flex;align-items:center;justify-content:center;opacity:0;font-size:18px}
+.notif-bg::after{content:"\f1f8";font-family:"Font Awesome 6 Free";font-weight:900}
+.notif-wrap .notif{margin:0!important;touch-action:pan-y;cursor:grab}
+.notif .n-head{display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.notif .n-time{font-size:11px;color:var(--text3);flex:none}
+/* ---------- مبلغ ثابت للدفع ---------- */
+.fixed-amt{position:relative;overflow:hidden;display:flex;align-items:baseline;justify-content:center;gap:8px;padding:16px;border-radius:20px;background:linear-gradient(140deg,rgba(4,120,139,.08),rgba(10,157,178,.14));border:1px dashed rgba(4,120,139,.3)}
+.fixed-amt span{font-size:12.5px;color:var(--text2);font-weight:700}
+.fixed-amt b{font-size:30px;color:var(--primary);letter-spacing:.5px}
+.fixed-amt small{color:var(--text2);font-weight:700}
+
+/* ---------- صفحة API ---------- */
+.api-fields{display:grid;gap:10px;margin-top:12px}
+.api-fields>div{padding:12px;border-radius:16px;background:rgba(3,79,92,.04)}
+.api-fields code,.api-codes code{direction:ltr;unicode-bidi:isolate;font-family:ui-monospace,monospace;font-size:12.5px;background:rgba(4,120,139,.1);color:var(--primary-deep);padding:2px 8px;border-radius:7px;margin-left:6px}
+.api-fields p{font-size:12.5px;color:var(--text2);margin-top:6px}
+.api-codes>div:not(.hint){display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line2)}
+.api-codes p{font-size:12.5px;color:var(--text2)}
+.numbered>b i{font-size:11px}

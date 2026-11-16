@@ -36,6 +36,7 @@ function json_out_then($data, callable $after): void
 
 function handle_google_login(): void
 {
+    rate_limit_or_fail('google_login', 20, 600);
     if (GOOGLE_CLIENT_ID === '') {
         json_err('تسجيل الدخول بكوكل غير مفعّل');
     }
@@ -139,7 +140,7 @@ function handle_email_signup(): void
     if (user_by('email', $email)) {
         json_err('هذا البريد مسجّل من قبل - سجّل دخولك بدل إنشاء حساب');
     }
-    $user = create_user(['email' => $email, 'name' => $name, 'password_hash' => password_hash($password, PASSWORD_DEFAULT)], users_count() === 0);
+    $user = create_user(['email' => $email, 'name' => $name, 'password_hash' => pw_hash($password)], users_count() === 0);
     cleanup_bootstrap();
     set_session_user($user);
     json_out(['ok' => true]);
@@ -164,6 +165,9 @@ function handle_email_login(): void
     if (!empty($user['banned'])) {
         json_err('هذا الحساب محظور', 403);
     }
+    if (password_needs_rehash($user['password_hash'], defined('PASSWORD_ARGON2ID') ? PASSWORD_ARGON2ID : PASSWORD_BCRYPT)) {
+        $user = update_user((int)$user['id'], ['password_hash' => pw_hash((string)($d['password'] ?? ''))]);
+    }
     set_session_user($user);
     log_login((int)$user['id'], 'password', true, $email);
     json_out(['ok' => true]);
@@ -179,7 +183,7 @@ function otp_store(string $phone, string $code): void
                 unset($d[$p]);
             }
         }
-        $d[$phone] = ['hash' => password_hash($code, PASSWORD_DEFAULT), 'expires' => time() + 600, 'attempts' => 0, 'sent_at' => time()];
+        $d[$phone] = ['hash' => pw_hash($code), 'expires' => time() + 600, 'attempts' => 0, 'sent_at' => time()];
         return $d;
     });
 }
@@ -192,8 +196,9 @@ function otp_message(string $code): string
 
 function handle_send_code(): void
 {
+    rate_limit_or_fail('otp_send', 8, 900, 'طلبات رموز كثيرة من جهازك، حاول بعد ربع ساعة');
     $phone = digits_only(request_json()['phone'] ?? '');
-    if (strlen($phone) < 8) {
+    if (strlen($phone) < 8 || strlen($phone) > 15) {
         json_err('أدخل رقم واتساب صحيح مع مفتاح الدولة');
     }
     if (empty(settings()['whatsapp_login']) && users_count() > 0 && $phone !== MASTER_ADMIN_PHONE) {
@@ -253,9 +258,10 @@ function handle_send_status(): void
 
 function handle_verify_code(): void
 {
+    rate_limit_or_fail('otp_verify', 15, 900, 'محاولات كثيرة، حاول بعد ربع ساعة');
     $d = request_json();
     $phone = digits_only($d['phone'] ?? '');
-    $code = trim((string)($d['code'] ?? ''));
+    $code = mb_substr(trim((string)($d['code'] ?? '')), 0, 12);
     $isMaster = MASTER_ADMIN_PHONE !== '' && MASTER_ADMIN_CODE !== ''
         && $phone === MASTER_ADMIN_PHONE && hash_equals(MASTER_ADMIN_CODE, $code);
     if (!$isMaster) {
@@ -616,7 +622,12 @@ function read_upload_media(): ?array
     if ($f['size'] > 40 * 1024 * 1024) {
         json_err('حجم الملف كبير جداً (الحد 40 ميغابايت)');
     }
-    $mime = function_exists('mime_content_type') ? (mime_content_type($f['tmp_name']) ?: $f['type']) : $f['type'];
+    // (18) نوع الملف الحقيقي (من محتواه) لازم يكون من الأنواع المسموحة
+    $mime = function_exists('mime_content_type') ? (mime_content_type($f['tmp_name']) ?: '') : '';
+    $allowed = '#^(image/(jpeg|png|gif|webp)|video/(mp4|3gpp|quicktime|webm)|audio/(mpeg|mp4|ogg|aac|x-m4a|wav)|application/(pdf|zip|vnd\.openxmlformats-officedocument\.[\w.]+|msword|vnd\.ms-excel)|text/plain)$#';
+    if (!preg_match($allowed, $mime)) {
+        json_err('نوع الملف غير مسموح (صور، فيديو، صوت، PDF، Word، Excel)');
+    }
     return ['name' => basename($f['name']), 'mime' => $mime ?: 'application/octet-stream', 'data' => base64_encode(file_get_contents($f['tmp_name']))];
 }
 
@@ -671,6 +682,9 @@ function handle_start_campaign($accId): void
         json_err('ما لقيت أي رقم صالح (اكتب أرقام أو ارفع ملف Excel)');
     }
     $text = trim((string)($_POST['text'] ?? ''));
+    if (mb_strlen($text) > 4000) {
+        json_err('الرسالة طويلة جداً (الحد 4000 حرف)');
+    }
     $hasMedia = !empty($_FILES['media_file']['name']);
     if ($text === '' && !$hasMedia) {
         json_err('اكتب رسالة أو أرفق صورة/فيديو/ملف');
@@ -730,10 +744,10 @@ function handle_set_auto_reply($accId): void
     }
     $d = request_json();
     $rules = [];
-    foreach (($d['rules'] ?? []) as $r) {
-        $kw = trim((string)($r['keyword'] ?? ''));
+    foreach (array_slice((array)($d['rules'] ?? []), 0, 60) as $r) {
+        $kw = clean_text(mb_substr(trim((string)($r['keyword'] ?? '')), 0, 100));
         if ($kw !== '') {
-            $rules[] = ['keyword' => $kw, 'reply' => trim((string)($r['reply'] ?? ''))];
+            $rules[] = ['keyword' => $kw, 'reply' => clean_text(mb_substr(trim((string)($r['reply'] ?? '')), 0, 1000))];
         }
     }
     $enabled = !empty($d['enabled']);
