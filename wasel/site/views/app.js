@@ -530,8 +530,8 @@ R.leads = async (el, p) => {
   const d = await api('/api/admin/leads');
   if (!d.ok) { el.innerHTML = head('استخراج أرقام من الخرائط') + `<div class="card">${empty('fa-solid fa-lock', d.error || 'للأدمن فقط')}</div>`; return; }
   const last = (() => { try { return JSON.parse(localStorage.getItem('wasel_leads_form') || '{}'); } catch (e) { return {}; } })();
-  let mode = last.mode || 'ext';
-  const MODES = [['ext', 'fa-brands fa-chrome', 'متصفح جهازي', 'إضافة كروم'], ['server', 'fa-solid fa-server', 'متصفح السيرفر', 'بدون جهازك'], ['api', 'fa-solid fa-key', 'Google API', 'مدفوع']];
+  let mode = last.mode || 'http';
+  const MODES = [['http', 'fa-solid fa-bolt', 'بحث سريع', 'يشتغل من الجوال'], ['ext', 'fa-brands fa-chrome', 'متصفح جهازي', 'إضافة كروم للكمبيوتر'], ['server', 'fa-solid fa-server', 'متصفح السيرفر', 'يحتاج VPS'], ['api', 'fa-solid fa-key', 'Google API', 'مدفوع']];
   el.innerHTML = head('استخراج أرقام من الخرائط') + `
     <div class="hero shine"><div style="display:flex;align-items:center;gap:14px"><span class="hero-icon"><i class="fa-solid fa-map-location-dot"></i></span>
       <div><div style="font-weight:800;font-size:17px">أرقام المحلات والشركات من خرائط Google</div><div class="hero-sub">المتصفح يفتح الخرائط ويبحث بنفسه، ويسجّل اسم كل محل ورقمه وعنوانه ونوعه وتقييمه</div></div></div></div>
@@ -551,7 +551,7 @@ R.leads = async (el, p) => {
     <div id="lres"></div>
     <div class="section-head">عمليات البحث السابقة</div>
     <div class="list mini-list" id="lhist">${d.searches.length ? d.searches.map(s => rowItem({
-      icon: s.source === 'api' || !s.source ? 'fa-solid fa-key' : s.source === 'server' ? 'fa-solid fa-server' : 'fa-brands fa-chrome', ic: 'ic-green', title: `${esc(s.keyword)} - ${esc(s.city)}`,
+      icon: s.source === 'api' || !s.source ? 'fa-solid fa-key' : s.source === 'server' ? 'fa-solid fa-server' : s.source === 'http' ? 'fa-solid fa-bolt' : 'fa-brands fa-chrome', ic: 'ic-green', title: `${esc(s.keyword)} - ${esc(s.city)}`,
       sub: `<span class="num">${esc(s.time)}</span> · ${esc(s.country)} · ${fmt(s.phones)} رقم من ${fmt(s.count)}`, onclick: `go('leads',{id:${s.id}})`,
     })).join('') : empty('fa-solid fa-map', 'ما فيه عمليات بحث بعد')}</div>`;
 
@@ -559,7 +559,9 @@ R.leads = async (el, p) => {
   const drawMode = () => {
     el.querySelectorAll('#lmode button').forEach(x => x.classList.toggle('on', x.dataset.v === mode));
     const info = $('#lmodeInfo'), opts = $('#lopts');
-    if (mode === 'ext') {
+    if (mode === 'http') {
+      info.innerHTML = `<div class="note ok-note" style="margin-top:10px"><i class="fa-solid fa-bolt"></i> السيرفر يسأل خرائط Google مباشرة ويجيب الاسم والرقم والعنوان والتقييم - بدون متصفح، ويشتغل من الجوال ومع أي استضافة.</div>`;
+    } else if (mode === 'ext') {
       info.innerHTML = extOn() ? `<div class="note ok-note" style="margin-top:10px"><i class="fa-solid fa-circle-check"></i> الإضافة شغالة بمتصفحك. راح تنفتح نافذة خرائط صغيرة وتشتغل لوحدها.</div>`
         : `<div class="card" style="margin-top:10px">
           <div class="card-title"><i class="fa-brands fa-chrome"></i> ثبّت إضافة واصل بمتصفح كروم (مرة وحدة)</div>
@@ -572,7 +574,8 @@ R.leads = async (el, p) => {
           <a class="btn btn-primary btn-block" href="/api/admin/leads/extension.zip" download><i class="fa-solid fa-download"></i> تنزيل الإضافة</a>
           <div class="hint" style="text-align:center;margin-top:8px">تشتغل على كروم أو Edge بالكمبيوتر</div></div>`;
     } else if (mode === 'server') {
-      info.innerHTML = `<div class="note" style="margin-top:10px"><i class="fa-solid fa-server"></i> محرك واتساب يشغّل كروم مخفي بالسيرفر ويبحث. يحتاج استضافة تسمح بتشغيل كروم (غالباً VPS) - لو ما اشتغل استخدم «متصفح جهازي».</div>`;
+      info.innerHTML = `<div class="card" style="margin-top:10px"><div class="card-title"><i class="fa-solid fa-server"></i> كروم على السيرفر</div><div id="srvState"><div class="skel" style="height:40px"></div></div></div>`;
+      srvState();
     } else {
       info.innerHTML = d.key_set ? `<div class="note" style="margin-top:10px"><i class="fa-solid fa-key"></i> عبر Google Places API الرسمية (تحتسب طلبات من حساب Google).</div>` : `<div class="card" style="margin-top:10px">
         <div class="note warn"><i class="fa-solid fa-key"></i> يحتاج مفتاح Google Maps (Places API). سوّيه من Google Cloud Console ← فعّل «Places API (New)» ← Credentials ← Create API key.</div>
@@ -586,7 +589,9 @@ R.leads = async (el, p) => {
         r.ok ? (toast('تم حفظ المفتاح', 'ok'), go('leads', {}, false)) : toast(r.error, 'err');
       };
     }
-    opts.innerHTML = mode === 'api'
+    opts.innerHTML = mode === 'http'
+      ? `<div class="field"><label>أقصى عدد محلات</label><div class="seg" id="lmax">${[50, 100, 200, 500].map(v => `<button data-v="${v}" class="${v === max ? 'on' : ''}"><b class="num">${v}</b></button>`).join('')}</div></div>`
+      : mode === 'api'
       ? `<div class="field"><label>عمق البحث</label><div class="seg" id="ldepth">${[[1, 'سريع', 'حتى 60'], [2, 'متوسط', 'حتى 240'], [3, 'شامل', 'حتى 540']].map(([v, t, s]) => `<button data-v="${v}" class="${v === depth ? 'on' : ''}"><b>${t}</b><small>${s}</small></button>`).join('')}</div></div>`
       : `<div class="field"><label>أقصى عدد محلات</label><div class="seg" id="lmax">${[50, 100, 200, 500].map(v => `<button data-v="${v}" class="${v === max ? 'on' : ''}"><b class="num">${v}</b></button>`).join('')}</div></div>
          <label class="kv" style="cursor:pointer;margin-bottom:10px"><span>افتح كل محل وسجّل رقمه وعنوانه<small class="row-sub" style="display:block">أبطأ بس يجيب أرقام أكثر</small></span><label class="switch"><input type="checkbox" id="ldeep" ${deep ? 'checked' : ''}><span></span></label></label>`;
@@ -595,6 +600,30 @@ R.leads = async (el, p) => {
     const dp = $('#ldeep'); if (dp) dp.onchange = () => { deep = dp.checked; };
     $('#lgo').disabled = (mode === 'api' && !d.key_set) || (mode === 'ext' && !extOn());
   };
+  // حالة كروم بالسيرفر + زر التنصيب
+  async function srvState() {
+    const box = $('#srvState'); if (!box) return;
+    const r = await api('/api/admin/leads/server');
+    if (!$('#srvState') || mode !== 'server') return;
+    const st = r.status || 'engine';
+    const T = {
+      ready: ['ok-note', 'fa-solid fa-circle-check', `كروم شغّال على السيرفر${r.version ? ' (' + esc(r.version) + ')' : ''} - جاهز للبحث`],
+      installed: ['', 'fa-solid fa-circle-info', 'كروم منصّب - اضغط «فحص» حتى نتأكد إن الاستضافة تشغّله'],
+      missing: ['warn', 'fa-solid fa-triangle-exclamation', 'كروم مو منصّب على السيرفر بعد'],
+      installing: ['', 'fa-solid fa-spinner fa-spin', 'جارِ تنصيب كروم على السيرفر... ياخذ من 2 إلى 10 دقائق، تقدر تطلع وترجع'],
+      checking: ['', 'fa-solid fa-spinner fa-spin', 'نجرّب نشغّل كروم على السيرفر...'],
+      failed: ['warn', 'fa-solid fa-circle-xmark', esc(r.error || 'فشل')],
+      engine: ['warn', 'fa-solid fa-plug-circle-xmark', esc(r.error || 'المحرك غير متصل')],
+    }[st] || ['', 'fa-solid fa-circle-info', esc(st)];
+    box.innerHTML = `<div class="note ${T[0]}"><i class="${T[1]}"></i> ${T[2]}</div>
+      ${['missing', 'failed'].includes(st) ? `<button class="btn btn-primary btn-block" style="margin-top:10px" id="srvInst"><i class="fa-solid fa-download"></i> ${st === 'failed' ? 'إعادة المحاولة' : 'تنصيب كروم على السيرفر'}</button>` : ''}
+      ${st === 'installed' ? `<button class="btn btn-primary btn-block" style="margin-top:10px" id="srvChk"><i class="fa-solid fa-stethoscope"></i> فحص</button>` : ''}
+      ${st === 'failed' || st === 'engine' ? `<div class="hint" style="margin-top:8px">لو استضافتك مشتركة (DirectAdmin عادي) غالباً ما تشغّل كروم - استخدم «بحث سريع».</div>` : ''}`;
+    const go2 = async (chk) => { const r2 = await api('/api/admin/leads/server', { body: { check_only: chk } }); if (!r2.ok) toast(r2.error, 'err'); srvState(); };
+    if ($('#srvInst')) $('#srvInst').onclick = () => go2(false);
+    if ($('#srvChk')) $('#srvChk').onclick = () => go2(true);
+    if (['installing', 'checking'].includes(st)) setTimeout(() => { if (S.page === 'leads' && mode === 'server') srvState(); }, 4000);
+  }
   el.querySelectorAll('#lmode button').forEach(b => b.onclick = () => { mode = b.dataset.v; drawMode(); });
   el.querySelectorAll('#lsug [data-k]').forEach(b => b.onclick = () => { $('#lkw').value = b.dataset.k; });
   drawMode();
@@ -609,7 +638,7 @@ R.leads = async (el, p) => {
       if (r.job.status === 'running') { drawLeadProgress(r.job); return; }
       S.timers.forEach(clearInterval); S.timers = [];
       if (r.job.search_id) { toast(`تم: ${fmt(r.job.found)} محل`, 'ok'); go('leads', { id: r.job.search_id }); }
-      else { $('#lprog').innerHTML = ''; toast(r.job.error || 'ما لكينا نتائج', 'err'); $('#lgo').disabled = false; }
+      else { $('#lprog').innerHTML = `<div class="note warn"><i class="fa-solid fa-circle-exclamation"></i> ${esc(r.job.error || 'ما لكينا نتائج')}</div>`; $('#lgo').disabled = false; }
     });
   };
   $('#lgo').onclick = async e => {
@@ -617,6 +646,13 @@ R.leads = async (el, p) => {
     if (!body.city || !body.keyword) { toast('اكتب المدينة ونوع النشاط', 'err'); return; }
     try { localStorage.setItem('wasel_leads_form', JSON.stringify(body)); } catch (er) { }
     const b = e.target.closest('button'); busy(b, true);
+    if (mode === 'http') {
+      $('#lprog').innerHTML = `<div class="card lead-prog" style="text-align:center"><div class="spinner"></div><b style="display:block;margin-top:10px">نبحث بخرائط Google...</b><div class="hint">ياخذ من 10 ثواني لدقيقة حسب العدد - لا تسد الصفحة</div></div>`;
+      const r = await api('/api/admin/leads/http', { body });
+      busy(b, false); $('#lprog').innerHTML = '';
+      if (!r.ok) { $('#lprog').innerHTML = `<div class="note warn"><i class="fa-solid fa-circle-exclamation"></i> ${esc(r.error || 'تعذر البحث')}</div>`; return; }
+      toast(`تم: ${fmt(r.job.found)} محل`, 'ok'); go('leads', { id: r.job.search_id }); return;
+    }
     if (mode === 'api') {
       $('#lres').innerHTML = `<div class="card" style="margin-top:12px;text-align:center"><div class="spinner"></div><div class="hint" style="margin-top:10px">نبحث بالخرائط... ممكن ياخذ لحد دقيقة بالبحث الشامل</div></div>`;
       const r = await api('/api/admin/leads/search', { body });
@@ -625,7 +661,7 @@ R.leads = async (el, p) => {
       showResults(r.search); return;
     }
     const r = await api('/api/admin/leads/job', { body });
-    if (!r.ok) { busy(b, false); toast(r.error || 'تعذر بدء البحث', 'err'); return; }
+    if (!r.ok) { busy(b, false); $('#lprog').innerHTML = `<div class="note warn"><i class="fa-solid fa-circle-exclamation"></i> ${esc(r.error || 'تعذر بدء البحث')}</div>`; return; }
     busy(b, false); b.disabled = true;
     if (mode === 'server') { pollServer(r.job); return; }
     const x = await extCall('start', { job: { id: r.job.id, url: r.job.url, max: r.job.max, deep: r.job.deep } });

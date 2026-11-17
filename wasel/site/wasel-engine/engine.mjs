@@ -14,7 +14,9 @@ import fsp from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { createRequire } from 'node:module';
+import { spawn } from 'node:child_process';
 import makeWASocket, {
   Browsers,
   DisconnectReason,
@@ -60,7 +62,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 6; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 7; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -652,12 +654,18 @@ async function deleteAccount(id) {
 // اختياري: يحتاج حزمة puppeteer (أو puppeteer-core مع CHROME_PATH). لو الاستضافة ما تشغّل كروم يرجع رسالة واضحة.
 const scrapeJobs = {};
 const CHROME_PATHS = [process.env.CHROME_PATH, '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/snap/bin/chromium', '/opt/pw-browsers/chromium'].filter(Boolean);
-async function launchChrome() {
-  let pp = null, err = '';
+// رسائل الأخطاء بدون مسارات ملفات السيرفر
+const hidePaths = (m) => String(m || '').replace(/(?:[A-Za-z]:)?(?:[\\/][\w.@~-]+){2,}[\\/]?/g, '…').split('\n')[0].slice(0, 220);
+const requireHere = createRequire(import.meta.url);
+async function loadPuppeteer() {
   for (const mod of ['puppeteer', 'puppeteer-core']) {
-    try { pp = (await import(mod)).default; break; } catch (e) { err = e.message; }
+    try { const m = await import(pathToFileURL(requireHere.resolve(mod)).href); return m.default?.launch ? m.default : m; } catch { /* نجرب اللي بعده */ }
   }
-  if (!pp) throw new Error('حزمة puppeteer غير منصّبة بالمحرك (شغّل Run NPM Install). ' + err);
+  return null;
+}
+async function launchChrome() {
+  const pp = await loadPuppeteer();
+  if (!pp) throw new Error('كروم غير منصّب على السيرفر بعد - اضغط «تنصيب كروم على السيرفر» بصفحة الاستخراج');
   const args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--lang=ar', '--window-size=1280,900'];
   const exe = CHROME_PATHS.find((p) => { try { return fs.statSync(p).isFile() || fs.statSync(p).isDirectory(); } catch { return false; } });
   const tries = [{}];
@@ -666,7 +674,37 @@ async function launchChrome() {
   for (const t of tries) {
     try { return await pp.launch({ headless: true, args, ...t }); } catch (e) { last = e; }
   }
-  throw new Error('تعذر تشغيل كروم على السيرفر - غالباً الاستضافة ما تسمح. استخدم إضافة كروم بجهازك. (' + String(last?.message || last).split('\n')[0].slice(0, 160) + ')');
+  throw new Error('كروم انصّب بس الاستضافة ما تسمح بتشغيله (تحتاج VPS). استخدم «بحث سريع» أو «متصفح جهازي». (' + hidePaths(last?.message || last) + ')');
+}
+// تنصيب كروم بضغطة من لوحة الأدمن + فحص هل الاستضافة تشغّله
+const chromeSetup = { status: 'idle', error: '', version: '', log: '' };
+async function chromeCheck() {
+  chromeSetup.status = 'checking';
+  try {
+    const b = await launchChrome();
+    chromeSetup.version = await b.version();
+    await b.close();
+    chromeSetup.status = 'ready'; chromeSetup.error = '';
+  } catch (e) { chromeSetup.status = 'failed'; chromeSetup.error = hidePaths(e.message); }
+}
+function chromeInstall() {
+  if (['installing', 'checking'].includes(chromeSetup.status)) return;
+  chromeSetup.status = 'installing'; chromeSetup.error = ''; chromeSetup.log = '';
+  const binDir = path.dirname(process.execPath);
+  const npmCli = [path.join(binDir, 'npm'), path.join(binDir, '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js')].find((f) => fs.existsSync(f));
+  const [cmd, args] = npmCli && npmCli.endsWith('.js') ? [process.execPath, [npmCli]] : [npmCli || 'npm', []];
+  const child = spawn(cmd, [...args, 'install', 'puppeteer@23.11.1', '--no-save', '--no-audit', '--no-fund', '--no-package-lock'], {
+    cwd: __dirname, env: { ...process.env, PATH: binDir + path.delimiter + (process.env.PATH || '') },
+  });
+  const add = (d) => { chromeSetup.log = (chromeSetup.log + d.toString()).slice(-3000); };
+  child.stdout.on('data', add); child.stderr.on('data', add);
+  const killer = setTimeout(() => child.kill('SIGKILL'), 15 * 60 * 1000);
+  child.on('error', (e) => { clearTimeout(killer); chromeSetup.status = 'failed'; chromeSetup.error = 'تعذر تشغيل npm: ' + hidePaths(e.message); });
+  child.on('close', (code) => {
+    clearTimeout(killer);
+    if (code !== 0) { chromeSetup.status = 'failed'; chromeSetup.error = 'فشل تنصيب كروم (غالباً مساحة الاستضافة أو صلاحياتها): ' + hidePaths(chromeSetup.log.trim().split('\n').slice(-1)[0]); return; }
+    chromeCheck();
+  });
 }
 async function runScrape(job) {
   let browser;
@@ -698,7 +736,7 @@ async function runScrape(job) {
     else job.status = 'done';
   } catch (e) {
     job.status = 'error';
-    job.error = String(e.message || e);
+    job.error = hidePaths(e.message || e);
   } finally {
     job.finished = now();
     try { await browser?.close(); } catch { /* تجاهل */ }
@@ -709,6 +747,15 @@ async function runScrape(job) {
 setInterval(() => { for (const [id, j] of Object.entries(scrapeJobs)) if (j.finished && now() - j.finished > 3600) delete scrapeJobs[id]; }, 600000);
 
 const routes = [
+  ['GET', /^\/scrape\/setup$/, async () => {
+    if (chromeSetup.status === 'idle') chromeSetup.status = (await loadPuppeteer()) ? 'installed' : 'missing';
+    const { log, ...pub } = chromeSetup;
+    return [200, { ok: true, ...pub }];
+  }],
+  ['POST', /^\/scrape\/setup$/, async (_m, body) => {
+    if (body.check_only || (await loadPuppeteer())) chromeCheck(); else chromeInstall();
+    return [200, { ok: true, status: chromeSetup.status }];
+  }],
   ['POST', /^\/scrape$/, async (_m, body) => {
     const running = Object.values(scrapeJobs).filter((j) => j.status === 'running').length;
     if (running >= 1) return [429, { ok: false, error: 'فيه بحث شغال حالياً - انتظره يخلص' }];

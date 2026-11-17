@@ -359,3 +359,5 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .rep-list>div{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:12px;background:#fff;border:1px solid var(--line);font-size:13.5px}
 .rep-list>div span{flex:1;text-align:right}
 .rep-list a{color:#16a34a;font-size:18px}
+.lmode{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.lmode button small{font-size:10px}
