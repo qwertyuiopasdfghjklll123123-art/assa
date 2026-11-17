@@ -29,6 +29,7 @@ function public_settings(): array
         'plan_name' => PLAN_NAME, 'plan_price' => plan_price(), 'plan_days' => plan_days(),
         'message_price' => message_price(), 'usd_rate' => usd_rate(), 'trial_days' => trial_days(),
         'support_number' => $s['whatsapp_support_number'] ?: WHATSAPP_PAY_NUMBER,
+        'leads_enabled' => !isset($s['leads_enabled']) || !empty($s['leads_enabled']),
         'dev' => $s['dev_phone'] !== '' ? ['name' => $s['dev_name'] ?: 'المطوّر', 'title' => $s['dev_title'] ?: 'مطوّر المنصة',
             'phone' => $s['dev_phone'], 'photo' => !empty($s['dev_photo']) && is_file(DATA_DIR . '/dev.bin') ? '/dev-photo?v=' . (int)filemtime(DATA_DIR . '/dev.bin') : null] : null,
     ];
@@ -408,7 +409,8 @@ function api_routes(): array
                 'admin_email' => $s['admin_email'],
                 'tg_token_set' => $s['tg_token'] !== '', 'tg_chat_id' => $s['tg_chat_id'],
                 'tg_auto_backup' => !empty($s['tg_auto_backup']), 'tg_last_backup' => $s['tg_last_backup'],
-                'ai_key_set' => $s['ai_api_key'] !== '', 'ai_knowledge_base' => $s['ai_knowledge_base'], 'maps_key_set' => $s['maps_api_key'] !== '',
+                'ai_key_set' => $s['ai_api_key'] !== '', 'ai_knowledge_base' => $s['ai_knowledge_base'],
+                'leads_enabled' => !empty($s['leads_enabled']), 'leads_daily' => (int)$s['leads_daily'], 'leads_max' => (int)$s['leads_max'],
                 'google_client_id' => GOOGLE_CLIENT_ID,
                 'dev_name' => $s['dev_name'], 'dev_title' => $s['dev_title'], 'dev_phone' => $s['dev_phone'], 'dev_photo' => !empty($s['dev_photo']),
                 'cron_url' => site_base_url() . '/cron/setup?key=' . CRON_KEY, 'last_cron' => $s['last_cron'] ? date('Y-m-d H:i', (int)$s['last_cron']) : null,
@@ -459,8 +461,14 @@ function api_routes(): array
             if (array_key_exists('tg_auto_backup', $d)) {
                 $f['tg_auto_backup'] = !empty($d['tg_auto_backup']);
             }
-            if (trim((string)($d['maps_api_key'] ?? '')) !== '') {
-                $f['maps_api_key'] = trim((string)$d['maps_api_key']);
+            if (array_key_exists('leads_enabled', $d)) {
+                $f['leads_enabled'] = !empty($d['leads_enabled']);
+            }
+            if (array_key_exists('leads_daily', $d)) {
+                $f['leads_daily'] = max(0, min(1000, (int)$d['leads_daily']));
+            }
+            if (array_key_exists('leads_max', $d)) {
+                $f['leads_max'] = max(10, min(500, (int)$d['leads_max']));
             }
             if (trim((string)($d['ai_api_key'] ?? '')) !== '') {
                 $f['ai_api_key'] = trim((string)$d['ai_api_key']);

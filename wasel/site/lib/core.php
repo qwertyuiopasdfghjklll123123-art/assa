@@ -116,6 +116,9 @@ function valid_country_code(?string $code): bool
 
 function apply_country_code(string $number, string $cc): string
 {
+    if ($number !== '' && $number[0] === '+') {
+        return substr($number, 1); // دولي جاهز
+    }
     if ($cc === '' || strpos($number, $cc) === 0) {
         return $number;
     }
@@ -444,7 +447,9 @@ function settings(): array
         'site_name' => '', 'default_country_code' => '964',
         'whatsapp_subscribe_number' => '', 'whatsapp_support_number' => '',
         'plan_price_iqd' => null, 'has_logo' => false, 'logo_mime' => null,
-        'ai_api_key' => '', 'ai_knowledge_base' => '', 'maps_api_key' => '',
+        'ai_api_key' => '', 'ai_knowledge_base' => '',
+        // سحب الأرقام من الخرائط
+        'leads_enabled' => true, 'leads_daily' => 5, 'leads_max' => 200,
         // الفوترة
         'trial_days' => TRIAL_DAYS, 'plan_days' => PLAN_ACTIVATION_DAYS, 'message_price' => 0, 'usd_rate' => 1500,
         // تسجيل الدخول والأمان

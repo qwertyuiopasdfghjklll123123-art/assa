@@ -14,9 +14,7 @@ import fsp from 'node:fs/promises';
 import http from 'node:http';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { fileURLToPath, pathToFileURL } from 'node:url';
-import { createRequire } from 'node:module';
-import { spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import makeWASocket, {
   Browsers,
   DisconnectReason,
@@ -62,7 +60,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 7; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 8; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -650,133 +648,7 @@ async function deleteAccount(id) {
   await fsp.rm(campaignFile(id), { force: true });
 }
 
-// ---------------------------------------------------------------- سحب أرقام من خرائط Google بمتصفح (Chrome مخفي)
-// اختياري: يحتاج حزمة puppeteer (أو puppeteer-core مع CHROME_PATH). لو الاستضافة ما تشغّل كروم يرجع رسالة واضحة.
-const scrapeJobs = {};
-const CHROME_PATHS = [process.env.CHROME_PATH, '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/snap/bin/chromium', '/opt/pw-browsers/chromium'].filter(Boolean);
-// رسائل الأخطاء بدون مسارات ملفات السيرفر
-const hidePaths = (m) => String(m || '').replace(/(?:[A-Za-z]:)?(?:[\\/][\w.@~-]+){2,}[\\/]?/g, '…').split('\n')[0].slice(0, 220);
-const requireHere = createRequire(import.meta.url);
-async function loadPuppeteer() {
-  for (const mod of ['puppeteer', 'puppeteer-core']) {
-    try { const m = await import(pathToFileURL(requireHere.resolve(mod)).href); return m.default?.launch ? m.default : m; } catch { /* نجرب اللي بعده */ }
-  }
-  return null;
-}
-async function launchChrome() {
-  const pp = await loadPuppeteer();
-  if (!pp) throw new Error('كروم غير منصّب على السيرفر بعد - اضغط «تنصيب كروم على السيرفر» بصفحة الاستخراج');
-  const args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--lang=ar', '--window-size=1280,900'];
-  const exe = CHROME_PATHS.find((p) => { try { return fs.statSync(p).isFile() || fs.statSync(p).isDirectory(); } catch { return false; } });
-  const tries = [{}];
-  if (exe) tries.push({ executablePath: fs.statSync(exe).isDirectory() ? path.join(exe, 'chrome') : exe });
-  let last;
-  for (const t of tries) {
-    try { return await pp.launch({ headless: true, args, ...t }); } catch (e) { last = e; }
-  }
-  throw new Error('كروم انصّب بس الاستضافة ما تسمح بتشغيله (تحتاج VPS). استخدم «بحث سريع» أو «متصفح جهازي». (' + hidePaths(last?.message || last) + ')');
-}
-// تنصيب كروم بضغطة من لوحة الأدمن + فحص هل الاستضافة تشغّله
-const chromeSetup = { status: 'idle', error: '', version: '', log: '' };
-async function chromeCheck() {
-  chromeSetup.status = 'checking';
-  try {
-    const b = await launchChrome();
-    chromeSetup.version = await b.version();
-    await b.close();
-    chromeSetup.status = 'ready'; chromeSetup.error = '';
-  } catch (e) { chromeSetup.status = 'failed'; chromeSetup.error = hidePaths(e.message); }
-}
-function chromeInstall() {
-  if (['installing', 'checking'].includes(chromeSetup.status)) return;
-  chromeSetup.status = 'installing'; chromeSetup.error = ''; chromeSetup.log = '';
-  const binDir = path.dirname(process.execPath);
-  const npmCli = [path.join(binDir, 'npm'), path.join(binDir, '..', 'lib', 'node_modules', 'npm', 'bin', 'npm-cli.js')].find((f) => fs.existsSync(f));
-  const [cmd, args] = npmCli && npmCli.endsWith('.js') ? [process.execPath, [npmCli]] : [npmCli || 'npm', []];
-  const child = spawn(cmd, [...args, 'install', 'puppeteer@23.11.1', '--no-save', '--no-audit', '--no-fund', '--no-package-lock'], {
-    cwd: __dirname, env: { ...process.env, PATH: binDir + path.delimiter + (process.env.PATH || '') },
-  });
-  const add = (d) => { chromeSetup.log = (chromeSetup.log + d.toString()).slice(-3000); };
-  child.stdout.on('data', add); child.stderr.on('data', add);
-  const killer = setTimeout(() => child.kill('SIGKILL'), 15 * 60 * 1000);
-  child.on('error', (e) => { clearTimeout(killer); chromeSetup.status = 'failed'; chromeSetup.error = 'تعذر تشغيل npm: ' + hidePaths(e.message); });
-  child.on('close', (code) => {
-    clearTimeout(killer);
-    if (code !== 0) { chromeSetup.status = 'failed'; chromeSetup.error = 'فشل تنصيب كروم (غالباً مساحة الاستضافة أو صلاحياتها): ' + hidePaths(chromeSetup.log.trim().split('\n').slice(-1)[0]); return; }
-    chromeCheck();
-  });
-}
-async function runScrape(job) {
-  let browser;
-  try {
-    browser = await launchChrome();
-    job.browser = browser;
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 900 });
-    await page.setExtraHTTPHeaders({ 'Accept-Language': 'ar,en;q=0.8' });
-    // تخطّي صفحة الموافقة على الكوكيز
-    try { await page.setCookie({ name: 'SOCS', value: 'CAESHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmVuIAEaBgiAo_CmBg', domain: '.google.com', path: '/' }); } catch { /* تجاهل */ }
-    await page.exposeFunction('__waselReport', (d) => {
-      job.found = d.found ?? job.found; job.stage = d.stage || job.stage; job.current = d.current || '';
-      if (d.done) { job.done = d.done; job.total = d.total; }
-    });
-    await page.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
-    if (page.url().includes('consent.')) {
-      await Promise.all([page.waitForNavigation({ timeout: 30000 }).catch(() => {}), page.evaluate(() => {
-        const b = [...document.querySelectorAll('form button, button')].find((x) => /accept|agree|قبول|موافق/i.test(x.innerText + ' ' + (x.getAttribute('aria-label') || '')));
-        (b || document.querySelector('form[action*="consent"] button'))?.click();
-      })]);
-    }
-    await page.addScriptTag({ content: fs.readFileSync(path.join(__dirname, 'maps-scraper.js'), 'utf8') });
-    job.page = page;
-    const r = await page.evaluate((o) => window.waselScrape(o), { max: job.max, deep: job.deep });
-    job.results = r.results || [];
-    job.found = job.results.length;
-    if (!r.ok) { job.status = 'error'; job.error = r.error === 'captcha' ? 'Google طلبت تحقق «لست روبوت» - جرّب بعد شوي أو استخدم إضافة كروم' : r.error; }
-    else job.status = 'done';
-  } catch (e) {
-    job.status = 'error';
-    job.error = hidePaths(e.message || e);
-  } finally {
-    job.finished = now();
-    try { await browser?.close(); } catch { /* تجاهل */ }
-    delete job.browser; delete job.page;
-  }
-}
-// تنظيف المهام القديمة
-setInterval(() => { for (const [id, j] of Object.entries(scrapeJobs)) if (j.finished && now() - j.finished > 3600) delete scrapeJobs[id]; }, 600000);
-
 const routes = [
-  ['GET', /^\/scrape\/setup$/, async () => {
-    if (chromeSetup.status === 'idle') chromeSetup.status = (await loadPuppeteer()) ? 'installed' : 'missing';
-    const { log, ...pub } = chromeSetup;
-    return [200, { ok: true, ...pub }];
-  }],
-  ['POST', /^\/scrape\/setup$/, async (_m, body) => {
-    if (body.check_only || (await loadPuppeteer())) chromeCheck(); else chromeInstall();
-    return [200, { ok: true, status: chromeSetup.status }];
-  }],
-  ['POST', /^\/scrape$/, async (_m, body) => {
-    const running = Object.values(scrapeJobs).filter((j) => j.status === 'running').length;
-    if (running >= 1) return [429, { ok: false, error: 'فيه بحث شغال حالياً - انتظره يخلص' }];
-    const id = String(body.id || crypto.randomUUID()).replace(/[^\w-]/g, '').slice(0, 40);
-    const url = String(body.url || '');
-    if (!/^https:\/\/www\.google\.[a-z.]+\/maps\//.test(url) && !process.env.SCRAPE_TEST) return [400, { ok: false, error: 'رابط غير صالح' }];
-    const job = scrapeJobs[id] = { id, url, max: Math.min(1000, Number(body.max) || 200), deep: body.deep !== false, status: 'running', stage: 'start', found: 0, results: [], started: now() };
-    runScrape(job);
-    return [200, { ok: true, id }];
-  }],
-  ['GET', /^\/scrape\/([\w-]+)$/, async (m) => {
-    const j = scrapeJobs[m[1]];
-    if (!j) return [404, { ok: false, error: 'job not found' }];
-    const { browser, page, ...pub } = j;
-    return [200, { ok: true, ...pub, results: j.status === 'running' ? [] : j.results }];
-  }],
-  ['POST', /^\/scrape\/([\w-]+)\/stop$/, async (m) => {
-    const j = scrapeJobs[m[1]];
-    if (j?.page) await j.page.evaluate(() => { window.__waselStop = true; }).catch(() => {});
-    return [200, { ok: true }];
-  }],
   ['GET', /^\/health$/, async () => [200, { ok: true, version: ENGINE_VERSION, accounts: Object.keys(registry).length, time: fmt(now()) }]],
 
   ['GET', /^\/accounts$/, async () => [200, Object.keys(registry).map(accountInfo)]],

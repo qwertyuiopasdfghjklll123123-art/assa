@@ -134,7 +134,7 @@ const PAGES = {
   admin: { nav: 'account', admin: true, slug: 'dashboard' }, users: { nav: 'account', admin: true, slug: 'users' }, recharges: { nav: 'account', admin: true, slug: 'recharges' },
   payments: { nav: 'account', admin: true, slug: 'payments' }, plansAdmin: { nav: 'account', admin: true, slug: 'plans' }, settings: { nav: 'account', admin: true, slug: 'settings' },
   security: { nav: 'account', admin: true, slug: 'security' }, backup: { nav: 'account', admin: true, slug: 'backup' }, announce: { nav: 'account', admin: true, slug: 'announce' },
-  leads: { nav: 'account', admin: true, slug: 'leads' },
+  leads: { nav: 'account', slug: 'leads' },
 };
 const SLUG2PAGE = Object.fromEntries(Object.entries(PAGES).map(([k, v]) => [v.slug ?? k, k]));
 
@@ -195,6 +195,10 @@ R.home = async (el) => {
   const planDays = ME.plan_active ? (ME.plan_days_left === null ? 'اشتراك دائم' : 'باقي ' + ME.plan_days_left + ' يوم') : ME.trial_active ? 'باقي ' + ME.trial_days_left + ' يوم' : '';
   el.innerHTML = `
     <div class="greet fade-in"><div><small>${hello}</small><h2>${esc(ME.name || 'صديقنا')}</h2></div><div class="avatar">${esc(first)}</div></div>
+    ${SET.leads_enabled || ADMIN ? `<div class="promo shine fade-in" onclick="go('leads')">
+      <div class="promo-art"><i class="fa-solid fa-map-location-dot"></i><span class="pin p1"><i class="fa-solid fa-location-dot"></i></span><span class="pin p2"><i class="fa-solid fa-store"></i></span></div>
+      <div class="promo-txt"><span class="promo-tag"><i class="fa-solid fa-bullhorn"></i> جديد</span><b>اسحب أرقام المحلات واعمل حملة إعلانية لمنتجك</b><small>اختر المدينة ونوع النشاط ونجيبلك أرقامهم من الخرائط</small></div>
+      <span class="promo-go"><i class="fa-solid fa-arrow-left"></i></span></div>` : ''}
     <div class="hero shine fade-in" onclick="go('wallet')" style="cursor:pointer">
       <div class="hc-top"><span class="pill pill-white"><i class="fa-solid fa-gem"></i> ${planLbl}</span><span style="opacity:.8">${planDays}</span></div>
       <div style="margin-top:12px"><div class="hero-label">الرصيد</div><div class="hero-amount"><span class="num">${fmt(ME.balance)}</span> <span style="font-size:15px;font-weight:600;opacity:.85">د.ع</span></div></div>
@@ -322,6 +326,15 @@ R.campaign = async (el, p) => {
         <button class="btn btn-soft btn-sm" id="rmBad" disabled><i class="fa-solid fa-eraser"></i> حذف الناقص</button>
         <button class="btn btn-soft btn-sm" id="rmAll" disabled><i class="fa-solid fa-trash-can"></i> مسح</button>
       </div>
+      <div id="ccTools" class="cc-tools hidden">
+        <div class="cc-tools-h"><b><i class="fa-solid fa-globe"></i> الأرقام حسب رمز الدولة</b><small>حدد رمز أو أكثر</small></div>
+        <div class="chips" id="ccChips"></div>
+        <div class="input-row hidden" id="ccActs" style="margin-top:8px">
+          <button class="btn btn-soft btn-sm" style="flex:1" data-cca="keep"><i class="fa-solid fa-filter"></i> إبقاء فقط</button>
+          <button class="btn btn-soft btn-sm" style="flex:1" data-cca="strip"><i class="fa-solid fa-delete-left"></i> إزالة الرمز</button>
+          <button class="btn btn-soft btn-sm" style="flex:1;color:var(--red)" data-cca="drop"><i class="fa-solid fa-trash-can"></i> حذف</button>
+        </div>
+      </div>
       <div class="input-row" style="margin-top:8px">
         <label class="file-drop" style="flex:1"><input type="file" id="numFile" accept=".xlsx,.csv,.txt,.vcf"><span class="row-ic ic-green"><i class="fa-solid fa-file-excel"></i></span><span style="flex:1;min-width:0"><b style="font-size:13px">Excel / CSV</b><span class="row-sub" id="numFileName">الأرقام بالعمود الأول</span></span></label>
         <button class="file-drop" id="contactsBtn" style="flex:1"><span class="row-ic ic-blue"><i class="fa-solid fa-address-book"></i></span><span style="flex:1;min-width:0;text-align:right"><b style="font-size:13px">جهات الاتصال</b><span class="row-sub">من جوالك أو ملف vcf</span></span></button>
@@ -335,9 +348,15 @@ R.campaign = async (el, p) => {
         <div class="field" style="flex:1"><label>الفاصل بين الرسائل (ثانية)</label><input class="input num" id="delay" type="number" min="1" value="15"></div>
         <div class="field" style="flex:1.3"><label>جدولة (اختياري)</label><input class="input" id="sendAt" type="datetime-local"></div>
       </div>
+      <div class="drip-card" id="dripCard">
+        <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ic-indigo"><i class="fa-solid fa-calendar-day"></i></span>
+          <div style="flex:1;min-width:0"><b>إرسال <input class="drip-n num" id="dripN" type="number" min="5" max="1000" value="40"> رقم يومياً</b><div class="row-sub" id="dripSub">يتفعّل لما تكون الأرقام أكثر من 40</div></div>
+          <label class="switch"><input type="checkbox" id="dripOn" disabled><span></span></label></div>
+      </div>
       <div class="note warn hidden" id="costNote"></div>
       <button class="btn btn-primary btn-block" id="sendBtn" style="margin-top:12px"><i class="fa-solid fa-paper-plane"></i> إرسال الحملة</button>
     </div>
+    <div id="drips"></div>
     <div class="section-head">تقارير حملات هذا الرقم <a onclick="go('reports')">كل التقارير</a></div>
     <div id="hist"></div>`;
 
@@ -350,6 +369,13 @@ R.campaign = async (el, p) => {
     $('#nsAll').textContent = fmt(a.total); $('#nsOk').textContent = fmt(a.valid); $('#nsDup').textContent = fmt(a.dup); $('#nsBad').textContent = fmt(a.bad);
     $('#rmDup').disabled = !a.dup; $('#rmBad').disabled = !a.bad; $('#rmAll').disabled = !a.total;
     $('#rmDup').innerHTML = `<i class="fa-solid fa-clone"></i> حذف المكرر${a.dup ? ` (${fmt(a.dup)})` : ''}`;
+    drawCcTools(a);
+    const dn = Math.max(5, +$('#dripN').value || 40), on = n > dn;
+    $('#dripOn').disabled = !on; if (!on) $('#dripOn').checked = false;
+    $('#dripCard').classList.toggle('on', $('#dripOn').checked);
+    $('#dripSub').innerHTML = !on ? `يتفعّل لما تكون الأرقام أكثر من ${fmt(dn)}` : $('#dripOn').checked
+      ? `${fmt(Math.min(n, dn))} الآن، و${fmt(dn)} كل 24 ساعة من نفس الرقم - تخلص خلال <b class="num">${fmt(Math.ceil(n / dn))}</b> يوم`
+      : `فعّله حتى ترسل ${fmt(dn)} الآن والباقي على دفعات يومية (أأمن لرقمك من الحظر)`;
     $('#rmBad').innerHTML = `<i class="fa-solid fa-eraser"></i> حذف الناقص${a.bad ? ` (${fmt(a.bad)})` : ''}`;
     const note = $('#costNote');
     if (payPerMsg && n) {
@@ -360,6 +386,48 @@ R.campaign = async (el, p) => {
     return n;
   };
   numbersEl.addEventListener('input', count);
+  $('#dripOn').onchange = count; $('#dripN').oninput = count;
+  // ---- أدوات رمز الدولة: تجميع الأرقام المكتوبة مع رمز دولة
+  let ccSel = new Set();
+  const CODES = B.country_codes.map(x => x[0]).sort((a, b) => b.length - a.length);
+  const codeOf = raw => {
+    const t = String(raw).trim(), dg = t.replace(/\D/g, '');
+    const plus = /^(\+|00)/.test(t), d = dg.replace(/^00/, '');
+    const c = CODES.find(x => d.startsWith(x));
+    if (!c) return null;
+    if (plus) return c;
+    // بدون + نعتبره مكتوب برمز إذا طوله يطابق الرقم الدولي لهذي الدولة
+    return NUM_LEN[c] ? (d.length === NUM_LEN[c] ? c : null) : (d.length >= 11 ? c : null);
+  };
+  function drawCcTools(a) {
+    const groups = {}; let local = 0;
+    a.items.forEach(it => { const c = codeOf(it.raw); if (c) groups[c] = (groups[c] || 0) + 1; else local++; });
+    const keys = Object.keys(groups).sort((x, y) => groups[y] - groups[x]);
+    ccSel = new Set([...ccSel].filter(c => groups[c] || (c === 'local' && local)));
+    $('#ccTools').classList.toggle('hidden', !keys.length);
+    $('#ccChips').innerHTML = keys.map(c => `<button class="chip ${ccSel.has(c) ? 'on' : ''}" data-cc="${c}"><span class="num">${esc(ccLabel(c))}</span> <b class="num">${fmt(groups[c])}</b></button>`).join('')
+      + (local ? `<button class="chip ${ccSel.has('local') ? 'on' : ''}" data-cc="local"><i class="fa-solid fa-phone"></i> بدون رمز <b class="num">${fmt(local)}</b></button>` : '');
+    $('#ccActs').classList.toggle('hidden', !ccSel.size);
+    $('#ccActs [data-cca="strip"]').disabled = ccSel.size === 1 && ccSel.has('local');
+  }
+  $('#ccChips').addEventListener('click', e => { const b = e.target.closest('[data-cc]'); if (!b) return; const c = b.dataset.cc; ccSel.has(c) ? ccSel.delete(c) : ccSel.add(c); count(); });
+  $('#ccActs').addEventListener('click', e => {
+    const b = e.target.closest('[data-cca]'); if (!b || !ccSel.size) return;
+    const act = b.dataset.cca, a = analyzeNumbers(numbersEl.value, $('#cc').dataset.cc);
+    const picked = it => ccSel.has(codeOf(it.raw) || 'local');
+    let changed = 0;
+    const lines = a.items.flatMap(it => {
+      const sel = picked(it);
+      if (act === 'keep') { if (!sel) changed++; return sel ? [it.raw] : []; }
+      if (act === 'drop') { if (sel) changed++; return sel ? [] : [it.raw]; }
+      const c = codeOf(it.raw);
+      if (!sel || !c) return [it.raw];
+      changed++;
+      return ['0' + it.raw.replace(/\D/g, '').replace(/^00/, '').slice(c.length).replace(/^0+/, '')];
+    });
+    numbersEl.value = lines.join('\n'); ccSel = new Set(); count();
+    toast({ keep: `انحذف ${fmt(changed)} رقم مو من الرموز المحددة`, drop: `انحذف ${fmt(changed)} رقم`, strip: `انشال الرمز من ${fmt(changed)} رقم` }[act], 'ok');
+  });
   new MutationObserver(count).observe($('#cc'), { attributes: true, attributeFilter: ['data-cc'] });
   const rewrite = (keep, msg) => {
     const a = analyzeNumbers(numbersEl.value, $('#cc').dataset.cc), seen = new Set(); let removed = 0;
@@ -402,7 +470,7 @@ R.campaign = async (el, p) => {
   $('#media').addEventListener('change', e => { const f = e.target.files[0]; $('#mediaName').textContent = f ? `${f.name} (${(f.size / 1048576).toFixed(1)}MB)` : 'اختياري'; });
   $('#accChips').addEventListener('click', e => {
     const c = e.target.closest('.chip'); if (!c) return;
-    accId = c.dataset.id; $$('#accChips .chip').forEach(x => x.classList.toggle('on', x === c)); loadStatus(); loadHist();
+    accId = c.dataset.id; $$('#accChips .chip').forEach(x => x.classList.toggle('on', x === c)); loadStatus(); loadHist(); loadDrips();
   });
   count();
   $('#sendBtn').addEventListener('click', async () => {
@@ -411,14 +479,15 @@ R.campaign = async (el, p) => {
     const fd = new FormData();
     fd.append('numbers_text', numbersEl.value); fd.append('country_code', $('#cc').dataset.cc); fd.append('text', $('#text').value);
     fd.append('delay', $('#delay').value || 15);
+    if ($('#dripOn').checked) { fd.append('drip', '1'); fd.append('drip_batch', Math.max(5, +$('#dripN').value || 40)); }
     if ($('#sendAt').value) fd.append('send_at', $('#sendAt').value);
     if ($('#media').files[0]) fd.append('media_file', $('#media').files[0]);
     busy($('#sendBtn'), true);
     const r = await api(`/accounts/${accId}/campaign`, { body: fd });
     busy($('#sendBtn'), false);
     if (!r.ok) { toast(r.error || 'تعذر بدء الحملة', 'err'); if (r.needs_subscription) setTimeout(() => go('wallet'), 1200); return; }
-    toast(r.scheduled_for ? 'تمت جدولة الحملة: ' + r.scheduled_for : `بدأت الحملة على ${fmt(r.total)} رقم`, 'ok');
-    numbersEl.value = ''; count(); loadStatus();
+    toast(r.drip ? `بدأت أول دفعة (${fmt(r.drip.batch)} رقم) - الباقي ${fmt(r.drip.total - r.drip.batch)} على ${fmt(r.drip.days - 1)} يوم` : r.scheduled_for ? 'تمت جدولة الحملة: ' + r.scheduled_for : `بدأت الحملة على ${fmt(r.total)} رقم`, 'ok');
+    numbersEl.value = ''; $('#dripOn').checked = false; count(); loadStatus(); loadDrips();
   });
 
   async function loadStatus() {
@@ -456,7 +525,17 @@ R.campaign = async (el, p) => {
     box.classList.remove('list', 'mini-list');
     box.innerHTML = Array.isArray(h) && h.length ? h.map(reportCard).join('') : `<div class="card">${empty('fa-regular fa-clock', 'ما فيه حملات سابقة لهذا الرقم')}</div>`;
   }
-  loadStatus(); loadHist(); every(3500, loadStatus);
+  async function loadDrips() {
+    const r = await api('/api/drips'); const box = el.querySelector('#drips'); if (!box || !r.ok) return;
+    const mine = r.drips.filter(x => x.account_id === accId);
+    box.innerHTML = mine.length ? `<div class="section-head">دفعات يومية مجدولة <span class="pill pill-blue">${mine.length}</span></div>` + mine.map(x => `<div class="card drip-item" style="margin-bottom:10px">
+      <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ic-indigo"><i class="fa-solid fa-calendar-day"></i></span>
+        <div style="flex:1;min-width:0"><b>${esc(x.text || 'حملة')}</b><div class="row-sub">باقي <b class="num">${fmt(x.left)}</b> من ${fmt(x.total)} · ${fmt(x.batch)} يومياً · الدفعة الجاية <span class="num">${esc(x.next_at)}</span></div></div>
+        <button class="btn btn-soft btn-xs" style="color:var(--red)" data-dc="${x.id}"><i class="fa-solid fa-xmark"></i> إلغاء</button></div>
+      <div class="progress" style="margin-top:10px"><span style="width:${Math.round((x.total - x.left) / x.total * 100)}%"></span></div></div>`).join('') : '';
+    box.querySelectorAll('[data-dc]').forEach(b => b.onclick = () => confirmTap(b, async () => { await api('/api/drips/' + b.dataset.dc, { method: 'DELETE' }); loadDrips(); }, 'الدفعات الباقية ما راح تنرسل', { title: 'إلغاء الدفعات', ok: 'إلغاء الدفعات' }));
+  }
+  loadStatus(); loadHist(); loadDrips(); every(3500, loadStatus);
 };
 
 // ---------------------------------------------------------------- تحليل الأرقام (مكرر / ناقص)
@@ -465,6 +544,7 @@ const NUM_LEN = { 964: 13, 966: 12, 971: 12, 965: 11, 974: 11, 973: 11, 968: 11,
 function normNumber(raw, cc) {
   let d = String(raw).replace(/\D/g, '');
   if (!d) return '';
+  if (/^\s*\+/.test(String(raw))) return d; // مكتوب برمز دولي
   if (d.startsWith('00')) d = d.slice(2);
   else if (cc && !d.startsWith(cc)) d = cc + d.replace(/^0+/, '');
   return d;
@@ -485,58 +565,20 @@ function analyzeNumbers(text, cc) {
 }
 
 // ---------------------------------------------------------------- استخراج أرقام من الخرائط (أدمن)
-// جسر إضافة كروم (سحب الخرائط بمتصفح جهاز الأدمن)
-const extOn = () => !!document.documentElement.getAttribute('data-wasel-ext');
-function extCall(type, extra = {}) {
-  return new Promise(res => {
-    const reqId = Math.random().toString(36).slice(2);
-    const h = e => { if (e.source === window && e.data?.source === 'wasel-ext' && e.data.type === 'reply' && e.data.reqId === reqId) { removeEventListener('message', h); clearTimeout(t); res(e.data.resp || { ok: false }); } };
-    const t = setTimeout(() => { removeEventListener('message', h); res({ ok: false, error: 'الإضافة ما ردّت - حدّث الصفحة' }); }, 6000);
-    addEventListener('message', h);
-    window.postMessage({ source: 'wasel-page', type, reqId, ...extra }, location.origin);
-  });
-}
-// تقدّم ونتيجة البحث من الإضافة (حتى لو تنقّلت بين صفحات التطبيق)
-window.addEventListener('message', async e => {
-  const m = e.data;
-  if (e.source !== window || m?.source !== 'wasel-ext' || !S.extJob || String(m.job) !== String(S.extJob.id)) return;
-  if (m.type === 'progress') { Object.assign(S.extJob, { found: m.found ?? S.extJob.found, stage: m.stage, current: m.current || '', done: m.done || 0, total: m.total || 0 }); drawLeadProgress(S.extJob); }
-  if (m.type === 'done') {
-    const id = S.extJob.id; S.extJob = null;
-    const r = await api(`/api/admin/leads/job/${id}/push`, { body: { results: m.results || [], error: m.error || '' } });
-    if (r.ok && r.job.search_id) { toast(`تم: ${fmt(r.job.found)} محل`, 'ok'); go('leads', { id: r.job.search_id }); }
-    else { toast(m.error || r.error || 'ما لكينا نتائج', 'err'); if (S.page === 'leads') go('leads', {}, false); }
-  }
-});
-function drawLeadProgress(j) {
-  const box = document.querySelector('#lprog'); if (!box) return;
-  const st = { open: 'نفتح الخرائط...', start: 'نشغّل المتصفح...', list: 'نجمع المحلات من القائمة', details: 'نفتح كل محل ونسجّل رقمه' }[j.stage] || 'جارِ البحث...';
-  const pct = j.stage === 'details' && j.total ? Math.round(j.done / j.total * 100) : null;
-  box.innerHTML = `<div class="card lead-prog fade-in">
-    <div style="display:flex;align-items:center;gap:12px"><div class="spinner" style="margin:0;flex:none"></div>
-      <div style="flex:1;min-width:0"><b>${st}</b><div class="row-sub">${j.current ? esc(j.current) : (j.mode === 'ext' ? 'لا تسد نافذة الخرائط ولا هذي الصفحة' : 'البحث شغال بالسيرفر - تقدر تطلع وترجع')}</div></div>
-      <span class="pill pill-green num">${fmt(j.found || 0)} محل</span></div>
-    <div class="progress" style="margin-top:12px"><span style="width:${pct ?? Math.min(95, (j.found || 0) / (j.max || 200) * 60)}%"></span></div>
-    ${pct !== null ? `<div class="hint" style="text-align:center;margin-top:6px">${fmt(j.done)} من ${fmt(j.total)}</div>` : ''}
-    <button class="btn btn-soft btn-sm btn-block" style="margin-top:10px" id="lstop"><i class="fa-solid fa-stop"></i> إيقاف وحفظ اللي انجمع</button></div>`;
-  box.querySelector('#lstop').onclick = async ev => {
-    busy(ev.target.closest('button'), true);
-    if (j.mode === 'ext') await extCall('stop'); else await api(`/api/admin/leads/job/${j.id}/stop`, { body: {} });
-  };
-}
-
+// ---------------------------------------------------------------- سحب أرقام من الخرائط (بحث سريع - لكل المستخدمين)
 R.leads = async (el, p) => {
-  el.innerHTML = head('استخراج أرقام من الخرائط') + '<div class="card"><div class="skel" style="height:160px"></div></div>';
-  const d = await api('/api/admin/leads');
-  if (!d.ok) { el.innerHTML = head('استخراج أرقام من الخرائط') + `<div class="card">${empty('fa-solid fa-lock', d.error || 'للأدمن فقط')}</div>`; return; }
+  el.innerHTML = head('سحب أرقام من الخرائط') + '<div class="card"><div class="skel" style="height:160px"></div></div>';
+  const d = await api('/api/leads');
+  if (!d.ok) { el.innerHTML = head('سحب أرقام من الخرائط') + `<div class="card">${empty('fa-solid fa-lock', d.error || 'تعذر التحميل')}</div>`; return; }
+  const Q = d.quota;
   const last = (() => { try { return JSON.parse(localStorage.getItem('wasel_leads_form') || '{}'); } catch (e) { return {}; } })();
-  let mode = last.mode || 'http';
-  const MODES = [['http', 'fa-solid fa-bolt', 'بحث سريع', 'يشتغل من الجوال'], ['ext', 'fa-brands fa-chrome', 'متصفح جهازي', 'إضافة كروم للكمبيوتر'], ['server', 'fa-solid fa-server', 'متصفح السيرفر', 'يحتاج VPS'], ['api', 'fa-solid fa-key', 'Google API', 'مدفوع']];
-  el.innerHTML = head('استخراج أرقام من الخرائط') + `
+  const maxOpts = [50, 100, 200, 500].filter(v => v <= Q.max);
+  let max = maxOpts.includes(last.max) ? last.max : Math.min(100, Q.max), skipOld = last.skip_old !== false;
+  const quotaPill = () => Q.unlimited ? `<span class="pill pill-blue"><i class="fa-solid fa-infinity"></i> بدون حد</span>` : `<span class="pill ${Q.left ? 'pill-green' : 'pill-red'} num">${fmt(Q.left)}/${fmt(Q.daily)} محاولة اليوم</span>`;
+  el.innerHTML = head('سحب أرقام من الخرائط', true, quotaPill()) + `
     <div class="hero shine"><div style="display:flex;align-items:center;gap:14px"><span class="hero-icon"><i class="fa-solid fa-map-location-dot"></i></span>
-      <div><div style="font-weight:800;font-size:17px">أرقام المحلات والشركات من خرائط Google</div><div class="hero-sub">المتصفح يفتح الخرائط ويبحث بنفسه، ويسجّل اسم كل محل ورقمه وعنوانه ونوعه وتقييمه</div></div></div></div>
-    <div class="seg lmode" id="lmode" style="margin-top:12px">${MODES.map(([v, i, t, s]) => `<button data-v="${v}" class="${v === mode ? 'on' : ''}"><i class="${i}"></i><b>${t}</b><small>${s}</small></button>`).join('')}</div>
-    <div id="lmodeInfo"></div>
+      <div><div style="font-weight:800;font-size:17px">أرقام المحلات والشركات من خرائط Google</div><div class="hero-sub">اختر المدينة ونوع النشاط، ونجيب الاسم والرقم والعنوان والتقييم - وبعدها أرسل لهم حملة بضغطة</div></div></div></div>
+    ${!Q.enabled ? `<div class="note warn" style="margin-top:12px"><i class="fa-solid fa-circle-pause"></i> سحب الأرقام متوقف حالياً من الإدارة</div>` : ''}
     <div class="card" style="margin-top:12px">
       <div class="field"><label>الدولة</label><select class="input" id="lc">${d.countries.map(c => `<option value="${c.iso}" ${c.iso === (last.country || 'IQ') ? 'selected' : ''}>${esc(c.name)} (+${c.cc})</option>`).join('')}</select></div>
       <div class="input-row">
@@ -544,135 +586,49 @@ R.leads = async (el, p) => {
         <div class="field" style="flex:1"><label>نوع النشاط / المنتج</label><input class="input" id="lkw" placeholder="مثال: سيراميك" value="${esc(last.keyword || '')}"></div>
       </div>
       <div class="chips" id="lsug" style="margin:-2px 0 10px">${['سيراميك', 'مطاعم', 'صالونات', 'صيدليات', 'موبايلات', 'أثاث', 'ملابس', 'مواد بناء', 'عيادات', 'مكاتب عقار'].map(k => `<button class="chip" data-k="${k}">${k}</button>`).join('')}</div>
-      <div id="lopts"></div>
-      <button class="btn btn-primary btn-block shine" id="lgo"><i class="fa-solid fa-magnifying-glass-location"></i> ابحث واستخرج الأرقام</button>
+      <div class="field"><label>أقصى عدد محلات</label><div class="seg" id="lmax">${maxOpts.map(v => `<button data-v="${v}" class="${v === max ? 'on' : ''}"><b class="num">${v}</b></button>`).join('')}</div></div>
+      <label class="kv" style="cursor:pointer;margin-bottom:6px"><span>استبعد الأرقام اللي سحبتها قبل<small class="row-sub" style="display:block">ما يتكرر عندك نفس الرقم بأكثر من بحث</small></span><label class="switch"><input type="checkbox" id="lskip" ${skipOld ? 'checked' : ''}><span></span></label></label>
+      <div class="hint" style="margin-bottom:10px"><i class="fa-solid fa-circle-info"></i> إذا بحثت عن نفس الشي مرة ثانية نفتحلك النتائج المحفوظة بدون ما تنحسب محاولة.</div>
+      <button class="btn btn-primary btn-block shine" id="lgo" ${Q.enabled && (Q.unlimited || Q.left > 0) ? '' : 'disabled'}><i class="fa-solid fa-magnifying-glass-location"></i> ابحث واسحب الأرقام</button>
+      ${Q.enabled && !Q.unlimited && Q.left <= 0 ? `<div class="hint" style="text-align:center;margin-top:8px">خلصت محاولات اليوم - ترجع تتجدد باچر</div>` : ''}
     </div>
     <div id="lprog" style="margin-top:12px"></div>
     <div id="lres"></div>
-    <div class="section-head">عمليات البحث السابقة</div>
+    <div class="section-head">بحوثي السابقة</div>
     <div class="list mini-list" id="lhist">${d.searches.length ? d.searches.map(s => rowItem({
-      icon: s.source === 'api' || !s.source ? 'fa-solid fa-key' : s.source === 'server' ? 'fa-solid fa-server' : s.source === 'http' ? 'fa-solid fa-bolt' : 'fa-brands fa-chrome', ic: 'ic-green', title: `${esc(s.keyword)} - ${esc(s.city)}`,
-      sub: `<span class="num">${esc(s.time)}</span> · ${esc(s.country)} · ${fmt(s.phones)} رقم من ${fmt(s.count)}`, onclick: `go('leads',{id:${s.id}})`,
-    })).join('') : empty('fa-solid fa-map', 'ما فيه عمليات بحث بعد')}</div>`;
+      icon: 'fa-solid fa-location-dot', ic: 'ic-green', title: `${esc(s.keyword)} - ${esc(s.city)}`,
+      sub: `<span class="num">${esc(s.time)}</span> · ${esc(s.country)} · ${fmt(s.phones)} رقم`, onclick: `go('leads',{id:${s.id}})`,
+    })).join('') : empty('fa-solid fa-map', 'ما سويت أي بحث بعد')}</div>`;
 
-  let depth = last.depth || 2, max = last.max || 200, deep = last.deep !== false;
-  const drawMode = () => {
-    el.querySelectorAll('#lmode button').forEach(x => x.classList.toggle('on', x.dataset.v === mode));
-    const info = $('#lmodeInfo'), opts = $('#lopts');
-    if (mode === 'http') {
-      info.innerHTML = `<div class="note ok-note" style="margin-top:10px"><i class="fa-solid fa-bolt"></i> السيرفر يسأل خرائط Google مباشرة ويجيب الاسم والرقم والعنوان والتقييم - بدون متصفح، ويشتغل من الجوال ومع أي استضافة.</div>`;
-    } else if (mode === 'ext') {
-      info.innerHTML = extOn() ? `<div class="note ok-note" style="margin-top:10px"><i class="fa-solid fa-circle-check"></i> الإضافة شغالة بمتصفحك. راح تنفتح نافذة خرائط صغيرة وتشتغل لوحدها.</div>`
-        : `<div class="card" style="margin-top:10px">
-          <div class="card-title"><i class="fa-brands fa-chrome"></i> ثبّت إضافة واصل بمتصفح كروم (مرة وحدة)</div>
-          <div class="inst-steps">
-            <div><b class="num">1</b> نزّل ملف الإضافة وفك الضغط عنه بمجلد</div>
-            <div><b class="num">2</b> افتح <code class="selectable" dir="ltr">chrome://extensions</code> وشغّل «وضع المطوّر» فوق</div>
-            <div><b class="num">3</b> اضغط «تحميل إضافة غير مضغوطة» واختار المجلد</div>
-            <div><b class="num">4</b> حدّث هذي الصفحة</div>
-          </div>
-          <a class="btn btn-primary btn-block" href="/api/admin/leads/extension.zip" download><i class="fa-solid fa-download"></i> تنزيل الإضافة</a>
-          <div class="hint" style="text-align:center;margin-top:8px">تشتغل على كروم أو Edge بالكمبيوتر</div></div>`;
-    } else if (mode === 'server') {
-      info.innerHTML = `<div class="card" style="margin-top:10px"><div class="card-title"><i class="fa-solid fa-server"></i> كروم على السيرفر</div><div id="srvState"><div class="skel" style="height:40px"></div></div></div>`;
-      srvState();
-    } else {
-      info.innerHTML = d.key_set ? `<div class="note" style="margin-top:10px"><i class="fa-solid fa-key"></i> عبر Google Places API الرسمية (تحتسب طلبات من حساب Google).</div>` : `<div class="card" style="margin-top:10px">
-        <div class="note warn"><i class="fa-solid fa-key"></i> يحتاج مفتاح Google Maps (Places API). سوّيه من Google Cloud Console ← فعّل «Places API (New)» ← Credentials ← Create API key.</div>
-        <div class="field" style="margin-top:10px"><label>مفتاح خرائط Google</label><input class="input" id="mk" type="password" dir="ltr" placeholder="AIza..."></div>
-        <button class="btn btn-primary btn-block" id="mkSave"><i class="fa-solid fa-check"></i> حفظ المفتاح</button></div>`;
-      if (!d.key_set) $('#mkSave').onclick = async e => {
-        const k = $('#mk').value.trim(); if (!k) { toast('اكتب المفتاح', 'err'); return; }
-        busy(e.target.closest('button'), true);
-        const r = await api('/api/admin/settings', { body: { maps_api_key: k } });
-        busy(e.target.closest('button'), false);
-        r.ok ? (toast('تم حفظ المفتاح', 'ok'), go('leads', {}, false)) : toast(r.error, 'err');
-      };
-    }
-    opts.innerHTML = mode === 'http'
-      ? `<div class="field"><label>أقصى عدد محلات</label><div class="seg" id="lmax">${[50, 100, 200, 500].map(v => `<button data-v="${v}" class="${v === max ? 'on' : ''}"><b class="num">${v}</b></button>`).join('')}</div></div>`
-      : mode === 'api'
-      ? `<div class="field"><label>عمق البحث</label><div class="seg" id="ldepth">${[[1, 'سريع', 'حتى 60'], [2, 'متوسط', 'حتى 240'], [3, 'شامل', 'حتى 540']].map(([v, t, s]) => `<button data-v="${v}" class="${v === depth ? 'on' : ''}"><b>${t}</b><small>${s}</small></button>`).join('')}</div></div>`
-      : `<div class="field"><label>أقصى عدد محلات</label><div class="seg" id="lmax">${[50, 100, 200, 500].map(v => `<button data-v="${v}" class="${v === max ? 'on' : ''}"><b class="num">${v}</b></button>`).join('')}</div></div>
-         <label class="kv" style="cursor:pointer;margin-bottom:10px"><span>افتح كل محل وسجّل رقمه وعنوانه<small class="row-sub" style="display:block">أبطأ بس يجيب أرقام أكثر</small></span><label class="switch"><input type="checkbox" id="ldeep" ${deep ? 'checked' : ''}><span></span></label></label>`;
-    el.querySelectorAll('#ldepth button').forEach(b => b.onclick = () => { depth = +b.dataset.v; el.querySelectorAll('#ldepth button').forEach(x => x.classList.toggle('on', x === b)); });
-    el.querySelectorAll('#lmax button').forEach(b => b.onclick = () => { max = +b.dataset.v; el.querySelectorAll('#lmax button').forEach(x => x.classList.toggle('on', x === b)); });
-    const dp = $('#ldeep'); if (dp) dp.onchange = () => { deep = dp.checked; };
-    $('#lgo').disabled = (mode === 'api' && !d.key_set) || (mode === 'ext' && !extOn());
-  };
-  // حالة كروم بالسيرفر + زر التنصيب
-  async function srvState() {
-    const box = $('#srvState'); if (!box) return;
-    const r = await api('/api/admin/leads/server');
-    if (!$('#srvState') || mode !== 'server') return;
-    const st = r.status || 'engine';
-    const T = {
-      ready: ['ok-note', 'fa-solid fa-circle-check', `كروم شغّال على السيرفر${r.version ? ' (' + esc(r.version) + ')' : ''} - جاهز للبحث`],
-      installed: ['', 'fa-solid fa-circle-info', 'كروم منصّب - اضغط «فحص» حتى نتأكد إن الاستضافة تشغّله'],
-      missing: ['warn', 'fa-solid fa-triangle-exclamation', 'كروم مو منصّب على السيرفر بعد'],
-      installing: ['', 'fa-solid fa-spinner fa-spin', 'جارِ تنصيب كروم على السيرفر... ياخذ من 2 إلى 10 دقائق، تقدر تطلع وترجع'],
-      checking: ['', 'fa-solid fa-spinner fa-spin', 'نجرّب نشغّل كروم على السيرفر...'],
-      failed: ['warn', 'fa-solid fa-circle-xmark', esc(r.error || 'فشل')],
-      engine: ['warn', 'fa-solid fa-plug-circle-xmark', esc(r.error || 'المحرك غير متصل')],
-    }[st] || ['', 'fa-solid fa-circle-info', esc(st)];
-    box.innerHTML = `<div class="note ${T[0]}"><i class="${T[1]}"></i> ${T[2]}</div>
-      ${['missing', 'failed'].includes(st) ? `<button class="btn btn-primary btn-block" style="margin-top:10px" id="srvInst"><i class="fa-solid fa-download"></i> ${st === 'failed' ? 'إعادة المحاولة' : 'تنصيب كروم على السيرفر'}</button>` : ''}
-      ${st === 'installed' ? `<button class="btn btn-primary btn-block" style="margin-top:10px" id="srvChk"><i class="fa-solid fa-stethoscope"></i> فحص</button>` : ''}
-      ${st === 'failed' || st === 'engine' ? `<div class="hint" style="margin-top:8px">لو استضافتك مشتركة (DirectAdmin عادي) غالباً ما تشغّل كروم - استخدم «بحث سريع».</div>` : ''}`;
-    const go2 = async (chk) => { const r2 = await api('/api/admin/leads/server', { body: { check_only: chk } }); if (!r2.ok) toast(r2.error, 'err'); srvState(); };
-    if ($('#srvInst')) $('#srvInst').onclick = () => go2(false);
-    if ($('#srvChk')) $('#srvChk').onclick = () => go2(true);
-    if (['installing', 'checking'].includes(st)) setTimeout(() => { if (S.page === 'leads' && mode === 'server') srvState(); }, 4000);
-  }
-  el.querySelectorAll('#lmode button').forEach(b => b.onclick = () => { mode = b.dataset.v; drawMode(); });
+  el.querySelectorAll('#lmax button').forEach(b => b.onclick = () => { max = +b.dataset.v; el.querySelectorAll('#lmax button').forEach(x => x.classList.toggle('on', x === b)); });
   el.querySelectorAll('#lsug [data-k]').forEach(b => b.onclick = () => { $('#lkw').value = b.dataset.k; });
-  drawMode();
-  // الإضافة تعلن عن نفسها بعد ما الصفحة تتحمل
-  if (!extOn()) setTimeout(() => { if (extOn() && S.page === 'leads') drawMode(); }, 1200);
-
-  const pollServer = job => {
-    S.srvJob = job; drawLeadProgress(job);
-    every(2500, async () => {
-      const r = await api('/api/admin/leads/job/' + job.id);
-      if (!r.ok) return;
-      if (r.job.status === 'running') { drawLeadProgress(r.job); return; }
-      S.timers.forEach(clearInterval); S.timers = [];
-      if (r.job.search_id) { toast(`تم: ${fmt(r.job.found)} محل`, 'ok'); go('leads', { id: r.job.search_id }); }
-      else { $('#lprog').innerHTML = `<div class="note warn"><i class="fa-solid fa-circle-exclamation"></i> ${esc(r.job.error || 'ما لكينا نتائج')}</div>`; $('#lgo').disabled = false; }
-    });
-  };
-  $('#lgo').onclick = async e => {
-    const body = { country: $('#lc').value, city: $('#lcity').value.trim(), keyword: $('#lkw').value.trim(), depth, max, deep, mode };
+  $('#lskip').onchange = e => { skipOld = e.target.checked; };
+  const search = async (force, btn) => {
+    const body = { country: $('#lc').value, city: $('#lcity').value.trim(), keyword: $('#lkw').value.trim(), max, skip_old: skipOld, force };
     if (!body.city || !body.keyword) { toast('اكتب المدينة ونوع النشاط', 'err'); return; }
     try { localStorage.setItem('wasel_leads_form', JSON.stringify(body)); } catch (er) { }
-    const b = e.target.closest('button'); busy(b, true);
-    if (mode === 'http') {
-      $('#lprog').innerHTML = `<div class="card lead-prog" style="text-align:center"><div class="spinner"></div><b style="display:block;margin-top:10px">نبحث بخرائط Google...</b><div class="hint">ياخذ من 10 ثواني لدقيقة حسب العدد - لا تسد الصفحة</div></div>`;
-      const r = await api('/api/admin/leads/http', { body });
-      busy(b, false); $('#lprog').innerHTML = '';
-      if (!r.ok) { $('#lprog').innerHTML = `<div class="note warn"><i class="fa-solid fa-circle-exclamation"></i> ${esc(r.error || 'تعذر البحث')}</div>`; return; }
-      toast(`تم: ${fmt(r.job.found)} محل`, 'ok'); go('leads', { id: r.job.search_id }); return;
+    busy(btn, true);
+    $('#lprog').innerHTML = `<div class="card lead-prog" style="text-align:center"><div class="spinner"></div><b style="display:block;margin-top:10px">نبحث بخرائط Google...</b><div class="hint">ياخذ من 10 ثواني لدقيقة حسب العدد - لا تسد الصفحة</div></div>`;
+    const r = await api('/api/leads/search', { body });
+    busy(btn, false); $('#lprog').innerHTML = '';
+    if (!r.ok) { $('#lprog').innerHTML = `<div class="note warn"><i class="fa-solid fa-circle-exclamation"></i> ${esc(r.error || 'تعذر البحث')}</div>`; return; }
+    if (r.repeated) {
+      toast('هذا البحث سويته قبل - فتحنا نتائجه المحفوظة بدون ما تنحسب محاولة', 'ok');
+      go('leads', { id: r.search.id, repeated: 1 }); return;
     }
-    if (mode === 'api') {
-      $('#lres').innerHTML = `<div class="card" style="margin-top:12px;text-align:center"><div class="spinner"></div><div class="hint" style="margin-top:10px">نبحث بالخرائط... ممكن ياخذ لحد دقيقة بالبحث الشامل</div></div>`;
-      const r = await api('/api/admin/leads/search', { body });
-      busy(b, false);
-      if (!r.ok) { $('#lres').innerHTML = ''; toast(r.error || 'تعذر البحث', 'err'); return; }
-      showResults(r.search); return;
-    }
-    const r = await api('/api/admin/leads/job', { body });
-    if (!r.ok) { busy(b, false); $('#lprog').innerHTML = `<div class="note warn"><i class="fa-solid fa-circle-exclamation"></i> ${esc(r.error || 'تعذر بدء البحث')}</div>`; return; }
-    busy(b, false); b.disabled = true;
-    if (mode === 'server') { pollServer(r.job); return; }
-    const x = await extCall('start', { job: { id: r.job.id, url: r.job.url, max: r.job.max, deep: r.job.deep } });
-    if (!x.ok) { b.disabled = false; toast(x.error || 'تعذر تشغيل الإضافة', 'err'); return; }
-    S.extJob = { ...r.job, found: 0, stage: 'open' }; drawLeadProgress(S.extJob);
+    toast(`تم: ${fmt(r.search.phones)} رقم${r.search.skipped ? ` (استبعدنا ${fmt(r.search.skipped)} سحبتها قبل)` : ''}`, 'ok');
+    go('leads', { id: r.search.id });
   };
-  // بحث شغال من قبل؟ نكمل نعرضه
-  if (S.extJob) { $('#lgo').disabled = true; drawLeadProgress(S.extJob); }
-  else { const run = (d.jobs || []).find(j => j.mode === 'server'); if (run) { $('#lgo').disabled = true; pollServer(run); } }
-  if (p.id) { const r = await api('/api/admin/leads/' + p.id); if (r.ok) showResults(r.search); }
-
+  $('#lgo').onclick = e => search(false, e.target.closest('button'));
+  if (p.id) {
+    const r = await api('/api/leads/' + p.id);
+    if (r.ok) {
+      if (p.repeated) $('#lprog').innerHTML = `<div class="note"><i class="fa-solid fa-clock-rotate-left"></i> هذي نتائج بحثك السابق (${esc(r.search.time)}).
+        ${Q.unlimited || Q.left > 0 ? `<button class="btn btn-soft btn-sm" style="margin-top:8px" id="lforce"><i class="fa-solid fa-rotate"></i> ابحث من جديد (تنحسب محاولة)</button>` : ''}</div>`;
+      if ($('#lforce')) $('#lforce').onclick = e => search(true, e.target.closest('button'));
+      showResults(r.search);
+    }
+  }
   function showResults(s) {
     let onlyMobile = s.iso === 'IQ', q = '';
     const box = $('#lres');
@@ -693,7 +649,7 @@ R.leads = async (el, p) => {
             <button class="btn btn-soft btn-sm" style="flex:1" id="csv" ${L.length ? '' : 'disabled'}><i class="fa-solid fa-file-csv"></i> Excel</button>
             <button class="btn btn-soft btn-sm" style="flex:1" id="cp" ${L.length ? '' : 'disabled'}><i class="fa-regular fa-copy"></i> نسخ</button>
           </div>
-          ${p.id ? `<button class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;color:var(--red)" id="ldel"><i class="fa-solid fa-trash-can"></i> حذف هذا البحث</button>` : ''}
+          ${s.id ? `<button class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;color:var(--red)" id="ldel"><i class="fa-solid fa-trash-can"></i> حذف هذا البحث</button>` : ''}
         </div>
         <div class="list stagger" style="margin-top:12px">${L.length ? L.slice(0, 300).map(x => `<div class="row lead-row">
           <span class="row-ic ${x.mobile ? 'ic-wa' : 'ic-gray'}"><i class="fa-${x.mobile ? 'brands fa-whatsapp' : 'solid fa-phone'}"></i></span>
@@ -713,7 +669,7 @@ R.leads = async (el, p) => {
         const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
         const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `${s.keyword}-${s.city}.csv`; a.click();
       };
-      if ($('#ldel')) $('#ldel').onclick = e => confirmTap(e.target.closest('button'), async () => { await api('/api/admin/leads/' + s.id, { method: 'DELETE' }); go('leads', {}, false); }, 'راح ينحذف هذا البحث ونتائجه', { title: 'حذف البحث', ok: 'حذف' });
+      if ($('#ldel')) $('#ldel').onclick = e => confirmTap(e.target.closest('button'), async () => { await api('/api/leads/' + s.id, { method: 'DELETE' }); go('leads', {}, false); }, 'راح ينحذف هذا البحث ونتائجه', { title: 'حذف البحث', ok: 'حذف' });
     };
     draw();
     box.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1066,6 +1022,7 @@ R.account = async (el) => {
     <div class="section-head">حسابي</div>
     <div class="list stagger">
       ${rowItem({ icon: 'fa-solid fa-chart-pie', ic: 'ic-purple', title: 'تقارير الحملات', sub: 'النجاح، المشاهدة والردود', onclick: "go('reports')" })}
+      ${SET.leads_enabled || ADMIN ? rowItem({ icon: 'fa-solid fa-map-location-dot', ic: 'ic-green', title: 'سحب أرقام من الخرائط', sub: 'أرقام المحلات والشركات حسب المدينة والنشاط', onclick: "go('leads')" }) : ''}
       ${rowItem({ icon: 'fa-solid fa-code', ic: 'ic-orange', title: 'ربط API', sub: 'أرسل رسائل ورموز تحقق من موقعك', onclick: "go('apikeys')" })}
       ${rowItem({ icon: 'fa-solid fa-clock-rotate-left', ic: 'ic-cyan', title: 'السجل المالي', sub: 'حركات الرصيد وطلبات الشحن', onclick: "go('tx')" })}
       ${rowItem({ icon: 'fa-solid fa-user-shield', ic: 'ic-indigo', title: 'الخصوصية والأمان', sub: 'كيف نحمي بياناتك وشروط الاستخدام', onclick: "window.open('/privacy','_blank')" })}
@@ -1081,7 +1038,6 @@ R.account = async (el) => {
       ${rowItem({ icon: 'fa-solid fa-sliders', ic: 'ic-indigo', title: 'الإعدادات', sub: 'الأسعار، الشعار، المطور، Cron', onclick: "go('settings')" })}
       ${rowItem({ icon: 'fa-solid fa-shield-halved', ic: 'ic-red', title: 'مركز الأمان', sub: 'سجل الدخول والحظر والجلسات', onclick: "go('security')" })}
       ${rowItem({ icon: 'fa-brands fa-telegram', ic: 'ic-cyan', title: 'النسخ الاحتياطي', sub: 'تصدير واستيراد JSON عبر بوت تيليجرام', onclick: "go('backup')" })}
-      ${rowItem({ icon: 'fa-solid fa-map-location-dot', ic: 'ic-green', title: 'استخراج أرقام من الخرائط', sub: 'أرقام المحلات والشركات حسب المدينة والنشاط', onclick: "go('leads')" })}
       ${rowItem({ icon: 'fa-solid fa-bullhorn', ic: 'ic-wa', title: 'إعلان جماعي', sub: 'رسالة واتساب لكل المستخدمين', onclick: "go('announce')" })}
     </div>` : ''}
     ${dev ? `<div class="section-head">المطوّر</div>
@@ -1515,10 +1471,18 @@ R.settings = async (el) => {
       <div class="copy-box"><span class="v" style="font-size:12px">${esc(s.cron_url)}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(s.cron_url)}')">نسخ</button></div>
       <a class="btn btn-primary btn-block shine" style="margin-top:10px" href="${esc(s.cron_url)}" target="_blank"><i class="fa-solid fa-clock"></i> تنصيب Cron الآن</a>
     </div>
+    <div class="section-head">سحب الأرقام من الخرائط</div>
+    <div class="card">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><span class="row-ic ic-green"><i class="fa-solid fa-map-location-dot"></i></span><div style="flex:1"><b>تفعيل سحب الأرقام للمستخدمين</b><div class="row-sub">الأدمن يقدر يسحب دائماً بدون حد</div></div><label class="switch"><input type="checkbox" data-k="leads_enabled" ${s.leads_enabled ? 'checked' : ''}><span></span></label></div>
+      <div class="input-row">
+        <div style="flex:1">${f('leads_daily', 'محاولات البحث لكل مستخدم باليوم', s.leads_daily, 'number')}</div>
+        <div style="flex:1">${f('leads_max', 'أقصى عدد نتائج للبحث', s.leads_max, 'number', 'من 10 إلى 500')}</div>
+      </div>
+    </div>
     <div class="section-head">الذكاء الاصطناعي (DeepSeek)</div>
     <div class="card">
       ${f('ai_api_key', 'مفتاح DeepSeek ' + (s.ai_key_set ? '(محفوظ)' : ''), '', 'password')}
-      ${f('maps_api_key', 'مفتاح خرائط Google (Places API) ' + (s.maps_key_set ? '(محفوظ)' : ''), '', 'password')}
+
       <div class="field"><label>معلومات المتجر/الخدمة للرد الذكي</label><textarea class="textarea" data-k="ai_knowledge_base">${esc(s.ai_knowledge_base)}</textarea></div>
     </div>
     <button class="btn btn-primary btn-block" id="saveSet" style="margin-top:14px"><i class="fa-solid fa-check"></i> حفظ كل الإعدادات</button>`;

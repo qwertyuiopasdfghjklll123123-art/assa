@@ -361,3 +361,31 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .rep-list a{color:#16a34a;font-size:18px}
 .lmode{display:grid;grid-template-columns:1fr 1fr;gap:6px}
 .lmode button small{font-size:10px}
+/* ===== بطاقة إعلان سحب الأرقام ===== */
+.promo{position:relative;overflow:hidden;display:flex;align-items:center;gap:14px;margin-bottom:14px;padding:16px;border-radius:24px;cursor:pointer;color:#fff;
+  background:linear-gradient(135deg,#0b8f5a,#12b886 55%,#0ab3c9);box-shadow:0 14px 30px rgba(11,143,90,.28)}
+.promo::after{content:"";position:absolute;width:180px;height:180px;border-radius:50%;background:rgba(255,255,255,.12);left:-50px;top:-70px}
+.promo-art{position:relative;flex:none;width:62px;height:62px;border-radius:20px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:28px}
+.promo-art .pin{position:absolute;width:24px;height:24px;border-radius:9px;background:#fff;color:#0b8f5a;font-size:11px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 10px rgba(0,0,0,.15);animation:float 4s ease-in-out infinite}
+.promo-art .p1{top:-6px;left:-6px}.promo-art .p2{bottom:-6px;right:-6px;animation-delay:-2s}
+.promo-txt{flex:1;min-width:0;position:relative;z-index:1}
+.promo-txt b{display:block;font-size:14.5px;line-height:1.6}
+.promo-txt small{display:block;font-size:11.5px;opacity:.88;margin-top:2px}
+.promo-tag{display:inline-flex;align-items:center;gap:5px;font-size:10.5px;font-weight:800;padding:3px 9px;border-radius:99px;background:rgba(255,255,255,.25);margin-bottom:4px}
+.promo-go{flex:none;width:36px;height:36px;border-radius:12px;background:#fff;color:#0b8f5a;display:flex;align-items:center;justify-content:center;position:relative;z-index:1;animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{50%{transform:translateX(-4px)}}
+@keyframes float{50%{transform:translateY(-5px)}}
+
+/* ===== رموز الدول + الدفعات اليومية ===== */
+.cc-tools{margin-top:10px;padding:12px;border-radius:16px;background:rgba(10,157,178,.05);border:1px dashed rgba(10,157,178,.25)}
+.cc-tools-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;font-size:13px}
+.cc-tools-h small{color:var(--text3);font-size:11px}
+.cc-tools .chip b{margin-right:4px;padding:0 6px;border-radius:8px;background:rgba(0,0,0,.06);font-size:11px}
+.cc-tools .chip.on b{background:rgba(255,255,255,.25)}
+.cc-tools .btn{font-size:12px;padding-inline:4px}
+.drip-card{margin-top:12px;padding:12px 14px;border-radius:18px;background:#fff;border:1px solid var(--line);transition:.25s}
+.drip-card.on{border-color:#6366f1;background:rgba(99,102,241,.05);box-shadow:0 6px 16px rgba(99,102,241,.12)}
+.drip-card b{font-size:13.5px}
+.drip-n{width:56px;height:30px;border-radius:9px;border:1px solid var(--line2);text-align:center;font-weight:800;font-size:14px;margin:0 4px;background:#fff}
+
+.num-tools .btn{white-space:nowrap;font-size:11.5px}

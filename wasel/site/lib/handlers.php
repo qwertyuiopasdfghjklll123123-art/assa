@@ -701,6 +701,25 @@ function handle_start_campaign($accId): void
             $sendAt = null;
         }
     }
+    // إرسال على دفعات يومية (مثلاً 40 الآن و40 بعد 24 ساعة...)
+    $batch = (int)($_POST['drip_batch'] ?? 0);
+    if (!empty($_POST['drip']) && $batch >= 5 && count($numbers) > $batch) {
+        $media = read_upload_media();
+        $delay = form_int('delay', DEFAULT_DELAY);
+        $mediaDelay = form_int('media_delay', DEFAULT_MEDIA_DELAY);
+        $first = array_slice($numbers, 0, $batch);
+        $r = engine_send_campaign($accId, $first, $text, $media, $delay, $mediaDelay, $sendAt);
+        $status = $r['_status'] ?? 503;
+        unset($r['_status']);
+        if ($status !== 200 || empty($r['ok'])) {
+            json_out($r, $status === 200 ? 400 : $status);
+        }
+        $acc = owned_account($accId);
+        $startTs = $sendAt ? strtotime($sendAt) : time();
+        drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers));
+        $r['drip'] = ['batch' => $batch, 'total' => count($numbers), 'days' => (int)ceil(count($numbers) / $batch)];
+        json_out($r);
+    }
     engine_start_campaign($accId, $numbers, $text, $sendAt);
 }
 

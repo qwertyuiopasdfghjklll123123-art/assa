@@ -8,7 +8,16 @@ function numbers_from_text(string $text): array
 {
     $out = [];
     foreach (preg_split('/[,\n\r]+/', $text) as $part) {
+        $part = trim($part);
         $d = preg_replace('/\D/', '', $part);
+        // مكتوب برمز دولي (+ أو 00): نعلّمه بـ + حتى ما ينضاف له رمز الدولة الافتراضي
+        if (preg_match('/^(\+|00)/', $part)) {
+            $d = preg_replace('/^00/', '', $d);
+            if (strlen($d) >= 8) {
+                $out[] = '+' . $d;
+            }
+            continue;
+        }
         if (strlen($d) >= 8) {
             $out[] = $d;
         }

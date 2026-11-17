@@ -16,5 +16,6 @@ require __DIR__ . '/lib/tasks.php';
 require __DIR__ . '/lib/wallet.php';
 require __DIR__ . '/lib/backup.php';
 require __DIR__ . '/lib/api.php';
+require __DIR__ . '/lib/drip.php';
 require __DIR__ . '/lib/security.php';
 echo json_encode(run_scheduled_tasks(), JSON_UNESCAPED_UNICODE), "\n";
