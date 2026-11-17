@@ -60,7 +60,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 5; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 6; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -367,13 +367,27 @@ function trackSave() {
   for (const [cid, t] of Object.entries(tracking)) if (t.started < cutoff) delete tracking[cid];
   try { fs.writeFileSync(TRACK_FILE + '.tmp', JSON.stringify(tracking)); fs.renameSync(TRACK_FILE + '.tmp', TRACK_FILE); } catch { /* ignore */ }
 }
+/** قوائم حصرية: كل رقم بقائمة وحدة بس (اللي رد ينشال من «شاهد بدون رد» و«ما شاهد») */
 function trackStats(cid) {
   const t = tracking[cid];
-  return { campaign_id: cid, delivered: Object.keys(t.delivered).length, read: Object.keys(t.read).length, replied: Object.keys(t.replied).length };
+  const nums = Object.keys(t.nums);
+  const lists = {
+    replied: nums.filter((d) => t.replied[d]),
+    read_only: nums.filter((d) => t.read[d] && !t.replied[d]),
+    unread: nums.filter((d) => t.delivered[d] && !t.read[d] && !t.replied[d]),
+    pending: nums.filter((d) => !t.delivered[d] && !t.read[d] && !t.replied[d]),
+  };
+  return { campaign_id: cid, delivered: Object.keys(t.delivered).length, read: Object.keys(t.read).length, replied: Object.keys(t.replied).length, lists };
 }
-function trackMark(cid, kind, d) {
+/** الرقم الأصلي اللي انرسل له (واتساب أحياناً يرجع صيغة ثانية للرقم) */
+function trackCanon(t, d) {
+  if (t.nums[d]) return d;
+  return (t.alias && t.alias[d]) || null;
+}
+function trackMark(cid, kind, raw) {
   const t = tracking[cid];
-  if (!t || !t.nums[d] || t[kind][d]) return;
+  const d = t && trackCanon(t, raw);
+  if (!d || t[kind][d]) return;
   t[kind][d] = 1;
   if (kind === 'read' || kind === 'replied') t.delivered[d] = 1;
   if (kind === 'replied') t.read[d] = 1;
@@ -406,11 +420,16 @@ function onReceipts(list) {
 /** رسالة واردة: لو المرسل من أرقام حملة حديثة لنفس الحساب نحسبه «رد» */
 function onIncomingForTracking(id, m) {
   if (m.key?.fromMe) return;
+  // الحالات (ستوري) والمجموعات والقنوات مو رد على الحملة
+  const rj = String(m.key?.remoteJid || '');
+  if (!rj || rj === 'status@broadcast' || /@(g\.us|broadcast|newsletter)$/.test(rj)) return;
+  const msg = m.message || {};
+  if (!Object.keys(msg).length || msg.protocolMessage || msg.senderKeyDistributionMessage && Object.keys(msg).length === 1) return;
   const cands = [m.key?.remoteJid, m.key?.remoteJidAlt, m.key?.participantAlt].filter(Boolean).map((j) => digits(String(j).split('@')[0].split(':')[0]));
   const cutoff = Date.now() - 7 * 86400 * 1000;
   for (const [cid, t] of Object.entries(tracking)) {
     if (t.account_id !== id || t.started < cutoff) continue;
-    for (const d of cands) if (t.nums[d]) trackMark(cid, 'replied', d);
+    for (const d of cands) if (trackCanon(t, d)) trackMark(cid, 'replied', d);
   }
 }
 
@@ -487,8 +506,10 @@ async function runCampaign(id) {
         st.sent += 1;
         const t = tracking[st.campaign_id];
         if (t) {
-          const d = digits(String(res?.jid || number).split('@')[0]);
-          t.nums[d] = 1; t.nums[digits(number)] = 1;
+          const d = digits(number); // نخزن كل شي على الرقم الأصلي
+          const jd = digits(String(res?.jid || number).split('@')[0]);
+          t.nums[d] = 1;
+          if (jd && jd !== d) { t.alias = t.alias || {}; t.alias[jd] = d; }
           if (res?.id) { t.msgs[res.id] = d; msgIndex.set(res.id, [st.campaign_id, d]); }
         }
       } catch (e) {
@@ -521,7 +542,7 @@ async function runCampaign(id) {
   const cancelled = st.cancel_requested;
   trackSave();
   const entry = { time: st.started_at, total: st.total, sent: st.sent, failed: st.failed, text: st.text || (st.media_name ? '📎 ' + st.media_name : ''),
-    campaign_id: st.campaign_id, ...(tracking[st.campaign_id] ? trackStats(st.campaign_id) : {}) };
+    campaign_id: st.campaign_id, failed_numbers: (st.failed_numbers || []).slice(0, 20000), ...(tracking[st.campaign_id] ? trackStats(st.campaign_id) : {}) };
   hook({ type: 'history', owner: acc.owner, account_id: id, account_name: acc.name, entry });
   if (cancelled) {
     const skipped = st.total - st.sent - st.failed;

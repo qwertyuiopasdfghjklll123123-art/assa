@@ -238,13 +238,46 @@ function reportCard(x) {
       <div style="flex:1;min-width:0"><b>${esc(x.account_name)}</b><div class="row-sub">${esc(x.time)} · ${esc((x.text || '').slice(0, 40)) || '—'}</div>
         <div class="row-sub"><span class="num">${fmt(x.sent)}</span> من <span class="num">${fmt(x.total)}</span> وصلت بنجاح${x.failed ? ` · <span style="color:var(--red)">فشل ${fmt(x.failed)}</span>` : ''}</div></div>
     </div>
-    ${x.tracked ? `<div class="rep-bars">
-      <div><b class="num" style="color:#0891b2">${fmt(x.delivered)}</b><span>استلموا</span></div>
-      <div><b class="num" style="color:#7c3aed">${fmt(x.read)}</b><span>شاهدوا</span></div>
-      <div><b class="num" style="color:#16a34a">${fmt(x.replied)}</b><span>ردّوا</span></div>
-      <div><b class="num" style="color:#d97706">${fmt(readOnly)}</b><span>شاهدوا بدون رد</span></div>
-    </div>` : ''}
+    ${x.tracked ? `<div class="rep-bars ${x.has_lists ? 'tap' : ''}">
+      <div ${x.has_lists ? `onclick="repNumbers(${x.id},'unread')"` : ''}><b class="num" style="color:#0891b2">${fmt(x.delivered)}</b><span>استلموا</span></div>
+      <div ${x.has_lists ? `onclick="repNumbers(${x.id},'read_only')"` : ''}><b class="num" style="color:#7c3aed">${fmt(x.read)}</b><span>شاهدوا</span></div>
+      <div ${x.has_lists ? `onclick="repNumbers(${x.id},'replied')"` : ''}><b class="num" style="color:#16a34a">${fmt(x.replied)}</b><span>ردّوا</span></div>
+      <div ${x.has_lists ? `onclick="repNumbers(${x.id},'read_only')"` : ''}><b class="num" style="color:#d97706">${fmt(readOnly)}</b><span>شاهدوا بدون رد</span></div>
+    </div>${x.has_lists ? `<button class="btn btn-soft btn-sm btn-block" style="margin-top:10px" onclick="repNumbers(${x.id},'replied')"><i class="fa-solid fa-list-check"></i> مين رد ومين ما رد؟</button>` : ''}` : (x.failed && x.has_lists ? `<button class="btn btn-soft btn-sm btn-block" style="margin-top:10px" onclick="repNumbers(${x.id},'failed')"><i class="fa-solid fa-list"></i> الأرقام الفاشلة</button>` : '')}
   </div>`;
+}
+// قوائم أرقام التقرير: كل رقم بقائمة وحدة (اللي رد ينشال من «ما ردّوا»)
+async function repNumbers(hid, tab) {
+  const r = await api(`/dashboard/campaigns/${hid}/numbers`);
+  if (!r.ok) { toast(r.error || 'تعذر جلب الأرقام', 'err'); return; }
+  const L = r.lists, TABS = [['replied', 'ردّوا', '#16a34a', 'fa-solid fa-reply'], ['read_only', 'شاهدوا بدون رد', '#d97706', 'fa-solid fa-eye'], ['unread', 'وصلت وما شاهدوا', '#0891b2', 'fa-solid fa-check-double'], ['pending', 'ما وصلت بعد', '#64748b', 'fa-solid fa-clock'], ['failed', 'فشلت', '#dc2626', 'fa-solid fa-xmark']];
+  document.getElementById('repSheet')?.remove(); document.getElementById('repBg')?.remove();
+  document.body.insertAdjacentHTML('beforeend', `<div class="sheet-bg" id="repBg"></div><div class="sheet rep-sheet" id="repSheet"><div class="sheet-handle"></div>
+    <h3 style="margin:0 0 4px">أرقام الحملة</h3><div class="hint" style="margin-bottom:10px">كل رقم يظهر بقائمة وحدة: اللي رد ينشال تلقائياً من «شاهدوا بدون رد» و«ما شاهدوا»</div>
+    <div class="rep-tabs" id="repTabs">${TABS.map(([k, t, c]) => `<button data-k="${k}" style="--c:${c}">${t}<b class="num">${fmt((L[k] || []).length)}</b></button>`).join('')}</div>
+    <div id="repBody"></div></div>`);
+  const bg = document.getElementById('repBg'), sh = document.getElementById('repSheet');
+  const close = () => { bg.classList.remove('show'); sh.classList.remove('show'); setTimeout(() => { bg.remove(); sh.remove(); }, 400); };
+  bg.onclick = close;
+  const draw = k => {
+    tab = k; const nums = L[k] || [], [, t, c, ic] = TABS.find(x => x[0] === k);
+    sh.querySelectorAll('#repTabs button').forEach(b => b.classList.toggle('on', b.dataset.k === k));
+    sh.querySelector('#repBody').innerHTML = nums.length ? `
+      <div class="input-row" style="margin:10px 0">
+        <button class="btn btn-primary btn-sm" style="flex:1.5" id="repCamp"><i class="fa-solid fa-paper-plane"></i> أرسل لهم حملة</button>
+        <button class="btn btn-soft btn-sm" style="flex:1" id="repCopy"><i class="fa-regular fa-copy"></i> نسخ</button>
+        <button class="btn btn-soft btn-sm" style="flex:1" id="repCsv"><i class="fa-solid fa-file-csv"></i> Excel</button></div>
+      <div class="rep-list">${nums.slice(0, 500).map(n => `<div><i class="${ic}" style="color:${c}"></i><span class="num" dir="ltr">+${esc(n)}</span><a href="https://wa.me/${esc(n)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i></a></div>`).join('')}</div>
+      ${nums.length > 500 ? `<div class="hint" style="text-align:center;margin-top:8px">يظهر أول 500 - النسخ والملف فيهم الكل (${fmt(nums.length)})</div>` : ''}`
+      : empty(ic, k === 'replied' ? 'ما رد أحد لحد الآن' : 'ما فيه أرقام بهذي القائمة');
+    if (!nums.length) return;
+    sh.querySelector('#repCamp').onclick = () => { S.pendingNumbers = nums.slice(); close(); go('campaign'); };
+    sh.querySelector('#repCopy').onclick = () => copy(nums.join('\n'));
+    sh.querySelector('#repCsv').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['\ufeff' + t + '\r\n' + nums.join('\r\n')], { type: 'text/csv' })); a.download = `${t}.csv`; a.click(); };
+  };
+  sh.querySelectorAll('#repTabs button').forEach(b => b.onclick = () => draw(b.dataset.k));
+  draw(tab);
+  requestAnimationFrame(() => { bg.classList.add('show'); sh.classList.add('show'); });
 }
 R.reports = async (el) => {
   el.innerHTML = head('تقارير الحملات') + '<div class="card"><div class="skel" style="height:90px"></div></div>';

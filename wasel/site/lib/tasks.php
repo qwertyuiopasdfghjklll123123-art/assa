@@ -215,6 +215,7 @@ function handle_engine_hook(): void
                 'text' => (string)($e['text'] ?? ''),
                 'campaign_id' => (string)($e['campaign_id'] ?? ''),
                 'delivered' => (int)($e['delivered'] ?? 0), 'read' => (int)($e['read'] ?? 0), 'replied' => (int)($e['replied'] ?? 0),
+                'lists' => track_lists($e['lists'] ?? []), 'failed_numbers' => digit_list($e['failed_numbers'] ?? []),
             ]);
             // آخر 20 حملة لكل حساب فقط
             store_update_all('history', function (array &$rows) use ($accId) {
@@ -247,6 +248,9 @@ function handle_engine_hook(): void
                             $rows[$k]['delivered'] = max((int)($h['delivered'] ?? 0), (int)($d['delivered'] ?? 0));
                             $rows[$k]['read'] = max((int)($h['read'] ?? 0), (int)($d['read'] ?? 0));
                             $rows[$k]['replied'] = max((int)($h['replied'] ?? 0), (int)($d['replied'] ?? 0));
+                            if (!empty($d['lists'])) {
+                                $rows[$k]['lists'] = track_lists($d['lists']);
+                            }
                         }
                     }
                 });
@@ -330,4 +334,41 @@ function handle_api_send(): void
     store_update('api_keys', $key['id'], fn($k) => array_merge($k, ['last_used_at' => now_str()]));
     [$ok, $err] = user_send((int)$key['owner'], $acc['id'], $phone, $message);
     $ok ? json_out(['ok' => true]) : json_err('فشل الإرسال: ' . $err, $err === no_balance_error() ? 402 : 502);
+}
+
+/** قائمة أرقام نظيفة (أرقام فقط، بدون تكرار، بحد أقصى) */
+function digit_list($a, int $max = 20000): array
+{
+    if (!is_array($a)) {
+        return [];
+    }
+    $out = [];
+    foreach ($a as $n) {
+        $d = preg_replace('/\D/', '', (string)$n);
+        if ($d !== '' && strlen($d) <= 20) {
+            $out[$d] = 1;
+        }
+        if (count($out) >= $max) {
+            break;
+        }
+    }
+    return array_map('strval', array_keys($out)); // مفاتيح المصفوفة تتحول لأرقام - نرجعها نصوص
+}
+
+/** قوائم التتبع الحصرية: ردّوا / شاهدوا بدون رد / وصلت وما شاهدوا / ما وصلت بعد */
+function track_lists($l): array
+{
+    $l = is_array($l) ? $l : [];
+    $out = [];
+    $seen = [];
+    foreach (['replied', 'read_only', 'unread', 'pending'] as $k) {
+        // كل رقم بقائمة وحدة بس، بالأولوية: رد > شاهد > وصل > ما وصل
+        $out[$k] = array_values(array_filter(digit_list($l[$k] ?? []), function ($d) use (&$seen) {
+            if (isset($seen[$d])) {
+                return false;
+            }
+            return $seen[$d] = true;
+        }));
+    }
+    return $out;
 }

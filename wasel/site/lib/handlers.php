@@ -730,6 +730,7 @@ function history_public(array $h): array
         'delivered' => (int)($h['delivered'] ?? 0), 'read' => (int)($h['read'] ?? 0), 'replied' => (int)($h['replied'] ?? 0),
         'success_rate' => (int)$h['total'] ? (int)round($sent / (int)$h['total'] * 100) : 0,
         'tracked' => !empty($h['campaign_id']),
+        'has_lists' => !empty($h['lists']) || !empty($h['failed_numbers']),
     ];
 }
 

@@ -376,6 +376,17 @@ $routes = [
         $id = require_login();
         json_out(array_map('history_public', array_slice(history_of_owner($id), 0, 20)));
     }],
+    // أرقام كل فئة بتقرير حملة (مين رد، مين شاهد بدون رد...)
+    ['GET', '#^/dashboard/campaigns/(\d+)/numbers$#', function ($hid) {
+        $id = require_login();
+        $h = store_find('history', (int)$hid);
+        if (!$h || (int)$h['owner'] !== $id) {
+            json_err('التقرير غير موجود', 404);
+        }
+        $l = track_lists($h['lists'] ?? []);
+        $l['failed'] = digit_list($h['failed_numbers'] ?? []);
+        json_out(['ok' => true, 'lists' => $l]);
+    }],
     ['GET', '#^/dashboard/running_campaigns$#', function () {
         $id = require_login();
         $live = engine_accounts();
