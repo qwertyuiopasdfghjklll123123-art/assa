@@ -15,6 +15,7 @@ require __DIR__ . '/lib/tasks.php';
 require __DIR__ . '/lib/wallet.php';
 require __DIR__ . '/lib/backup.php';
 require __DIR__ . '/lib/api.php';
+require __DIR__ . '/lib/leads.php';
 require __DIR__ . '/lib/security.php';
 
 if (!is_dir(DATA_DIR)) {
@@ -584,7 +585,7 @@ $routes = [
     }],
 ];
 
-$routes = array_merge($routes, api_routes());
+$routes = array_merge($routes, api_routes(), leads_routes());
 
 foreach ($routes as [$m, $re, $fn]) {
     if ($m !== $method || !preg_match($re, $path, $mm)) {

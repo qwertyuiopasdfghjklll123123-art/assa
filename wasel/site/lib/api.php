@@ -408,7 +408,7 @@ function api_routes(): array
                 'admin_email' => $s['admin_email'],
                 'tg_token_set' => $s['tg_token'] !== '', 'tg_chat_id' => $s['tg_chat_id'],
                 'tg_auto_backup' => !empty($s['tg_auto_backup']), 'tg_last_backup' => $s['tg_last_backup'],
-                'ai_key_set' => $s['ai_api_key'] !== '', 'ai_knowledge_base' => $s['ai_knowledge_base'],
+                'ai_key_set' => $s['ai_api_key'] !== '', 'ai_knowledge_base' => $s['ai_knowledge_base'], 'maps_key_set' => $s['maps_api_key'] !== '',
                 'google_client_id' => GOOGLE_CLIENT_ID,
                 'dev_name' => $s['dev_name'], 'dev_title' => $s['dev_title'], 'dev_phone' => $s['dev_phone'], 'dev_photo' => !empty($s['dev_photo']),
                 'cron_url' => site_base_url() . '/cron/setup?key=' . CRON_KEY, 'last_cron' => $s['last_cron'] ? date('Y-m-d H:i', (int)$s['last_cron']) : null,
@@ -458,6 +458,9 @@ function api_routes(): array
             }
             if (array_key_exists('tg_auto_backup', $d)) {
                 $f['tg_auto_backup'] = !empty($d['tg_auto_backup']);
+            }
+            if (trim((string)($d['maps_api_key'] ?? '')) !== '') {
+                $f['maps_api_key'] = trim((string)$d['maps_api_key']);
             }
             if (trim((string)($d['ai_api_key'] ?? '')) !== '') {
                 $f['ai_api_key'] = trim((string)$d['ai_api_key']);

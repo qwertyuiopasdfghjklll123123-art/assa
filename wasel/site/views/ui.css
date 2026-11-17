@@ -321,3 +321,22 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .api-codes>div:not(.hint){display:flex;gap:10px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line2)}
 .api-codes p{font-size:12.5px;color:var(--text2)}
 .numbered>b i{font-size:11px}
+
+/* ===== فلترة الأرقام بالحملة ===== */
+.num-stats{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.num-stats span{flex:1;min-width:70px;text-align:center;padding:7px 6px;border-radius:12px;background:rgba(255,255,255,.7);border:1px solid var(--glass-line);font-size:11.5px;color:var(--text2)}
+.num-stats b{display:block;font-size:16px;color:var(--text)}
+.num-stats .ok b{color:var(--green)}.num-stats .dup b{color:#d97706}.num-stats .bad b{color:var(--red)}
+.num-tools{display:flex;gap:6px;margin-top:8px}
+.num-tools .btn{flex:1;padding-inline:6px;font-size:12.5px}
+.num-tools .btn:disabled{opacity:.45}
+/* ===== استخراج الأرقام من الخرائط ===== */
+.seg{display:flex;gap:6px;background:rgba(10,157,178,.06);padding:5px;border-radius:14px}
+.seg button{flex:1;display:flex;flex-direction:column;align-items:center;padding:8px 4px;border-radius:11px;color:var(--text2);transition:.2s}
+.seg button b{font-size:13px}.seg button small{font-size:10.5px;color:var(--text3)}
+.seg button.on{background:#fff;color:var(--primary);box-shadow:0 4px 12px rgba(3,79,92,.12)}
+.lead-row{align-items:flex-start}
+.lead-row .row-sub{white-space:normal}
+.spinner{width:34px;height:34px;margin:0 auto;border-radius:50%;border:3px solid rgba(10,157,178,.2);border-top-color:var(--primary);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ic-gray{background:rgba(100,116,139,.1);color:#64748b}

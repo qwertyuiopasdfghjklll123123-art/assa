@@ -444,7 +444,7 @@ function settings(): array
         'site_name' => '', 'default_country_code' => '964',
         'whatsapp_subscribe_number' => '', 'whatsapp_support_number' => '',
         'plan_price_iqd' => null, 'has_logo' => false, 'logo_mime' => null,
-        'ai_api_key' => '', 'ai_knowledge_base' => '',
+        'ai_api_key' => '', 'ai_knowledge_base' => '', 'maps_api_key' => '',
         // الفوترة
         'trial_days' => TRIAL_DAYS, 'plan_days' => PLAN_ACTIVATION_DAYS, 'message_price' => 0, 'usd_rate' => 1500,
         // تسجيل الدخول والأمان

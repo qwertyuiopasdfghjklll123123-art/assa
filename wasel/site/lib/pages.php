@@ -63,7 +63,7 @@ function logo_svg(int $size = 32): string
 
 /** روابط صفحات التطبيق (للأدمن): لازم تطابق PAGES بملف app.js */
 const APP_SLUGS = ['campaign', 'reports', 'numbers', 'number', 'packages', 'pay', 'me', 'notifications', 'clients', 'api', 'transactions',
-    'profile', 'dashboard', 'users', 'recharges', 'payments', 'plans', 'settings', 'security', 'backup', 'announce'];
+    'profile', 'dashboard', 'users', 'recharges', 'payments', 'plans', 'settings', 'security', 'backup', 'announce', 'leads'];
 
 function view_file(string $name): string
 {

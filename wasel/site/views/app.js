@@ -134,6 +134,7 @@ const PAGES = {
   admin: { nav: 'account', admin: true, slug: 'dashboard' }, users: { nav: 'account', admin: true, slug: 'users' }, recharges: { nav: 'account', admin: true, slug: 'recharges' },
   payments: { nav: 'account', admin: true, slug: 'payments' }, plansAdmin: { nav: 'account', admin: true, slug: 'plans' }, settings: { nav: 'account', admin: true, slug: 'settings' },
   security: { nav: 'account', admin: true, slug: 'security' }, backup: { nav: 'account', admin: true, slug: 'backup' }, announce: { nav: 'account', admin: true, slug: 'announce' },
+  leads: { nav: 'account', admin: true, slug: 'leads' },
 };
 const SLUG2PAGE = Object.fromEntries(Object.entries(PAGES).map(([k, v]) => [v.slug ?? k, k]));
 
@@ -279,6 +280,15 @@ R.campaign = async (el, p) => {
     <div class="card" id="cForm">
       <div class="card-title"><i class="fa-solid fa-address-book"></i> الأرقام <span class="spacer"></span><span class="pill pill-blue" id="numCount">0 رقم</span></div>
       <textarea class="textarea" id="numbers" placeholder="رقم بكل سطر أو مفصولة بفواصل&#10;07701234567&#10;9647709876543" dir="ltr" style="text-align:left"></textarea>
+      <div class="num-stats" id="numStats">
+        <span><b class="num" id="nsAll">0</b> مكتوب</span><span class="ok"><b class="num" id="nsOk">0</b> صالح</span>
+        <span class="dup"><b class="num" id="nsDup">0</b> مكرر</span><span class="bad"><b class="num" id="nsBad">0</b> ناقص/خطأ</span>
+      </div>
+      <div class="num-tools">
+        <button class="btn btn-soft btn-sm" id="rmDup" disabled><i class="fa-solid fa-clone"></i> حذف المكرر</button>
+        <button class="btn btn-soft btn-sm" id="rmBad" disabled><i class="fa-solid fa-eraser"></i> حذف الناقص</button>
+        <button class="btn btn-soft btn-sm" id="rmAll" disabled><i class="fa-solid fa-trash-can"></i> مسح</button>
+      </div>
       <div class="input-row" style="margin-top:8px">
         <label class="file-drop" style="flex:1"><input type="file" id="numFile" accept=".xlsx,.csv,.txt,.vcf"><span class="row-ic ic-green"><i class="fa-solid fa-file-excel"></i></span><span style="flex:1;min-width:0"><b style="font-size:13px">Excel / CSV</b><span class="row-sub" id="numFileName">الأرقام بالعمود الأول</span></span></label>
         <button class="file-drop" id="contactsBtn" style="flex:1"><span class="row-ic ic-blue"><i class="fa-solid fa-address-book"></i></span><span style="flex:1;min-width:0;text-align:right"><b style="font-size:13px">جهات الاتصال</b><span class="row-sub">من جوالك أو ملف vcf</span></span></button>
@@ -301,8 +311,13 @@ R.campaign = async (el, p) => {
   let accId = sel.id;
   const numbersEl = $('#numbers');
   const count = () => {
-    const n = new Set(numbersEl.value.split(/[\n,،;\s]+/).map(x => x.replace(/\D/g, '')).filter(x => x.length >= 8)).size;
+    const a = analyzeNumbers(numbersEl.value, $('#cc').dataset.cc);
+    const n = a.valid;
     $('#numCount').textContent = fmt(n) + ' رقم';
+    $('#nsAll').textContent = fmt(a.total); $('#nsOk').textContent = fmt(a.valid); $('#nsDup').textContent = fmt(a.dup); $('#nsBad').textContent = fmt(a.bad);
+    $('#rmDup').disabled = !a.dup; $('#rmBad').disabled = !a.bad; $('#rmAll').disabled = !a.total;
+    $('#rmDup').innerHTML = `<i class="fa-solid fa-clone"></i> حذف المكرر${a.dup ? ` (${fmt(a.dup)})` : ''}`;
+    $('#rmBad').innerHTML = `<i class="fa-solid fa-eraser"></i> حذف الناقص${a.bad ? ` (${fmt(a.bad)})` : ''}`;
     const note = $('#costNote');
     if (payPerMsg && n) {
       const cost = n * SET.message_price;
@@ -312,6 +327,16 @@ R.campaign = async (el, p) => {
     return n;
   };
   numbersEl.addEventListener('input', count);
+  new MutationObserver(count).observe($('#cc'), { attributes: true, attributeFilter: ['data-cc'] });
+  const rewrite = (keep, msg) => {
+    const a = analyzeNumbers(numbersEl.value, $('#cc').dataset.cc), seen = new Set(); let removed = 0;
+    const lines = a.items.filter(it => { const ok = keep(it, seen); if (!ok) removed++; else seen.add(it.n); return ok; }).map(it => it.raw);
+    numbersEl.value = lines.join('\n'); count(); toast(`${msg}: ${fmt(removed)} رقم`, 'ok');
+  };
+  $('#rmDup').onclick = () => rewrite((it, seen) => !seen.has(it.n), 'انحذف المكرر');
+  $('#rmBad').onclick = () => rewrite(it => it.ok, 'انحذف الناقص والخطأ');
+  $('#rmAll').onclick = e => confirmTap(e.target.closest('button'), () => { numbersEl.value = ''; count(); }, 'راح تنمسح كل الأرقام المكتوبة', { title: 'مسح الأرقام', ok: 'مسح' });
+  if (S.pendingNumbers) { numbersEl.value = S.pendingNumbers.join('\n'); S.pendingNumbers = null; setTimeout(() => toast('تمت إضافة الأرقام من الخرائط', 'ok'), 300); }
   const addNums = (arr, label) => {
     const clean = arr.map(x => String(x).replace(/[^\d+]/g, '').replace(/^\+/, '').replace(/^00/, '')).filter(x => x.length >= 8);
     numbersEl.value = (numbersEl.value.trim() ? numbersEl.value.trim() + '\n' : '') + clean.join('\n');
@@ -346,8 +371,9 @@ R.campaign = async (el, p) => {
     const c = e.target.closest('.chip'); if (!c) return;
     accId = c.dataset.id; $$('#accChips .chip').forEach(x => x.classList.toggle('on', x === c)); loadStatus(); loadHist();
   });
+  count();
   $('#sendBtn').addEventListener('click', async () => {
-    if (!count()) { toast('أضف أرقام أولاً', 'err'); return; }
+    if (!count()) { toast('أضف أرقام صالحة أولاً', 'err'); return; }
     if (!$('#text').value.trim() && !$('#media').files[0]) { toast('اكتب رسالة أو أرفق صورة/ملف', 'err'); return; }
     const fd = new FormData();
     fd.append('numbers_text', numbersEl.value); fd.append('country_code', $('#cc').dataset.cc); fd.append('text', $('#text').value);
@@ -398,6 +424,133 @@ R.campaign = async (el, p) => {
     box.innerHTML = Array.isArray(h) && h.length ? h.map(reportCard).join('') : `<div class="card">${empty('fa-regular fa-clock', 'ما فيه حملات سابقة لهذا الرقم')}</div>`;
   }
   loadStatus(); loadHist(); every(3500, loadStatus);
+};
+
+// ---------------------------------------------------------------- تحليل الأرقام (مكرر / ناقص)
+// الطول الدولي الصحيح لكل رمز دولة (0 = متغير)
+const NUM_LEN = { 964: 13, 966: 12, 971: 12, 965: 11, 974: 11, 973: 11, 968: 11, 962: 12, 963: 12, 961: 0, 20: 12, 218: 12, 216: 11, 213: 12, 212: 12, 967: 12, 249: 12, 970: 12, 90: 12, 98: 12, 1: 11, 44: 12, 49: 0, 33: 11 };
+function normNumber(raw, cc) {
+  let d = String(raw).replace(/\D/g, '');
+  if (!d) return '';
+  if (d.startsWith('00')) d = d.slice(2);
+  else if (cc && !d.startsWith(cc)) d = cc + d.replace(/^0+/, '');
+  return d;
+}
+function numberOk(d) {
+  if (d.length < 8 || d.length > 15) return false;
+  const cc = Object.keys(NUM_LEN).sort((a, b) => b.length - a.length).find(c => d.startsWith(c));
+  if (!cc) return d.length >= 10;
+  if (cc === '964' && !/^9647\d{9}$/.test(d) && !/^964[1-6]\d{7,8}$/.test(d)) return false;
+  return NUM_LEN[cc] ? d.length === NUM_LEN[cc] : d.length >= 10;
+}
+function analyzeNumbers(text, cc) {
+  const items = String(text).split(/[\n,،;]+/).map(x => x.trim()).filter(Boolean).flatMap(x => /\d\s+\d{4,}/.test(x) && x.replace(/\D/g, '').length > 15 ? x.split(/\s+/) : [x])
+    .map(raw => { const n = normNumber(raw, cc); return { raw, n, ok: numberOk(n) }; });
+  const seen = new Set(); let dup = 0, bad = 0, valid = 0;
+  items.forEach(it => { if (!it.ok) { bad++; return; } if (seen.has(it.n)) { dup++; return; } seen.add(it.n); valid++; });
+  return { items, total: items.length, dup, bad, valid };
+}
+
+// ---------------------------------------------------------------- استخراج أرقام من الخرائط (أدمن)
+R.leads = async (el, p) => {
+  el.innerHTML = head('استخراج أرقام من الخرائط') + '<div class="card"><div class="skel" style="height:160px"></div></div>';
+  const d = await api('/api/admin/leads');
+  if (!d.ok) { el.innerHTML = head('استخراج أرقام من الخرائط') + `<div class="card">${empty('fa-solid fa-lock', d.error || 'للأدمن فقط')}</div>`; return; }
+  const last = (() => { try { return JSON.parse(localStorage.getItem('wasel_leads_form') || '{}'); } catch (e) { return {}; } })();
+  el.innerHTML = head('استخراج أرقام من الخرائط') + `
+    <div class="hero shine"><div style="display:flex;align-items:center;gap:14px"><span class="hero-icon"><i class="fa-solid fa-map-location-dot"></i></span>
+      <div><div style="font-weight:800;font-size:17px">أرقام المحلات والشركات من خرائط Google</div><div class="hero-sub">اختر الدولة والمدينة ونوع النشاط، ونجيب لك كل المحلات المسجلة بالخرائط مع أرقامها</div></div></div></div>
+    ${d.key_set ? '' : `<div class="card" style="margin-top:12px">
+      <div class="note warn"><i class="fa-solid fa-key"></i> يحتاج مفتاح Google Maps (Places API). سوّيه من Google Cloud Console ← فعّل «Places API (New)» ← Credentials ← Create API key.</div>
+      <div class="field" style="margin-top:10px"><label>مفتاح خرائط Google</label><input class="input" id="mk" type="password" dir="ltr" placeholder="AIza..."></div>
+      <button class="btn btn-primary btn-block" id="mkSave"><i class="fa-solid fa-check"></i> حفظ المفتاح</button></div>`}
+    <div class="card" style="margin-top:12px">
+      <div class="field"><label>الدولة</label><select class="input" id="lc">${d.countries.map(c => `<option value="${c.iso}" ${c.iso === (last.country || 'IQ') ? 'selected' : ''}>${esc(c.name)} (+${c.cc})</option>`).join('')}</select></div>
+      <div class="input-row">
+        <div class="field" style="flex:1"><label>المدينة / المنطقة</label><input class="input" id="lcity" placeholder="مثال: البصرة" value="${esc(last.city || '')}"></div>
+        <div class="field" style="flex:1"><label>نوع النشاط / المنتج</label><input class="input" id="lkw" placeholder="مثال: سيراميك" value="${esc(last.keyword || '')}"></div>
+      </div>
+      <div class="chips" id="lsug" style="margin:-2px 0 10px">${['سيراميك', 'مطاعم', 'صالونات', 'صيدليات', 'موبايلات', 'أثاث', 'ملابس', 'مواد بناء', 'عيادات', 'مكاتب عقار'].map(k => `<button class="chip" data-k="${k}">${k}</button>`).join('')}</div>
+      <div class="field"><label>عمق البحث</label>
+        <div class="seg" id="ldepth">${[[1, 'سريع', 'حتى 60'], [2, 'متوسط', 'حتى 240'], [3, 'شامل', 'حتى 540']].map(([v, t, s]) => `<button data-v="${v}" class="${v === (last.depth || 2) ? 'on' : ''}"><b>${t}</b><small>${s}</small></button>`).join('')}</div>
+        <div class="hint">البحث الشامل يقسّم المدينة لمربعات ويجيب أكثر نتائج، بس ياخذ وقت أطول ويستهلك طلبات أكثر من حساب Google.</div></div>
+      <button class="btn btn-primary btn-block shine" id="lgo" ${d.key_set ? '' : 'disabled'}><i class="fa-solid fa-magnifying-glass-location"></i> ابحث واستخرج الأرقام</button>
+    </div>
+    <div id="lres"></div>
+    <div class="section-head">عمليات البحث السابقة</div>
+    <div class="list mini-list" id="lhist">${d.searches.length ? d.searches.map(s => rowItem({
+      icon: 'fa-solid fa-location-dot', ic: 'ic-green', title: `${esc(s.keyword)} - ${esc(s.city)}`,
+      sub: `<span class="num">${esc(s.time)}</span> · ${esc(s.country)} · ${fmt(s.phones)} رقم من ${fmt(s.count)}`, onclick: `go('leads',{id:${s.id}})`,
+    })).join('') : empty('fa-solid fa-map', 'ما فيه عمليات بحث بعد')}</div>`;
+
+  let depth = last.depth || 2;
+  el.querySelectorAll('#ldepth button').forEach(b => b.onclick = () => { depth = +b.dataset.v; el.querySelectorAll('#ldepth button').forEach(x => x.classList.toggle('on', x === b)); });
+  el.querySelectorAll('#lsug [data-k]').forEach(b => b.onclick = () => { $('#lkw').value = b.dataset.k; });
+  if (!d.key_set) $('#mkSave').onclick = async e => {
+    const k = $('#mk').value.trim(); if (!k) { toast('اكتب المفتاح', 'err'); return; }
+    busy(e.target.closest('button'), true);
+    const r = await api('/api/admin/settings', { body: { maps_api_key: k } });
+    busy(e.target.closest('button'), false);
+    r.ok ? (toast('تم حفظ المفتاح', 'ok'), go('leads', {}, false)) : toast(r.error, 'err');
+  };
+  $('#lgo').onclick = async e => {
+    const body = { country: $('#lc').value, city: $('#lcity').value.trim(), keyword: $('#lkw').value.trim(), depth };
+    if (!body.city || !body.keyword) { toast('اكتب المدينة ونوع النشاط', 'err'); return; }
+    try { localStorage.setItem('wasel_leads_form', JSON.stringify(body)); } catch (er) { }
+    const b = e.target.closest('button'); busy(b, true);
+    $('#lres').innerHTML = `<div class="card" style="margin-top:12px;text-align:center"><div class="spinner"></div><div class="hint" style="margin-top:10px">نبحث بالخرائط... ممكن ياخذ لحد دقيقة بالبحث الشامل</div></div>`;
+    const r = await api('/api/admin/leads/search', { body });
+    busy(b, false);
+    if (!r.ok) { $('#lres').innerHTML = ''; toast(r.error || 'تعذر البحث', 'err'); return; }
+    showResults(r.search);
+  };
+  if (p.id) { const r = await api('/api/admin/leads/' + p.id); if (r.ok) showResults(r.search); }
+
+  function showResults(s) {
+    let onlyMobile = s.iso === 'IQ', q = '';
+    const box = $('#lres');
+    const list = () => s.results.filter(x => x.phone && (!onlyMobile || x.mobile !== false) && (!q || (x.name + x.address).includes(q)));
+    const draw = () => {
+      const L = list(), withPhone = s.results.filter(x => x.phone).length;
+      box.innerHTML = `<div class="section-head">النتائج: ${esc(s.keyword)} - ${esc(s.city)} <span class="pill pill-green num">${fmt(L.length)} رقم</span></div>
+        <div class="stats three">
+          <div class="stat"><span class="stat-v num">${fmt(s.count)}</span><span class="stat-l">محل وشركة</span></div>
+          <div class="stat"><span class="stat-v num" style="color:var(--green)">${fmt(withPhone)}</span><span class="stat-l">عندهم رقم</span></div>
+          <div class="stat"><span class="stat-v num" style="color:var(--primary)">${fmt(s.results.filter(x => x.mobile).length)}</span><span class="stat-l">موبايل</span></div>
+        </div>
+        <div class="card" style="margin-top:12px">
+          <input class="input" id="lq" placeholder="فلترة بالاسم أو العنوان..." value="${esc(q)}">
+          <label class="kv" style="margin-top:8px;cursor:pointer"><span>أرقام الموبايل فقط (اللي عليها واتساب)</span><label class="switch"><input type="checkbox" id="lmob" ${onlyMobile ? 'checked' : ''}><span></span></label></label>
+          <div class="input-row" style="margin-top:10px">
+            <button class="btn btn-primary btn-sm" style="flex:1.4" id="toCamp" ${L.length ? '' : 'disabled'}><i class="fa-solid fa-paper-plane"></i> أرسل لهم حملة</button>
+            <button class="btn btn-soft btn-sm" style="flex:1" id="csv" ${L.length ? '' : 'disabled'}><i class="fa-solid fa-file-csv"></i> Excel</button>
+            <button class="btn btn-soft btn-sm" style="flex:1" id="cp" ${L.length ? '' : 'disabled'}><i class="fa-regular fa-copy"></i> نسخ</button>
+          </div>
+          ${p.id ? `<button class="btn btn-ghost btn-sm btn-block" style="margin-top:8px;color:var(--red)" id="ldel"><i class="fa-solid fa-trash-can"></i> حذف هذا البحث</button>` : ''}
+        </div>
+        <div class="list stagger" style="margin-top:12px">${L.length ? L.slice(0, 300).map(x => `<div class="row lead-row">
+          <span class="row-ic ${x.mobile ? 'ic-wa' : 'ic-gray'}"><i class="fa-${x.mobile ? 'brands fa-whatsapp' : 'solid fa-phone'}"></i></span>
+          <div class="row-body"><div class="row-title">${esc(x.name)}</div>
+            <div class="row-sub"><span class="num" dir="ltr">+${esc(x.phone)}</span>${x.rating ? ` · <i class="fa-solid fa-star" style="color:#f5a524"></i> ${x.rating}` : ''}${x.type ? ' · ' + esc(x.type) : ''}</div>
+            <div class="row-sub">${esc(x.address)}</div></div>
+          ${x.map ? `<a class="btn btn-soft btn-xs" href="${esc(x.map)}" target="_blank" rel="noopener"><i class="fa-solid fa-location-arrow"></i></a>` : ''}</div>`).join('')
+          + (L.length > 300 ? `<div class="hint" style="text-align:center;padding:10px">يظهر أول 300 - الكل ينضاف للحملة والملف</div>` : '')
+          : empty('fa-solid fa-map-pin', 'ما فيه أرقام بهذا الفلتر')}</div>`;
+      $('#lq').oninput = e => { q = e.target.value.trim(); const pos = e.target.selectionStart; draw(); const i = $('#lq'); i.focus(); i.setSelectionRange(pos, pos); };
+      $('#lmob').onchange = e => { onlyMobile = e.target.checked; draw(); };
+      const nums = () => [...new Set(list().map(x => x.phone))];
+      $('#toCamp').onclick = () => { S.pendingNumbers = nums(); go('campaign'); };
+      $('#cp').onclick = () => copy(nums().join('\n'));
+      $('#csv').onclick = () => {
+        const rows = [['الاسم', 'الرقم', 'موبايل', 'العنوان', 'النوع', 'التقييم', 'الخريطة'], ...list().map(x => [x.name, x.phone, x.mobile ? 'نعم' : x.mobile === false ? 'لا' : '', x.address, x.type, x.rating ?? '', x.map])];
+        const csv = '﻿' + rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\r\n');
+        const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' })); a.download = `${s.keyword}-${s.city}.csv`; a.click();
+      };
+      if ($('#ldel')) $('#ldel').onclick = e => confirmTap(e.target.closest('button'), async () => { await api('/api/admin/leads/' + s.id, { method: 'DELETE' }); go('leads', {}, false); }, 'راح ينحذف هذا البحث ونتائجه', { title: 'حذف البحث', ok: 'حذف' });
+    };
+    draw();
+    box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 };
 
 // ---------------------------------------------------------------- أرقام واتساب
@@ -761,6 +914,7 @@ R.account = async (el) => {
       ${rowItem({ icon: 'fa-solid fa-sliders', ic: 'ic-indigo', title: 'الإعدادات', sub: 'الأسعار، الشعار، المطور، Cron', onclick: "go('settings')" })}
       ${rowItem({ icon: 'fa-solid fa-shield-halved', ic: 'ic-red', title: 'مركز الأمان', sub: 'سجل الدخول والحظر والجلسات', onclick: "go('security')" })}
       ${rowItem({ icon: 'fa-brands fa-telegram', ic: 'ic-cyan', title: 'النسخ الاحتياطي', sub: 'تصدير واستيراد JSON عبر بوت تيليجرام', onclick: "go('backup')" })}
+      ${rowItem({ icon: 'fa-solid fa-map-location-dot', ic: 'ic-green', title: 'استخراج أرقام من الخرائط', sub: 'أرقام المحلات والشركات حسب المدينة والنشاط', onclick: "go('leads')" })}
       ${rowItem({ icon: 'fa-solid fa-bullhorn', ic: 'ic-wa', title: 'إعلان جماعي', sub: 'رسالة واتساب لكل المستخدمين', onclick: "go('announce')" })}
     </div>` : ''}
     ${dev ? `<div class="section-head">المطوّر</div>
@@ -1197,6 +1351,7 @@ R.settings = async (el) => {
     <div class="section-head">الذكاء الاصطناعي (DeepSeek)</div>
     <div class="card">
       ${f('ai_api_key', 'مفتاح DeepSeek ' + (s.ai_key_set ? '(محفوظ)' : ''), '', 'password')}
+      ${f('maps_api_key', 'مفتاح خرائط Google (Places API) ' + (s.maps_key_set ? '(محفوظ)' : ''), '', 'password')}
       <div class="field"><label>معلومات المتجر/الخدمة للرد الذكي</label><textarea class="textarea" data-k="ai_knowledge_base">${esc(s.ai_knowledge_base)}</textarea></div>
     </div>
     <button class="btn btn-primary btn-block" id="saveSet" style="margin-top:14px"><i class="fa-solid fa-check"></i> حفظ كل الإعدادات</button>`;
