@@ -99,11 +99,19 @@ function render_welcome_page(): string
         'google' => GOOGLE_CLIENT_ID, 'whatsapp' => !empty(settings()['whatsapp_login']) || users_count() === 0,
         'trial_days' => trial_days(), 'message_price' => message_price(), 'plan_price' => plan_price(),
         'dev' => public_settings()['dev'], 'country_codes' => COUNTRY_CODES,
+        // للواجهة التعريفية: الباقات وطرق الدفع (بدون أرقام التحويل أو أي بيانات حساسة)
+        'plans' => array_map(fn($p) => ['name' => $p['name'], 'price' => (int)$p['price'], 'days' => (int)$p['days'], 'popular' => !empty($p['popular']),
+            'features' => array_slice($p['features_list'], 0, 5)], plans(true)),
+        'pays' => array_map(fn($m) => ['type' => $m['type'], 'name' => $m['name'], 'note' => $m['note'] ?? '',
+            'image' => !empty($m['image']) ? '/pm-image/' . $m['image'] : null], payment_methods(true)),
     ];
     return strtr(view_file('welcome.html'), [
         '__SITE_NAME__' => $siteName,
         '__LOGO_BIG__' => logo_html(84, 'hero-logo'),
         '__LOGO_SM__' => logo_html(56, 'login-logo'),
+        '__LOGO_XS__' => logo_html(34, 'xs-logo'),
+        '__LOGO_INST__' => logo_html(72, 'inst-logo'),
+        '__YEAR__' => date('Y'),
         '__GOOGLE_SCRIPT__' => GOOGLE_CLIENT_ID !== '' ? '<script src="https://accounts.google.com/gsi/client" async defer></script>' : '',
         '__BOOT_JSON__' => js_json($boot),
     ]);

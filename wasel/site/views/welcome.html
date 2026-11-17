@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="/assets/ui.css?v=9">
+<link rel="stylesheet" href="/assets/ui.css?v=10">
 __GOOGLE_SCRIPT__
 <style>
   body{overflow-x:hidden}
@@ -70,13 +70,243 @@ __GOOGLE_SCRIPT__
   .dm-t small{font-size:10.5px;color:var(--text3)}
   .dm-t b{font-size:13px}
   .dev-mini .fa-whatsapp{color:#16a34a;font-size:20px;margin-right:4px}
+
+  /* ===================== الواجهة التعريفية ===================== */
+  html.no-intro #intro{display:none}
+  #intro{position:fixed;inset:0;z-index:50;overflow-y:auto;overflow-x:hidden;background:var(--bg);-webkit-overflow-scrolling:touch;transition:opacity .5s var(--ease),transform .6s var(--ease)}
+  #intro.bye{opacity:0;transform:scale(1.04);pointer-events:none}
+  .in-wrap{max-width:520px;margin:0 auto;padding:0 18px calc(30px + env(safe-area-inset-bottom,0px))}
+  .blob{position:fixed;border-radius:50%;filter:blur(40px);opacity:.55;z-index:-1;animation:drift 14s ease-in-out infinite alternate;pointer-events:none}
+  .blob.b1{width:260px;height:260px;background:#7fe3ef;top:-80px;right:-60px}
+  .blob.b2{width:220px;height:220px;background:#b9f1d6;top:40%;left:-90px;animation-delay:-5s}
+  .blob.b3{width:200px;height:200px;background:#d9ccff;bottom:-60px;right:-40px;animation-delay:-9s;opacity:.4}
+  @keyframes drift{to{transform:translate(30px,40px) scale(1.15)}}
+  .in-top{display:flex;align-items:center;justify-content:space-between;padding:calc(14px + env(safe-area-inset-top,0px)) 0 6px}
+  .in-brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:16px}
+  .in-brand img{width:34px!important;height:34px!important;border-radius:11px}
+  .in-skip{font-size:13px;font-weight:700;color:var(--primary);padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.7);border:1px solid var(--glass-line)}
+  .in-hero{text-align:center;padding:18px 0 6px}
+  .in-logo{position:relative;width:170px;height:170px;margin:6px auto 0;display:flex;align-items:center;justify-content:center}
+  .in-logo .ring{position:absolute;inset:0;border-radius:50%;border:2px dashed rgba(10,157,178,.35);animation:spin 18s linear infinite}
+  .in-logo .ring.r2{inset:18px;border-style:solid;border-color:rgba(10,157,178,.12);animation-duration:0s}
+  .in-logo .lg{width:108px;height:108px;border-radius:32px;overflow:hidden;box-shadow:0 22px 44px rgba(4,120,139,.3);animation:pop .9s var(--ease) both,float 6s ease-in-out 1s infinite}
+  .in-logo .lg img{width:100%!important;height:100%!important}
+  .in-logo .sat{position:absolute;width:40px;height:40px;border-radius:14px;background:#fff;box-shadow:0 8px 18px rgba(3,79,92,.14);display:flex;align-items:center;justify-content:center;font-size:17px;animation:float 5s ease-in-out infinite}
+  .sat.s1{top:4px;right:6px;color:#16a34a}.sat.s2{bottom:6px;left:2px;color:#04788b;animation-delay:-1.6s}.sat.s3{top:40px;left:-8px;color:#7c3aed;animation-delay:-3.2s}.sat.s4{bottom:30px;right:-6px;color:#ea580c;animation-delay:-2.4s}
+  .in-hero h1{font-size:30px;font-weight:800;margin-top:14px;letter-spacing:-.5px}
+  .in-hero h1 span{background:linear-gradient(90deg,#04788b,#0ab3c9,#04788b);background-size:200% auto;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shimmer 4s linear infinite}
+  @keyframes shimmer{to{background-position:200% center}}
+  .in-hero p{color:var(--text2);font-size:14.5px;line-height:1.9;margin-top:8px}
+  .in-cta{display:grid;gap:10px;margin-top:20px}
+  .in-cta .btn{height:58px;border-radius:18px;font-size:16px}
+  .btn-app{position:relative;overflow:hidden}
+  .btn-app small{display:block;font-size:11px;opacity:.85;font-weight:500}
+  .btn-app .bi{width:38px;height:38px;border-radius:12px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;font-size:17px;animation:bob 1.8s ease-in-out infinite}
+  @keyframes bob{50%{transform:translateY(3px)}}
+  .btn-web{background:#fff;color:var(--text);border:1px solid var(--glass-line);box-shadow:var(--shadow)}
+  .in-badges{display:flex;justify-content:center;gap:14px;margin-top:14px;color:var(--text3);font-size:11.5px;flex-wrap:wrap}
+  .in-badges i{color:var(--primary);margin-left:4px}
+  .in-sec{margin-top:34px}
+  .in-sec>h2{font-size:20px;font-weight:800;text-align:center}
+  .in-sec>.sub{font-size:13px;color:var(--text3);text-align:center;margin-top:4px;margin-bottom:14px}
+  .in-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:22px}
+  .in-stats div{text-align:center;padding:14px 6px;border-radius:18px;background:rgba(255,255,255,.75);border:1px solid #fff;box-shadow:var(--shadow)}
+  .in-stats b{display:block;font-size:20px;color:var(--primary)}
+  .in-stats small{font-size:11px;color:var(--text3)}
+  /* جوال تجريبي فيه محادثة */
+  .phone{width:250px;margin:0 auto;border-radius:34px;background:#0d2a30;padding:10px;box-shadow:0 30px 60px rgba(3,79,92,.25)}
+  .phone-in{border-radius:26px;overflow:hidden;background:#e9f3ef}
+  .ph-bar{background:#04788b;color:#fff;padding:12px 14px;display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700}
+  .ph-bar span{width:28px;height:28px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center}
+  .ph-body{padding:12px 10px;min-height:230px;display:flex;flex-direction:column;gap:7px}
+  .msg{max-width:82%;padding:7px 10px;border-radius:12px;font-size:12px;line-height:1.6;opacity:0;transform:translateY(8px) scale(.96);animation:msgIn 12s infinite}
+  .msg.me{align-self:flex-start;background:#d9fdd3;border-top-left-radius:3px}
+  .msg.them{align-self:flex-end;background:#fff;border-top-right-radius:3px}
+  .msg small{display:block;text-align:left;font-size:9.5px;color:#53bdeb}
+  .msg:nth-child(1){animation-delay:.3s}.msg:nth-child(2){animation-delay:1.6s}.msg:nth-child(3){animation-delay:2.9s}.msg:nth-child(4){animation-delay:4.2s}
+  @keyframes msgIn{0%{opacity:0;transform:translateY(8px) scale(.96)}5%,85%{opacity:1;transform:none}92%,100%{opacity:0;transform:translateY(-4px)}}
+  .typing{align-self:flex-end;background:#fff;border-radius:12px;padding:8px 10px;display:flex;gap:3px;opacity:0;animation:msgIn 12s 5.4s infinite}
+  .typing i{width:5px;height:5px;border-radius:50%;background:#94a3b8;animation:dot 1s infinite}.typing i:nth-child(2){animation-delay:.15s}.typing i:nth-child(3){animation-delay:.3s}
+  @keyframes dot{50%{transform:translateY(-3px);opacity:.5}}
+  .in-feats{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .in-feat{padding:14px;border-radius:20px;background:rgba(255,255,255,.8);border:1px solid #fff;box-shadow:var(--shadow)}
+  .in-feat .row-ic{width:42px;height:42px;margin-bottom:8px}
+  .in-feat b{display:block;font-size:13.5px}
+  .in-feat small{font-size:11.5px;color:var(--text3);line-height:1.7;display:block;margin-top:2px}
+  .in-steps{position:relative;display:grid;gap:12px}
+  .in-steps::before{content:"";position:absolute;right:21px;top:20px;bottom:20px;width:2px;background:linear-gradient(var(--primary),rgba(10,157,178,.1))}
+  .in-step{position:relative;display:flex;gap:12px;align-items:flex-start}
+  .in-step .n{flex:none;width:44px;height:44px;border-radius:15px;background:var(--btn);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;box-shadow:0 8px 18px rgba(4,120,139,.25);z-index:1}
+  .in-step div{padding-top:3px}.in-step b{font-size:14px}.in-step small{display:block;font-size:12.5px;color:var(--text2);line-height:1.8}
+  .in-plans{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;padding:6px 2px 14px;margin:0 -18px;padding-inline:18px;scrollbar-width:none}
+  .in-plans::-webkit-scrollbar{display:none}
+  .in-plan{flex:0 0 78%;scroll-snap-align:center;position:relative;overflow:hidden;padding:20px;border-radius:24px;background:rgba(255,255,255,.88);border:1px solid #fff;box-shadow:var(--shadow)}
+  .in-plan.pop{background:linear-gradient(150deg,#04788b,#0ab3c9);color:#fff}
+  .in-plan .tag{position:absolute;top:14px;left:14px;font-size:11px;font-weight:800;padding:4px 10px;border-radius:99px;background:#fff;color:#04788b}
+  .in-plan h3{font-size:16px}
+  .in-plan .pr{font-size:28px;font-weight:800;margin:8px 0 2px}.in-plan .pr small{font-size:13px;font-weight:600;opacity:.75}
+  .in-plan .dur{font-size:12px;opacity:.75}
+  .in-plan ul{list-style:none;margin-top:12px;display:grid;gap:6px}
+  .in-plan li{font-size:12.5px;display:flex;gap:8px;align-items:flex-start}
+  .in-plan li i{color:var(--green);margin-top:4px}.in-plan.pop li i{color:#b9f1d6}
+  .in-pays{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .in-pay{display:flex;align-items:center;gap:10px;padding:12px;border-radius:18px;background:rgba(255,255,255,.85);border:1px solid #fff;box-shadow:var(--shadow)}
+  .in-pay .row-ic{width:40px;height:40px;flex:none}
+  .in-pay .row-ic img{width:100%;height:100%;object-fit:contain;border-radius:10px}
+  .in-pay b{font-size:13px;display:block}.in-pay small{font-size:10.5px;color:var(--text3);display:block;line-height:1.5}
+  .in-dev{display:flex;align-items:center;gap:14px;padding:18px;border-radius:24px;background:linear-gradient(140deg,rgba(255,255,255,.95),rgba(220,247,250,.9));border:1px solid #fff;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  .in-dev .av{width:66px;height:66px;border-radius:50%;flex:none;object-fit:cover;display:flex;align-items:center;justify-content:center;background:var(--btn);color:#fff;font-size:26px;font-weight:800;box-shadow:0 0 0 3px #fff,0 0 0 6px rgba(10,157,178,.3),0 0 22px rgba(10,157,178,.45);animation:glow 2.8s ease-in-out infinite}
+  .in-dev small{font-size:12px;color:var(--text3)}.in-dev b{display:block;font-size:17px}
+  .in-dev a{margin-right:auto}
+  .in-faq details{background:rgba(255,255,255,.85);border:1px solid #fff;border-radius:18px;box-shadow:var(--shadow);padding:14px 16px}
+  .in-faq details+details{margin-top:8px}
+  .in-faq summary{font-weight:700;font-size:13.5px;cursor:pointer;list-style:none;display:flex;justify-content:space-between;gap:10px}
+  .in-faq summary::-webkit-details-marker{display:none}
+  .in-faq summary::after{content:"+";color:var(--primary);font-size:18px;line-height:1;transition:.3s}
+  .in-faq details[open] summary::after{transform:rotate(45deg)}
+  .in-faq p{font-size:12.5px;color:var(--text2);line-height:1.9;margin-top:8px}
+  .in-final{margin-top:34px;padding:22px;border-radius:28px;text-align:center;background:linear-gradient(150deg,#04788b,#0ab3c9);color:#fff;box-shadow:0 20px 40px rgba(4,120,139,.28)}
+  .in-final h2{font-size:20px}.in-final p{font-size:13px;opacity:.85;margin:6px 0 14px}
+  .in-final .btn-web{color:var(--primary)}
+  .in-foot{text-align:center;font-size:11.5px;color:var(--text3);margin-top:18px}
+  .in-foot a{color:var(--primary);font-weight:700}
+  .rv{opacity:0;transform:translateY(26px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+  .rv.seen{opacity:1;transform:none}
+  /* ===================== شاشة تثبيت التطبيق ===================== */
+  .inst-bg{position:fixed;inset:0;z-index:80;background:rgba(5,35,40,.35);-webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);opacity:0;pointer-events:none;transition:.35s}
+  .inst-bg.show{opacity:1;pointer-events:auto}
+  .inst{position:fixed;z-index:81;left:0;right:0;bottom:0;max-width:520px;margin:0 auto;background:var(--bg);border-radius:30px 30px 0 0;padding:12px 22px calc(26px + env(safe-area-inset-bottom,0px));transform:translateY(105%);transition:transform .5s var(--ease);box-shadow:0 -20px 50px rgba(3,79,92,.18)}
+  .inst.show{transform:none}
+  .inst .handle{width:44px;height:5px;border-radius:9px;background:var(--line2);margin:0 auto 16px}
+  .inst-app{display:flex;align-items:center;gap:14px}
+  .inst-app .ic{width:72px;height:72px;border-radius:22px;overflow:hidden;box-shadow:0 12px 26px rgba(4,120,139,.25);flex:none}
+  .inst-app .ic img{width:100%!important;height:100%!important}
+  .inst-app b{font-size:19px;display:block}.inst-app small{font-size:12px;color:var(--text3)}
+  .inst-meta{display:flex;justify-content:space-around;margin:16px 0;padding:12px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+  .inst-meta div{text-align:center;font-size:11px;color:var(--text3)}.inst-meta b{display:block;font-size:14px;color:var(--text)}
+  .inst-prog{position:relative;width:120px;height:120px;margin:4px auto 10px}
+  .inst-prog svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .inst-prog circle{fill:none;stroke-width:9;stroke-linecap:round}
+  .inst-prog .tr{stroke:rgba(10,157,178,.12)}.inst-prog .bar{stroke:url(#pg);stroke-dasharray:327;stroke-dashoffset:327;transition:stroke-dashoffset .35s}
+  .inst-prog .pct{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-weight:800;font-size:24px;color:var(--primary)}
+  .inst-prog .pct small{font-size:11px;color:var(--text3);font-weight:600}
+  .inst-done{width:96px;height:96px;margin:4px auto 12px;border-radius:50%;background:var(--green-bg);color:var(--green);display:flex;align-items:center;justify-content:center;font-size:42px;animation:pop .6s var(--ease) both}
+  .inst h3{text-align:center;font-size:18px}.inst p.c{text-align:center;font-size:13px;color:var(--text2);line-height:1.9;margin-top:4px}
+  .inst-steps{display:grid;gap:8px;margin:14px 0}
+  .inst-steps div{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#fff;border:1px solid var(--line);font-size:13px}
+  .inst-steps i{width:30px;height:30px;border-radius:10px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center}
+  .reopen-intro{font-size:12px;font-weight:700;color:var(--primary);padding:8px 12px;border-radius:12px;background:rgba(255,255,255,.7);border:1px solid var(--glass-line)}
 </style>
 </head>
 <body>
+<script>
+// قبل الرسم: التطبيق المثبّت أو اللي اختار «كموقع» ما يشوف الواجهة التعريفية
+(function () {
+  var standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+  var done = false; try { done = localStorage.getItem('wasel_intro') === 'done'; } catch (e) {}
+  if (standalone || done || location.hash === '#login') document.documentElement.classList.add('no-intro');
+})();
+</script>
+<!-- ===================== الواجهة التعريفية ===================== -->
+<div id="intro">
+  <span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span>
+  <div class="in-wrap">
+    <div class="in-top"><span class="in-brand">__LOGO_XS__ __SITE_NAME__</span><button class="in-skip" onclick="useWeb()">تخطّي <i class="fa-solid fa-arrow-left"></i></button></div>
+
+    <section class="in-hero">
+      <div class="in-logo"><span class="ring"></span><span class="ring r2"></span><div class="lg">__LOGO_BIG__</div>
+        <span class="sat s1"><i class="fa-brands fa-whatsapp"></i></span><span class="sat s2"><i class="fa-solid fa-paper-plane"></i></span><span class="sat s3"><i class="fa-solid fa-robot"></i></span><span class="sat s4"><i class="fa-solid fa-chart-pie"></i></span></div>
+      <h1>مرحباً بك في <span>__SITE_NAME__</span></h1>
+      <p>منصة عراقية لإرسال حملات واتساب لآلاف العملاء، ورد آلي ذكي يجاوب عنك ٢٤ ساعة، وتقارير تعرف منها مين استلم ومين قرأ ومين رد.</p>
+      <div class="in-cta">
+        <button class="btn btn-primary btn-block btn-app shine" onclick="openInstall()"><span class="bi"><i class="fa-solid fa-download"></i></span><span style="flex:1">استخدمه كتطبيق<small>ثبّته على جوالك بضغطة - بدون متجر</small></span></button>
+        <button class="btn btn-block btn-web" onclick="useWeb()"><i class="fa-solid fa-globe"></i> استخدمه كموقع</button>
+      </div>
+      <div class="in-badges"><span><i class="fa-solid fa-shield-halved"></i>آمن ومشفّر</span><span><i class="fa-solid fa-bolt"></i>سريع وخفيف</span><span><i class="fa-solid fa-headset"></i>دعم مباشر</span></div>
+      <div class="in-stats" id="inStats"></div>
+    </section>
+
+    <section class="in-sec rv">
+      <h2>شوف شلون يشتغل</h2><div class="sub">رسالتك توصل، والرد الذكي يكمل وياهم</div>
+      <div class="phone"><div class="phone-in">
+        <div class="ph-bar"><span><i class="fa-solid fa-store"></i></span>معرض الأمل للسيراميك</div>
+        <div class="ph-body">
+          <div class="msg me">🎉 خصم 20% على كل أنواع السيراميك هذا الأسبوع!<small>✓✓ 10:30</small></div>
+          <div class="msg them">هلا، بكم المتر؟</div>
+          <div class="msg me">أهلاً بيك 🌹 يبدأ من 12 ألف للمتر، وعندنا توصيل لكل المناطق<small>✓✓ رد آلي</small></div>
+          <div class="msg them">ممتاز، أريد أزوركم</div>
+          <div class="typing"><i></i><i></i><i></i></div>
+        </div></div></div>
+    </section>
+
+    <section class="in-sec rv">
+      <h2>كل اللي تحتاجه بمكان واحد</h2><div class="sub">أدوات احترافية بواجهة بسيطة</div>
+      <div class="in-feats">
+        <div class="in-feat"><span class="row-ic ic-teal"><i class="fa-solid fa-paper-plane"></i></span><b>حملات جماعية</b><small>نص، صورة، فيديو أو ملف لآلاف الأرقام، فوراً أو بموعد</small></div>
+        <div class="in-feat"><span class="row-ic ic-purple"><i class="fa-solid fa-robot"></i></span><b>رد آلي ذكي</b><small>يفهم المحادثة ويجاوب حسب معلومات نشاطك</small></div>
+        <div class="in-feat"><span class="row-ic ic-orange"><i class="fa-solid fa-chart-pie"></i></span><b>تقارير دقيقة</b><small>نسبة النجاح، مين قرأ، ومين رد، ومين شاف وما رد</small></div>
+        <div class="in-feat"><span class="row-ic ic-green"><i class="fa-solid fa-file-excel"></i></span><b>استيراد سهل</b><small>Excel أو جهات الاتصال، مع حذف المكرر والناقص</small></div>
+        <div class="in-feat"><span class="row-ic ic-blue"><i class="fa-solid fa-mobile-screen"></i></span><b>أكثر من رقم</b><small>اربط أرقامك بالباركود أو برمز الربط</small></div>
+        <div class="in-feat"><span class="row-ic ic-pink"><i class="fa-solid fa-code"></i></span><b>ربط API</b><small>أرسل رموز تحقق وإشعارات من موقعك</small></div>
+      </div>
+    </section>
+
+    <section class="in-sec rv">
+      <h2>ابدأ بأربع خطوات</h2><div class="sub">ما تحتاج خبرة تقنية</div>
+      <div class="in-steps">
+        <div class="in-step"><span class="n">1</span><div><b>سجّل دخولك</b><small>بحساب Google أو برمز يوصلك على واتساب</small></div></div>
+        <div class="in-step"><span class="n">2</span><div><b>اربط رقم واتساب</b><small>امسح الباركود من «الأجهزة المرتبطة» أو أدخل رمز الربط</small></div></div>
+        <div class="in-step"><span class="n">3</span><div><b>أضف الأرقام واكتب رسالتك</b><small>الصق الأرقام أو ارفع ملف Excel، وأرفق صورة إذا تريد</small></div></div>
+        <div class="in-step"><span class="n">4</span><div><b>أرسل وتابع النتائج</b><small>تقرير مباشر بالواصل والمقروء والردود</small></div></div>
+      </div>
+    </section>
+
+    <section class="in-sec rv" id="inPlansSec">
+      <h2>الباقات والأسعار</h2><div class="sub" id="inPlanSub">اختار اللي يناسب شغلك</div>
+      <div class="in-plans" id="inPlans"></div>
+    </section>
+
+    <section class="in-sec rv" id="inPaysSec">
+      <h2>طرق الدفع</h2><div class="sub">اشحن رصيدك بالطريقة اللي تناسبك</div>
+      <div class="in-pays" id="inPays"></div>
+    </section>
+
+    <section class="in-sec rv" id="inDevSec">
+      <h2>المطوّر</h2><div class="sub">لأي استفسار أو اقتراح تواصل مباشرة</div>
+      <div class="in-dev shine" id="inDev"></div>
+    </section>
+
+    <section class="in-sec rv in-faq">
+      <h2>أسئلة شائعة</h2><div class="sub">&nbsp;</div>
+      <details><summary>هل رقمي يبقى آمن؟</summary><p>نعم. الربط يصير بنفس طريقة «الأجهزة المرتبطة» بواتساب، وتقدر تفصل الرقم بأي وقت من جوالك أو من المنصة.</p></details>
+      <details><summary>شنو الفرق بين التطبيق والموقع؟</summary><p>نفس المزايا بالضبط. التطبيق يتثبت على شاشتك الرئيسية ويفتح بدون شريط المتصفح وأسرع، وما ياخذ مساحة تقريباً.</p></details>
+      <details><summary>شلون أتجنب حظر رقمي؟</summary><p>أرسل للناس اللي يعرفونك، واترك فاصل مناسب بين الرسائل (15 ثانية أو أكثر)، وابدأ بأعداد قليلة.</p></details>
+      <details><summary>أقدر أجرب قبل ما أدفع؟</summary><p id="faqTrial">نعم، تقدر تبدأ مباشرة وتشوف كل المزايا.</p></details>
+    </section>
+
+    <div class="in-final rv">
+      <h2>جاهز تبدأ؟</h2><p>ثبّت التطبيق أو كمّل من المتصفح، الاختيار إلك</p>
+      <div class="in-cta" style="margin-top:0">
+        <button class="btn btn-block btn-web" onclick="openInstall()"><i class="fa-solid fa-download"></i> تثبيت التطبيق</button>
+        <button class="btn btn-block" style="background:rgba(255,255,255,.18);color:#fff;border:1px solid rgba(255,255,255,.35)" onclick="useWeb()"><i class="fa-solid fa-globe"></i> المتابعة كموقع</button>
+      </div>
+    </div>
+    <div class="in-foot"><a href="/privacy">الخصوصية والأمان وشروط الاستخدام</a><br>© __YEAR__ __SITE_NAME__</div>
+  </div>
+</div>
+
+<!-- ===================== تثبيت التطبيق ===================== -->
+<div class="inst-bg" id="instBg" onclick="closeInstall()"></div>
+<div class="inst" id="inst">
+  <div class="handle"></div>
+  <div class="inst-app"><span class="ic">__LOGO_INST__</span><div><b>__SITE_NAME__</b><small>منصة حملات ورسائل واتساب</small></div></div>
+  <div class="inst-meta"><div><b>أقل من 1MB</b>الحجم</div><div><b><i class="fa-solid fa-shield-halved" style="color:var(--green)"></i></b>آمن</div><div><b>مجاني</b>التثبيت</div></div>
+  <div id="instBody"></div>
+</div>
 <div class="stage">
   <!-- الترحيب -->
   <section class="screen" id="welcome">
-    <div class="bar"><span class="pill pill-blue"><i class="fa-solid fa-shield-halved"></i> آمن وموثوق</span><span></span></div>
+    <div class="bar"><span class="pill pill-blue"><i class="fa-solid fa-shield-halved"></i> آمن وموثوق</span><button class="reopen-intro" onclick="showIntro()"><i class="fa-solid fa-circle-info"></i> تعرّف على المنصة</button></div>
     <div class="head"><div class="logo-halo"><div class="logo-wrap">__LOGO_BIG__</div><span class="orb o1"><i class="fa-brands fa-whatsapp"></i></span><span class="orb o2"><i class="fa-solid fa-paper-plane"></i></span><span class="orb o3"><i class="fa-solid fa-robot"></i></span></div>
       <h1>__SITE_NAME__</h1><p>كل رسائل واتساب لعملك… بمكان واحد</p></div>
     <div class="feats stagger">
@@ -276,6 +506,111 @@ async function saveName() {
 ['phone', 'code', 'name'].forEach(id => $(id).addEventListener('keydown', e => {
   if (e.key === 'Enter') ({ phone: sendCode, code: verifyCode, name: saveName })[id]();
 }));
+
+
+// ===================== الواجهة التعريفية والتثبيت =====================
+const IS_STANDALONE = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const IS_IOS = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+let deferredPrompt = null, installTimer = null;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; });
+window.addEventListener('appinstalled', () => { deferredPrompt = null; try { localStorage.setItem('wasel_intro', 'done'); } catch (e) {} instState('done'); });
+const fmtN = n => Number(n || 0).toLocaleString('en-US');
+const escH = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+function hideIntro() {
+  const el = $('intro');
+  if (!el || document.documentElement.classList.contains('no-intro')) return;
+  el.classList.add('bye');
+  setTimeout(() => document.documentElement.classList.add('no-intro'), 550);
+}
+function useWeb() {
+  try { localStorage.setItem('wasel_intro', 'done'); } catch (e) {}
+  closeInstall(); hideIntro(); setTimeout(() => goLogin(), 250);
+}
+function showIntro() {
+  try { localStorage.removeItem('wasel_intro'); } catch (e) {}
+  const el = $('intro'); el.classList.add('bye');
+  document.documentElement.classList.remove('no-intro');
+  el.scrollTop = 0;
+  requestAnimationFrame(() => requestAnimationFrame(() => el.classList.remove('bye')));
+}
+
+function openInstall() {
+  $('instBg').classList.add('show'); $('inst').classList.add('show');
+  if (deferredPrompt) {
+    // نفتح نافذة التثبيت مباشرة بنفس الضغطة
+    instState('progress');
+    const p = deferredPrompt; deferredPrompt = null;
+    p.prompt();
+    p.userChoice.then(c => {
+      if (c.outcome === 'accepted') { try { localStorage.setItem('wasel_intro', 'done'); } catch (e) {} finishProgress(); }
+      else instState('cancel');
+    }).catch(() => instState('manual'));
+  } else instState(IS_IOS ? 'ios' : 'manual');
+}
+function closeInstall() { clearInterval(installTimer); $('instBg').classList.remove('show'); $('inst').classList.remove('show'); }
+
+let pct = 0;
+function setPct(v) { pct = v; const b = document.querySelector('#inst .bar'); if (b) b.style.strokeDashoffset = 327 - 327 * v / 100; const t = $('pctV'); if (t) t.textContent = Math.round(v) + '%'; }
+function finishProgress() {
+  clearInterval(installTimer);
+  installTimer = setInterval(() => { if (pct >= 100) { clearInterval(installTimer); setTimeout(() => instState('done'), 300); return; } setPct(Math.min(100, pct + 6)); }, 60);
+}
+function instState(s) {
+  const body = $('instBody'); clearInterval(installTimer);
+  if (s === 'progress') {
+    pct = 0;
+    body.innerHTML = `<div class="inst-prog"><svg viewBox="0 0 120 120"><defs><linearGradient id="pg"><stop offset="0" stop-color="#04788b"/><stop offset="1" stop-color="#0ab3c9"/></linearGradient></defs><circle class="tr" cx="60" cy="60" r="52"/><circle class="bar" cx="60" cy="60" r="52"/></svg><div class="pct"><span id="pctV">0%</span><small>جارِ التثبيت</small></div></div>
+      <h3>وافق على التثبيت</h3><p class="c">اضغط «تثبيت» بالنافذة اللي ظهرت من المتصفح</p>`;
+    installTimer = setInterval(() => setPct(Math.min(70, pct + (70 - pct) * .08)), 120);
+  } else if (s === 'done') {
+    body.innerHTML = `<div class="inst-done"><i class="fa-solid fa-check"></i></div><h3>تم تثبيت التطبيق 🎉</h3>
+      <p class="c">تلگاه بالشاشة الرئيسية لجوالك باسم «${escH(B.site)}». افتحه من هناك وراح يفتح مباشرة على تسجيل الدخول.</p>
+      <button class="btn btn-primary btn-block" style="margin-top:14px" onclick="useWeb()"><i class="fa-solid fa-globe"></i> أو كمّل من المتصفح</button>`;
+  } else if (s === 'cancel') {
+    body.innerHTML = `<h3>ما تم التثبيت</h3><p class="c">تقدر تحاول مرة ثانية أو تكمّل كموقع</p>
+      <div class="in-cta"><button class="btn btn-primary btn-block" onclick="retryInstall()"><i class="fa-solid fa-download"></i> حاول مرة ثانية</button><button class="btn btn-block btn-web" onclick="useWeb()">المتابعة كموقع</button></div>`;
+  } else if (s === 'ios') {
+    body.innerHTML = `<h3>ثبّته بثلاث خطوات</h3><p class="c">بالآيفون يتم التثبيت من متصفح Safari</p>
+      <div class="inst-steps"><div><i class="fa-solid fa-arrow-up-from-bracket"></i> اضغط زر المشاركة أسفل الشاشة</div><div><i class="fa-regular fa-square-plus"></i> اختر «إضافة إلى الشاشة الرئيسية»</div><div><i class="fa-solid fa-check"></i> اضغط «إضافة» وافتحه من الشاشة الرئيسية</div></div>
+      <button class="btn btn-block btn-web" onclick="useWeb()">المتابعة كموقع</button>`;
+  } else {
+    body.innerHTML = `<h3>ثبّته من قائمة المتصفح</h3><p class="c">متصفحك ما أعطى نافذة التثبيت تلقائياً. سوّها يدوياً:</p>
+      <div class="inst-steps"><div><i class="fa-solid fa-ellipsis-vertical"></i> افتح قائمة المتصفح (⋮) فوق</div><div><i class="fa-solid fa-mobile-screen-button"></i> اختر «تثبيت التطبيق» أو «إضافة إلى الشاشة الرئيسية»</div><div><i class="fa-solid fa-check"></i> وافق، وافتحه من الشاشة الرئيسية</div></div>
+      <div class="hint" style="text-align:center;margin-bottom:10px">ننصح باستخدام Chrome على أندرويد</div>
+      <button class="btn btn-block btn-web" onclick="useWeb()">المتابعة كموقع</button>`;
+  }
+}
+function retryInstall() { if (deferredPrompt) openInstall(); else instState(IS_IOS ? 'ios' : 'manual'); }
+
+// تعبئة الأقسام من بيانات الموقع
+(function fillIntro() {
+  const st = [];
+  if (B.trial_days > 0) st.push([B.trial_days, 'أيام تجربة مجانية']);
+  st.push(['24/7', 'رد آلي بدون توقف']);
+  if (B.message_price > 0) st.push([fmtN(B.message_price), 'د.ع للرسالة']); else st.push(['∞', 'رسائل حسب باقتك']);
+  if (st.length < 3) st.push(['+20', 'دولة مدعومة']);
+  $('inStats').innerHTML = st.slice(0, 3).map(([v, l]) => `<div><b class="num">${escH(v)}</b><small>${l}</small></div>`).join('');
+  if (B.trial_days > 0) $('faqTrial').textContent = `نعم، كل حساب جديد ياخذ ${B.trial_days} أيام تجربة مجانية بكل المزايا.`;
+  const plans = B.plans || [];
+  if (plans.length) {
+    $('inPlans').innerHTML = plans.map(p => `<div class="in-plan ${p.popular ? 'pop' : ''}">${p.popular ? '<span class="tag">الأكثر طلباً</span>' : ''}
+      <h3>${escH(p.name)}</h3><div class="pr num">${fmtN(p.price)} <small>د.ع</small></div><div class="dur">لمدة ${fmtN(p.days)} يوم</div>
+      <ul>${(p.features || []).slice(0, 5).map(f => `<li><i class="fa-solid fa-circle-check"></i>${escH(f)}</li>`).join('')}</ul></div>`).join('');
+    if (B.message_price > 0) $('inPlanSub').textContent = `أو ادفع حسب الاستخدام: ${fmtN(B.message_price)} د.ع لكل رسالة`;
+  } else $('inPlansSec').remove();
+  const PI = { asiacell: ['fa-solid fa-sim-card', 'ic-red'], binance: ['fa-brands fa-bitcoin', 'ic-orange'], superkey: ['fa-solid fa-key', 'ic-purple'], manual: ['fa-solid fa-money-bill-transfer', 'ic-green'] };
+  const pays = B.pays || [];
+  if (pays.length) $('inPays').innerHTML = pays.map(m => { const [i, c] = PI[m.type] || PI.manual; return `<div class="in-pay"><span class="row-ic ${c}">${m.image ? `<img src="${escH(m.image)}" alt="">` : `<i class="${i}"></i>`}</span><div style="min-width:0"><b>${escH(m.name)}</b><small>${escH(m.note || '')}</small></div></div>`; }).join('');
+  else $('inPaysSec').remove();
+  if (B.dev) $('inDev').innerHTML = `${B.dev.photo ? `<img class="av" src="${escH(B.dev.photo)}" alt="">` : `<span class="av">${escH((B.dev.name || 'م')[0])}</span>`}
+    <div style="min-width:0"><small>${escH(B.dev.title)}</small><b>${escH(B.dev.name)}</b></div>
+    <a class="btn btn-wa btn-sm" href="https://wa.me/${escH(B.dev.phone)}" target="_blank" rel="noopener"><i class="fa-brands fa-whatsapp"></i> تواصل</a>`;
+  else $('inDevSec').remove();
+  // ظهور الأقسام مع التمرير
+  const io = 'IntersectionObserver' in window ? new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { e.target.classList.add('seen'); io.unobserve(e.target); } }), { root: $('intro'), threshold: .12 }) : null;
+  document.querySelectorAll('#intro .rv').forEach(x => io ? io.observe(x) : x.classList.add('seen'));
+})();
 
 // منع التكبير بالأصابع ومنع نسخ النصوص (عدا حقول الكتابة)
 ['gesturestart', 'gesturechange'].forEach(t => document.addEventListener(t, e => e.preventDefault()));
