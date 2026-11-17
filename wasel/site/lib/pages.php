@@ -113,7 +113,7 @@ function render_welcome_page(): string
         'dev' => public_settings()['dev'], 'country_codes' => COUNTRY_CODES,
         // للواجهة التعريفية: الباقات وطرق الدفع (بدون أرقام التحويل أو أي بيانات حساسة)
         'plans' => array_map(fn($p) => ['name' => $p['name'], 'price' => (int)$p['price'], 'days' => (int)$p['days'], 'popular' => !empty($p['popular']),
-            'features' => array_slice($p['features_list'], 0, 5)], plans(true)),
+            'features' => array_slice(array_merge($p['limit_lines'], $p['features_list']), 0, 6)], plans(true)),
         'pays' => array_map(fn($m) => ['type' => $m['type'], 'name' => $m['name'], 'note' => $m['note'] ?? '',
             'image' => !empty($m['image']) ? '/pm-image/' . $m['image'] : null], payment_methods(true)),
     ];

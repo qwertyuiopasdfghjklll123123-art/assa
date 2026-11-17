@@ -62,12 +62,90 @@ function can_send(?array $u): bool
     return $price > 0 && (int)($u['balance'] ?? 0) >= $price;
 }
 
-/** خصم رسالة وحدة. يرجع [ok, charged] */
+// ================================================================ حدود الباقات (عدد الأرقام + الرسائل اليومية)
+
+/** الباقة الفعّالة للمستخدم (صف الباقة) أو null */
+function user_plan(?array $u): ?array
+{
+    if (!$u || !effective_plan_active($u)) {
+        return null;
+    }
+    if (!empty($u['plan_id']) && ($p = store_find('plans', (int)$u['plan_id']))) {
+        return $p;
+    }
+    $name = (string)($u['plan_name'] ?? '');
+    return $name !== '' ? store_first('plans', fn($p) => ($p['name'] ?? '') === $name) : null;
+}
+
+/** حدود المستخدم: numbers = أقصى أرقام واتساب، daily = أقصى رسائل باليوم (0 = بدون حد) */
+function user_limits(?array $u): array
+{
+    if (!$u || !empty($u['is_admin'])) {
+        return ['kind' => 'admin', 'numbers' => 0, 'daily' => 0];
+    }
+    if (effective_plan_active($u)) {
+        $p = user_plan($u);
+        return ['kind' => 'plan', 'numbers' => max(0, (int)($p['max_numbers'] ?? 0)), 'daily' => max(0, (int)($p['daily_messages'] ?? 0))];
+    }
+    if (user_has_access($u)) { // الفترة المجانية
+        $s = settings();
+        return ['kind' => 'trial', 'numbers' => max(0, (int)($s['trial_max_numbers'] ?? 1)), 'daily' => max(0, (int)($s['trial_daily_messages'] ?? 20))];
+    }
+    return ['kind' => 'payg', 'numbers' => 0, 'daily' => 0];
+}
+
+function daily_used(int $uid): int
+{
+    $r = store_get_doc('msg_daily', [])[(string)$uid] ?? null;
+    return $r && ($r['date'] ?? '') === date('Y-m-d') ? (int)$r['n'] : 0;
+}
+
+/** يحجز رسالة من حد اليوم (ذري). يرجع false لو خلص الحد */
+function daily_take(int $uid, int $limit): bool
+{
+    $ok = false;
+    store_update_doc('msg_daily', function ($d) use ($uid, $limit, &$ok) {
+        $k = (string)$uid;
+        $n = ($d[$k]['date'] ?? '') === date('Y-m-d') ? (int)$d[$k]['n'] : 0;
+        if ($n < $limit) {
+            $ok = true;
+            $d[$k] = ['date' => date('Y-m-d'), 'n' => $n + 1];
+        }
+        // تنظيف الأيام القديمة
+        foreach ($d as $kk => $v) {
+            if (($v['date'] ?? '') !== date('Y-m-d')) {
+                unset($d[$kk]);
+            }
+        }
+        return $d;
+    });
+    return $ok;
+}
+
+function daily_limit_error(array $lim): string
+{
+    return $lim['kind'] === 'trial'
+        ? 'وصلت حد الفترة المجانية (' . $lim['daily'] . ' رسالة باليوم) - يرجع يتجدد باچر، أو اشترك بباقة حتى ترسل أكثر'
+        : 'وصلت حد باقتك اليومي (' . $lim['daily'] . ' رسالة) - يرجع يتجدد باچر';
+}
+
+function numbers_limit_error(array $lim): string
+{
+    return $lim['kind'] === 'trial'
+        ? 'الفترة المجانية تسمح برقم واتساب واحد بس - اشترك بباقة حتى تربط أرقام أكثر'
+        : 'باقتك تسمح بـ ' . $lim['numbers'] . ' أرقام واتساب كحد أقصى - احذف رقم أو رقّي باقتك';
+}
+
+/** خصم رسالة وحدة. يرجع [ok, charged, error] */
 function charge_message(int $userId, string $note = 'رسالة واتساب'): array
 {
     $u = user_by_id($userId);
     if (!$u || !empty($u['banned'])) {
         return [false, 0];
+    }
+    $lim = user_limits($u);
+    if ($lim['daily'] > 0 && !daily_take($userId, $lim['daily'])) {
+        return [false, 0, daily_limit_error($lim)];
     }
     if (!empty($u['is_admin']) || user_has_access($u)) {
         return [true, 0];
@@ -102,8 +180,8 @@ function ensure_default_plans(): void
         return;
     }
     $defaults = [
-        ['name' => 'الباقة الشهرية', 'price' => plan_price(), 'days' => plan_days(), 'color' => 'teal', 'popular' => false,
-            'features' => "إرسال غير محدود\nرقم واتساب واحد أو أكثر\nرد آلي بالكلمات المفتاحية"],
+        ['name' => 'الباقة الشهرية', 'price' => plan_price(), 'days' => plan_days(), 'color' => 'teal', 'popular' => false, 'max_numbers' => 3, 'daily_messages' => 0,
+            'features' => "إرسال غير محدود\nرد آلي بالكلمات المفتاحية"],
         ['name' => 'باقة 3 أشهر', 'price' => (int)round(plan_price() * 2.6), 'days' => 90, 'color' => 'amber', 'popular' => true,
             'features' => "كل مزايا الشهرية\nتوفير 13%\nرد آلي بالذكاء الاصطناعي"],
         ['name' => 'الباقة السنوية', 'price' => plan_price() * 9, 'days' => 365, 'color' => 'violet', 'popular' => false,
@@ -114,15 +192,41 @@ function ensure_default_plans(): void
     }
 }
 
+/** مرة وحدة: الباقة الشهرية الموجودة تاخذ حد 3 أرقام */
+function migrate_plan_limits(): void
+{
+    if (!empty(settings()['plan_limits_v1'])) {
+        return;
+    }
+    foreach (store_all('plans') as $p) {
+        if (!array_key_exists('max_numbers', $p)) {
+            $monthly = (int)$p['days'] <= 31;
+            store_update('plans', $p['id'], fn($x) => array_merge($x, ['max_numbers' => $monthly ? 3 : 0, 'daily_messages' => 0,
+                'features' => $monthly ? trim(preg_replace("/^رقم واتساب واحد أو أكثر\\R?/mu", '', (string)($x['features'] ?? ''))) : ($x['features'] ?? '')]));
+        }
+    }
+    update_settings(['plan_limits_v1' => true]);
+}
+
+function plan_limit_lines(array $p): array
+{
+    $n = (int)($p['max_numbers'] ?? 0);
+    $d = (int)($p['daily_messages'] ?? 0);
+    return [$n > 0 ? ($n === 1 ? 'رقم واتساب واحد' : "حتى {$n} أرقام واتساب") : 'أرقام واتساب بدون حد',
+        $d > 0 ? "{$d} رسالة يومياً" : 'رسائل بدون حد يومي'];
+}
+
 function plans(bool $activeOnly): array
 {
     ensure_default_plans();
+    migrate_plan_limits();
     $rows = store_all('plans');
     if ($activeOnly) {
         $rows = array_values(array_filter($rows, fn($p) => !empty($p['active'])));
     }
     usort($rows, fn($a, $b) => ($a['sort'] ?? 0) <=> ($b['sort'] ?? 0) ?: $a['id'] <=> $b['id']);
-    return array_map(fn($p) => $p + ['features_list' => array_values(array_filter(array_map('trim', explode("\n", (string)($p['features'] ?? '')))))], $rows);
+    return array_map(fn($p) => $p + ['max_numbers' => 0, 'daily_messages' => 0, 'limit_lines' => plan_limit_lines($p),
+        'features_list' => array_values(array_filter(array_map('trim', explode("\n", (string)($p['features'] ?? '')))))], $rows);
 }
 
 /** شراء/تجديد باقة من الرصيد (لو عنده نفس الباقة فعّالة تنضاف المدة فوقها) */
@@ -140,7 +244,7 @@ function buy_plan(int $userId, ?int $planId = null): array
     }
     $u = user_by_id($userId);
     $from = effective_plan_active($u) && ($e = parse_dt($u['plan_ends_at'] ?? null)) ? $e : time();
-    update_user($userId, ['plan_active' => true, 'plan_ends_at' => date('Y-m-d H:i', $from + $days * 86400), 'plan_name' => $plan['name']]);
+    update_user($userId, ['plan_active' => true, 'plan_ends_at' => date('Y-m-d H:i', $from + $days * 86400), 'plan_name' => $plan['name'], 'plan_id' => (int)$plan['id']]);
     add_event($userId, null, 'تم تفعيل باقتك', $plan['name'] . " لمدة {$days} يوم", 'success');
     return [true, null];
 }

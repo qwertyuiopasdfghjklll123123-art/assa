@@ -450,6 +450,8 @@ function settings(): array
         'ai_api_key' => '', 'ai_knowledge_base' => '',
         // سحب الأرقام من الخرائط
         'leads_enabled' => true, 'leads_daily' => 5, 'leads_max' => 200,
+        // حدود الفترة المجانية
+        'trial_max_numbers' => 1, 'trial_daily_messages' => 20,
         // الفوترة
         'trial_days' => TRIAL_DAYS, 'plan_days' => PLAN_ACTIVATION_DAYS, 'message_price' => 0, 'usd_rate' => 1500,
         // تسجيل الدخول والأمان

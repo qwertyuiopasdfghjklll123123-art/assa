@@ -18,6 +18,10 @@ function me_payload(int $id): array
         'trial_active' => !$active && $trialEnds && $trialEnds > time(),
         'trial_days_left' => !$active && $trialEnds && $trialEnds > time() ? (int)ceil(($trialEnds - time()) / 86400) : 0,
         'can_send' => can_send($u), 'created_at' => $u['created_at'],
+        'limits' => (function () use ($u, $id) {
+            $l = user_limits($u);
+            return $l + ['numbers_used' => count(wa_accounts_of($id)), 'daily_used' => $l['daily'] > 0 ? daily_used($id) : 0];
+        })(),
         'login' => !empty($u['google_sub']) ? 'google' : (empty($u['phone']) && !empty($u['email']) ? 'email' : 'whatsapp'),
     ];
 }
@@ -314,6 +318,8 @@ function api_routes(): array
                 'popular' => array_key_exists('popular', $d) ? !empty($d['popular']) : !empty($old['popular']),
                 'active' => array_key_exists('active', $d) ? !empty($d['active']) : ($old['active'] ?? true),
                 'sort' => (int)($d['sort'] ?? ($old['sort'] ?? 99)),
+                'max_numbers' => max(0, min(100, (int)($d['max_numbers'] ?? ($old['max_numbers'] ?? 0)))),
+                'daily_messages' => max(0, min(100000, (int)($d['daily_messages'] ?? ($old['daily_messages'] ?? 0)))),
             ];
             $old ? store_update('plans', $pid, fn($p) => array_merge($p, $row)) : store_insert('plans', $row + ['created_at' => now_str()]);
             json_out(['ok' => true]);
@@ -421,6 +427,7 @@ function api_routes(): array
                 'tg_auto_backup' => !empty($s['tg_auto_backup']), 'tg_last_backup' => $s['tg_last_backup'],
                 'ai_key_set' => $s['ai_api_key'] !== '', 'ai_knowledge_base' => $s['ai_knowledge_base'],
                 'leads_enabled' => !empty($s['leads_enabled']), 'leads_daily' => (int)$s['leads_daily'], 'leads_max' => (int)$s['leads_max'],
+                'trial_max_numbers' => (int)$s['trial_max_numbers'], 'trial_daily_messages' => (int)$s['trial_daily_messages'],
                 'google_client_id' => GOOGLE_CLIENT_ID,
                 'dev_name' => $s['dev_name'], 'dev_title' => $s['dev_title'], 'dev_phone' => $s['dev_phone'], 'dev_photo' => !empty($s['dev_photo']),
                 'cron_url' => site_base_url() . '/cron/setup?key=' . CRON_KEY, 'last_cron' => $s['last_cron'] ? date('Y-m-d H:i', (int)$s['last_cron']) : null,
@@ -470,6 +477,12 @@ function api_routes(): array
             }
             if (array_key_exists('tg_auto_backup', $d)) {
                 $f['tg_auto_backup'] = !empty($d['tg_auto_backup']);
+            }
+            if (array_key_exists('trial_max_numbers', $d)) {
+                $f['trial_max_numbers'] = max(0, min(100, (int)$d['trial_max_numbers']));
+            }
+            if (array_key_exists('trial_daily_messages', $d)) {
+                $f['trial_daily_messages'] = max(0, min(100000, (int)$d['trial_daily_messages']));
             }
             if (array_key_exists('leads_enabled', $d)) {
                 $f['leads_enabled'] = !empty($d['leads_enabled']);

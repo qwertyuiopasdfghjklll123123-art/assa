@@ -9,9 +9,10 @@ require_once __DIR__ . '/handlers.php';
 /** إرسال رسالة باسم مستخدم: يخصم سعر الرسالة (لو ما عنده اشتراك) ويرجعه لو فشل الإرسال */
 function user_send(int $owner, string $accId, string $phone, string $text): array
 {
-    [$ok, $charged] = charge_message($owner);
+    $res = charge_message($owner);
+    [$ok, $charged] = $res;
     if (!$ok) {
-        return [false, no_balance_error()];
+        return [false, $res[2] ?? no_balance_error()];
     }
     [$sent, $err] = engine_send($accId, $phone, $text);
     if (!$sent) {
@@ -261,8 +262,12 @@ function handle_engine_hook(): void
             // no break
         case 'charge':
             // المحرك يطلب خصم رسالة قبل إرسالها (حملات + رد آلي)
-            [$ok, $charged] = charge_message((int)($d['owner'] ?? 0), (string)($d['note'] ?? 'رسالة واتساب'));
-            json_out(['ok' => $ok, 'charged' => $charged, 'error' => $ok ? null : no_balance_error()]);
+            $res = charge_message((int)($d['owner'] ?? 0), (string)($d['note'] ?? 'رسالة واتساب'));
+            [$ok, $charged] = $res;
+            if (!$ok && !empty($res[2]) && empty($d['quiet'])) {
+                add_event((int)($d['owner'] ?? 0), null, 'وصلت الحد اليومي', $res[2], 'warning');
+            }
+            json_out(['ok' => $ok, 'charged' => $charged, 'error' => $ok ? null : ($res[2] ?? no_balance_error())]);
             // no break
         case 'refund':
             refund_message((int)($d['owner'] ?? 0), (int)($d['amount'] ?? 0));

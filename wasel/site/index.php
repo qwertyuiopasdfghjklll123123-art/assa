@@ -423,6 +423,10 @@ $routes = [
     }],
     ['POST', '#^/accounts$#', function () {
         $id = require_login();
+        $lim = user_limits(user_by_id($id));
+        if ($lim['numbers'] > 0 && count(wa_accounts_of($id)) >= $lim['numbers']) {
+            json_err(numbers_limit_error($lim), 403, ['limit' => true]);
+        }
         $name = trim((string)(request_json()['name'] ?? ''));
         $accId = bin2hex(random_bytes(4));
         if ($name === '') {

@@ -692,6 +692,31 @@ function handle_start_campaign($accId): void
     if (mb_strlen($text) > 4000) {
         json_err('الرسالة طويلة جداً (الحد 4000 حرف)');
     }
+    // حدود الباقة: الرقم لازم يكون ضمن الأرقام المسموحة، والرسائل ضمن حد اليوم
+    $lim = user_limits(user_by_id($id));
+    if ($lim['numbers'] > 0) {
+        $mine = wa_accounts_of($id);
+        usort($mine, fn($a, $b) => strcmp((string)($a['created_at'] ?? ''), (string)($b['created_at'] ?? '')));
+        $allowed = array_slice(array_column($mine, 'id'), 0, $lim['numbers']);
+        if (!in_array($accId, $allowed, true)) {
+            json_err(numbers_limit_error($lim) . ' - هذا الرقم خارج الحد، أرسل من أرقامك الأولى', 403);
+        }
+    }
+    if ($lim['daily'] > 0) {
+        $left = max(0, $lim['daily'] - daily_used($id));
+        $batchWanted = !empty($_POST['drip']) ? (int)($_POST['drip_batch'] ?? 0) : 0;
+        if ($left <= 0) {
+            json_err(daily_limit_error($lim), 429);
+        }
+        if ($batchWanted > 0) {
+            // الدفعات اليومية ما تتجاوز الحد اليومي
+            $_POST['drip_batch'] = (string)min($batchWanted, $lim['daily']);
+        }
+        $firstBatch = $batchWanted > 0 ? min((int)$_POST['drip_batch'], count($numbers)) : count($numbers);
+        if ($firstBatch > $left) {
+            json_err("باقي لك اليوم {$left} رسالة من {$lim['daily']} - فعّل «إرسال يومياً» بعدد {$left} أو قلّل الأرقام" . ($lim['kind'] === 'trial' ? '، أو اشترك بباقة' : ''), 429, ['daily_left' => $left, 'daily' => $lim['daily']]);
+        }
+    }
     $hasMedia = !empty($_FILES['media_file']['name']);
     if ($text === '' && !$hasMedia) {
         json_err('اكتب رسالة أو أرفق صورة/فيديو/ملف');

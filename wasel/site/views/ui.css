@@ -402,3 +402,12 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .off-st{display:flex;align-items:center;justify-content:center;gap:6px;font-size:12px;color:var(--text3);margin-top:12px}
 .off-st .dot{width:8px;height:8px;border-radius:50%;background:#f59e0b;animation:offp 1.4s infinite}
 @keyframes offp{50%{opacity:.3}}
+
+/* ===== حدود الباقة ===== */
+.limit-card{display:flex;align-items:center;gap:12px;border-color:rgba(234,88,12,.25);background:rgba(255,247,237,.7)}
+.daily-bar{margin-top:12px;padding:12px 14px;border-radius:16px;background:rgba(10,157,178,.06);border:1px solid rgba(10,157,178,.15);display:grid;gap:8px}
+.daily-bar>div:first-child{display:flex;flex-direction:column;gap:2px}
+.daily-bar b{font-size:13px}.daily-bar small{font-size:12px;color:var(--text2)}
+.daily-bar .btn{justify-self:start}
+.daily-bar.out{background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.2)}
+.daily-bar.out .progress span{background:var(--red)}

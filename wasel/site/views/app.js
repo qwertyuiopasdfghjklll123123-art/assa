@@ -377,6 +377,7 @@ R.campaign = async (el, p) => {
           <label class="switch"><input type="checkbox" id="dripOn" disabled><span></span></label></div>
       </div>
       <div class="note warn hidden" id="costNote"></div>
+      <div id="dailyNote"></div>
       <button class="btn btn-primary btn-block" id="sendBtn" style="margin-top:12px"><i class="fa-solid fa-paper-plane"></i> إرسال الحملة</button>
     </div>
     <div id="drips"></div>
@@ -410,6 +411,14 @@ R.campaign = async (el, p) => {
   };
   numbersEl.addEventListener('input', count);
   $('#dripOn').onchange = count; $('#dripN').oninput = count;
+  // حد الرسائل اليومي (الفترة المجانية / الباقة)
+  const DL = ME.limits || {};
+  if (DL.daily > 0) {
+    const left = Math.max(0, DL.daily - (DL.daily_used || 0));
+    $('#dripN').value = DL.daily; $('#dripN').max = DL.daily;
+    $('#dailyNote').innerHTML = `<div class="daily-bar ${left ? '' : 'out'}"><div><b>${DL.kind === 'trial' ? 'الفترة المجانية' : 'باقتك'}: ${fmt(DL.daily)} رسالة يومياً</b><small>باقي لك اليوم <b class="num">${fmt(left)}</b> رسالة${left ? ' - للأرقام الأكثر فعّل «إرسال يومياً»' : ' - يتجدد باچر'}</small></div>
+      <div class="progress"><span style="width:${Math.min(100, (DL.daily_used || 0) / DL.daily * 100)}%"></span></div>${DL.kind === 'trial' ? `<button class="btn btn-soft btn-xs" onclick="go('wallet')"><i class="fa-solid fa-gem"></i> اشترك</button>` : ''}</div>`;
+  }
   // ---- أدوات رمز الدولة: تجميع الأرقام المكتوبة مع رمز دولة
   let ccSel = new Set();
   const CODES = B.country_codes.map(x => x[0]).sort((a, b) => b.length - a.length);
@@ -508,7 +517,13 @@ R.campaign = async (el, p) => {
     busy($('#sendBtn'), true);
     const r = await api(`/accounts/${accId}/campaign`, { body: fd });
     busy($('#sendBtn'), false);
-    if (!r.ok) { toast(r.error || 'تعذر بدء الحملة', 'err'); if (r.needs_subscription) setTimeout(() => go('wallet'), 1200); return; }
+    if (!r.ok) {
+      toast(r.error || 'تعذر بدء الحملة', 'err');
+      if (r.needs_subscription) setTimeout(() => go('wallet'), 1200);
+      if (r.daily_left > 0 && !$('#dripOn').disabled) { $('#dripN').value = r.daily_left; $('#dripOn').checked = true; count(); }
+      return;
+    }
+    if (DL.daily > 0) { DL.daily_used = (DL.daily_used || 0) + Math.min(r.total || 0, DL.daily); }
     toast(r.drip ? `بدأت أول دفعة (${fmt(r.drip.batch)} رقم) - الباقي ${fmt(r.drip.total - r.drip.batch)} على ${fmt(r.drip.days - 1)} يوم` : r.scheduled_for ? 'تمت جدولة الحملة: ' + r.scheduled_for : `بدأت الحملة على ${fmt(r.total)} رقم`, 'ok');
     numbersEl.value = ''; $('#dripOn').checked = false; count(); loadStatus(); loadDrips();
   });
@@ -703,22 +718,30 @@ R.leads = async (el, p) => {
 R.accounts = async (el) => {
   el.innerHTML = head('أرقام واتساب', false) + '<div class="list"><div style="padding:14px"><div class="skel" style="height:44px"></div></div></div>';
   const accs = await loadAccounts();
-  el.innerHTML = head('أرقام واتساب', false, `<span class="pill pill-green">${accs.filter(a => a.logged_in).length} متصل</span>`) + `
+  const L = ME.limits || {}, full = L.numbers > 0 && accs.length >= L.numbers;
+  const limPill = L.numbers > 0 ? `<span class="pill ${full ? 'pill-orange' : 'pill-blue'} num">${fmt(accs.length)}/${fmt(L.numbers)} أرقام</span>` : `<span class="pill pill-green">${accs.filter(a => a.logged_in).length} متصل</span>`;
+  el.innerHTML = head('أرقام واتساب', false, limPill) + `
     <div class="list stagger">${accs.length ? accs.map(a => rowItem({
       icon: 'fa-brands fa-whatsapp', ic: a.logged_in ? 'ic-wa' : 'ic-red', title: `${esc(a.name)} ${a.otp_sender ? '<span class="pill pill-blue">مرسل الرموز</span>' : ''}`,
       sub: `<span class="status-dot ${a.logged_in ? 'on' : ''}"></span> ${a.logged_in ? 'متصل وجاهز للإرسال' : 'غير متصل - اضغط للربط'}`, onclick: `go('acc',{id:'${esc(a.id)}'})`,
     })).join('') : empty('fa-brands fa-whatsapp', 'ما ربطت أي رقم بعد')}</div>
     <div class="section-head">ربط رقم جديد</div>
+    ${full ? `<div class="card limit-card"><span class="row-ic ic-orange"><i class="fa-solid fa-lock"></i></span>
+      <div style="flex:1"><b>وصلت حد الأرقام (${fmt(L.numbers)})</b><div class="row-sub" style="white-space:normal">${L.kind === 'trial' ? 'الفترة المجانية تسمح برقم واتساب واحد. اشترك بباقة حتى تربط أرقام أكثر.' : 'باقتك تسمح بـ ' + fmt(L.numbers) + ' أرقام. احذف رقم أو رقّي باقتك.'}</div></div>
+      <button class="btn btn-primary btn-sm" onclick="go('wallet')"><i class="fa-solid fa-gem"></i> الباقات</button></div>` : `
     <div class="card">
+      ${L.numbers > 0 ? `<div class="note" style="margin-bottom:10px"><i class="fa-solid fa-circle-info"></i> ${L.kind === 'trial' ? 'الفترة المجانية' : 'باقتك'}: حتى ${fmt(L.numbers)} ${L.numbers === 1 ? 'رقم' : 'أرقام'} واتساب - باقي ${fmt(L.numbers - accs.length)}</div>` : ''}
       <div class="field"><label>اسم الحساب (للتمييز)</label><input class="input" id="accName" placeholder="مثال: رقم المبيعات"></div>
       <button class="btn btn-wa btn-block" id="addBtn"><i class="fa-solid fa-link"></i> متابعة للربط</button>
       <div class="hint" style="text-align:center;margin-top:8px">تقدر تربط بمسح الباركود أو بإدخال رمز ربط بالأجهزة المرتبطة</div>
-    </div>`;
+    </div>`}`;
+  if (full) return;
   $('#addBtn').onclick = async () => {
     busy($('#addBtn'), true);
     const r = await api('/accounts', { body: { name: $('#accName').value.trim() } });
     busy($('#addBtn'), false);
-    if (!r.id) { toast(r.error || 'تعذر إنشاء الحساب', 'err'); return; }
+    if (!r.id) { toast(r.error || 'تعذر إنشاء الحساب', 'err'); if (r.limit) setTimeout(() => go('wallet'), 1500); return; }
+    if (ME.limits) ME.limits.numbers_used++;
     go('acc', { id: r.id });
   };
 };
@@ -853,7 +876,7 @@ R.wallet = async (el, p) => {
       <div class="plan solid shine fade-in" style="cursor:default">
         <div class="plan-top"><span class="plan-name">${esc(chosen.name)}</span><span class="pill pill-white">${fmt(chosen.days)} يوم</span></div>
         <div class="plan-price"><span class="num">${fmt(chosen.price)}</span> <small>د.ع</small></div>
-        <ul>${chosen.features_list.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+        <ul>${(chosen.limit_lines || []).concat(chosen.features_list).map(f => `<li>${esc(f)}</li>`).join('')}</ul>
       </div>
       <div class="stepper"><div class="st done"><b>1</b>اختر الباقة</div><div class="st ${enough ? 'done' : ''}"><b>2</b>ادفع</div><div class="st"><b>3</b>تتفعّل فوراً</div></div>
       ${enough ? `<div class="card" style="margin-top:14px"><div class="card-title"><i class="fa-solid fa-wallet"></i> الدفع من رصيدك <span class="spacer"></span><span class="pill pill-green num">${fmt(ME.balance)} د.ع</span></div>
@@ -880,7 +903,7 @@ R.wallet = async (el, p) => {
       <div class="plan-top"><div style="display:flex;align-items:center;gap:10px"><span class="plan-ic"><i class="fa-solid ${['fa-paper-plane', 'fa-rocket', 'fa-crown', 'fa-gem'][i % 4]}"></i></span><div><span class="plan-name">${esc(pl.name)}</span><div class="plan-days">${fmt(pl.days)} يوم</div></div></div>${pl.popular ? '<span class="plan-badge"><i class="fa-solid fa-star"></i> الأكثر طلباً</span>' : ME.plan_active && ME.plan_name === pl.name ? '<span class="pill pill-green">باقتك</span>' : ''}</div>
       <div class="plan-price"><span class="num">${fmt(pl.price)}</span> <small>د.ع</small>${pl.days >= 60 ? `<span class="plan-per">≈ ${fmt(Math.round(pl.price / pl.days * 30))} د.ع شهرياً</span>` : ''}</div>
       <div class="plan-sep"></div>
-      <ul>${pl.features_list.map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+      <ul>${(pl.limit_lines || []).concat(pl.features_list).map(f => `<li>${esc(f)}</li>`).join('')}</ul>
       <span class="btn ${pl.popular ? 'btn-white' : 'btn-primary'}">${ME.plan_active && ME.plan_name === pl.name ? 'تجديد الباقة' : 'اشترك الآن'} <i class="fa-solid fa-arrow-left"></i></span></div>`).join('') || `<div class="card">${empty('fa-solid fa-gem', 'ما فيه باقات حالياً')}</div>`}</div>
     ${SET.message_price > 0 ? `<div class="section-head">أو ادفع حسب استخدامك</div>
     <div class="card" style="display:flex;gap:14px;align-items:center"><span class="row-ic" style="width:54px;height:54px;font-size:22px"><i class="fa-solid fa-coins"></i></span>
@@ -1463,6 +1486,7 @@ R.settings = async (el) => {
     <div class="card">
       <div class="note" style="margin-bottom:14px">أسعار ومدد الاشتراك تتعدّل من قسم <a onclick="go('plansAdmin')" style="cursor:pointer;font-weight:800">الباقات</a></div>
       <div class="input-row">${f('trial_days', 'الفترة المجانية (يوم)', s.trial_days, 'number', '0 = بدون تجربة')}${f('message_price', 'سعر الرسالة (د.ع)', s.message_price, 'number', '0 = الإرسال للمشتركين فقط')}</div>
+      <div class="input-row">${f('trial_max_numbers', 'أرقام واتساب بالفترة المجانية', s.trial_max_numbers, 'number', '0 = بدون حد')}${f('trial_daily_messages', 'رسائل يومياً بالفترة المجانية', s.trial_daily_messages, 'number', '0 = بدون حد')}</div>
       ${f('usd_rate', 'سعر الدولار بالدينار (لـ Binance)', s.usd_rate, 'number', 'مثال: 1500 يعني 1$ = 1500 د.ع')}
     </div>
     <div class="section-head">الهوية</div>
@@ -1601,11 +1625,12 @@ R.plansAdmin = async (el) => {
     el.querySelector('#pa').innerHTML = (r.plans || []).map(pl => `<div class="card" data-pl="${pl.id}">
       <div style="display:flex;align-items:center;gap:12px;cursor:pointer" data-open>
         <span class="row-ic"><i class="fa-solid fa-gem"></i></span>
-        <div style="flex:1"><b>${esc(pl.name)}</b> ${pl.popular ? '<span class="pill pill-orange">الأكثر طلباً</span>' : ''}<div class="row-sub num" style="text-align:right">${fmt(pl.price)} د.ع · ${fmt(pl.days)} يوم</div></div>
+        <div style="flex:1"><b>${esc(pl.name)}</b> ${pl.popular ? '<span class="pill pill-orange">الأكثر طلباً</span>' : ''}<div class="row-sub num" style="text-align:right">${fmt(pl.price)} د.ع · ${fmt(pl.days)} يوم · ${esc((pl.limit_lines || [])[0] || '')}</div></div>
         <label class="switch" onclick="event.stopPropagation()"><input type="checkbox" data-active ${pl.active ? 'checked' : ''}><span></span></label></div>
       <div class="hidden" data-panel style="margin-top:14px">
         <div class="field"><label>اسم الباقة</label><input class="input" data-f="name" value="${esc(pl.name)}"></div>
         <div class="input-row"><div class="field" style="flex:1"><label>السعر (د.ع)</label><input class="input num" type="number" data-f="price" value="${pl.price}"></div><div class="field" style="flex:1"><label>المدة (يوم)</label><input class="input num" type="number" data-f="days" value="${pl.days}"></div></div>
+        <div class="input-row"><div class="field" style="flex:1"><label>عدد أرقام واتساب</label><input class="input num" type="number" min="0" data-f="max_numbers" value="${pl.max_numbers || 0}"><div class="hint">0 = بدون حد</div></div><div class="field" style="flex:1"><label>رسائل باليوم</label><input class="input num" type="number" min="0" data-f="daily_messages" value="${pl.daily_messages || 0}"><div class="hint">0 = بدون حد</div></div></div>
         <div class="field"><label>المزايا (كل ميزة بسطر)</label><textarea class="textarea" data-f="features" style="min-height:90px">${esc(pl.features || '')}</textarea></div>
         <div class="input-row" style="align-items:center"><div class="field" style="flex:1"><label>الترتيب</label><input class="input num" type="number" data-f="sort" value="${pl.sort}"></div>
           <label style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:700"><label class="switch"><input type="checkbox" data-popular ${pl.popular ? 'checked' : ''}><span></span></label> مميّزة (الأكثر طلباً)</label></div>
