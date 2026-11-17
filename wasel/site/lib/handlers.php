@@ -712,7 +712,9 @@ function handle_start_campaign($accId): void
             // الدفعات اليومية ما تتجاوز الحد اليومي
             $_POST['drip_batch'] = (string)min($batchWanted, $lim['daily']);
         }
-        $firstBatch = $batchWanted > 0 ? min((int)$_POST['drip_batch'], count($numbers)) : count($numbers);
+        $schedFirst = drip_parse_schedule((string)($_POST['drip_schedule'] ?? ''), $lim['daily'])[0] ?? null;
+        $firstBatch = !empty($_POST['drip']) && $schedFirst !== null ? ($schedFirst === 0 ? count($numbers) : min($schedFirst, count($numbers)))
+            : ($batchWanted > 0 ? min((int)$_POST['drip_batch'], count($numbers)) : count($numbers));
         if ($firstBatch > $left) {
             json_err("باقي لك اليوم {$left} رسالة من {$lim['daily']} - فعّل «إرسال يومياً» بعدد {$left} أو قلّل الأرقام" . ($lim['kind'] === 'trial' ? '، أو اشترك بباقة' : ''), 429, ['daily_left' => $left, 'daily' => $lim['daily']]);
         }
@@ -733,9 +735,13 @@ function handle_start_campaign($accId): void
             $sendAt = null;
         }
     }
-    // إرسال على دفعات يومية (مثلاً 40 الآن و40 بعد 24 ساعة...)
+    // إرسال على دفعات يومية (مثلاً 40 الآن و40 بعد 24 ساعة...) أو جدول مخصص لكل يوم (0 = كل الباقي)
     $batch = (int)($_POST['drip_batch'] ?? 0);
-    if (!empty($_POST['drip']) && $batch >= 5 && count($numbers) > $batch) {
+    $sched = drip_parse_schedule((string)($_POST['drip_schedule'] ?? ''), $lim['daily'] ?? 0);
+    if ($sched) {
+        $batch = $sched[0] === 0 ? count($numbers) : $sched[0];
+    }
+    if (!empty($_POST['drip']) && $batch >= 1 && count($numbers) > $batch) {
         $media = read_upload_media();
         $delay = form_int('delay', DEFAULT_DELAY);
         $mediaDelay = form_int('media_delay', DEFAULT_MEDIA_DELAY);
@@ -748,8 +754,8 @@ function handle_start_campaign($accId): void
         }
         $acc = owned_account($accId);
         $startTs = $sendAt ? strtotime($sendAt) : time();
-        drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers));
-        $r['drip'] = ['batch' => $batch, 'total' => count($numbers), 'days' => (int)ceil(count($numbers) / $batch)];
+        drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers), $sched);
+        $r['drip'] = ['batch' => $batch, 'total' => count($numbers), 'days' => drip_days(count($numbers), $batch, $sched)];
         json_out($r);
     }
     engine_start_campaign($accId, $numbers, $text, $sendAt);
@@ -782,6 +788,8 @@ function history_public(array $h): array
         'success_rate' => (int)$h['total'] ? (int)round($sent / (int)$h['total'] * 100) : 0,
         'tracked' => !empty($h['campaign_id']),
         'has_lists' => !empty($h['lists']) || !empty($h['failed_numbers']),
+        'finished_at' => $h['finished_at'] ?? null, 'media_name' => $h['media_name'] ?? '', 'delay' => (int)($h['delay'] ?? 0),
+        'account_id' => $h['account_id'] ?? '',
     ];
 }
 

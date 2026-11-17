@@ -338,28 +338,49 @@ function set_plan_active(int $userId, bool $active): void
 
 // ---------------------------------------------------------------- الإشعارات
 
-function add_event(?int $owner, ?string $account, string $title, string $body, string $kind = 'info'): void
+function add_event(?int $owner, ?string $account, string $title, string $body, string $kind = 'info', ?string $link = null): void
 {
     if (!$owner) {
         return;
     }
-    store_update_all('events', function (array &$rows) use ($owner, $account, $title, $body, $kind) {
+    add_events_bulk([$owner], $title, $body, $kind, $link, $account);
+}
+
+/** يضيف نفس الإشعار لعدة مستخدمين بعملية وحدة (للإعلانات) */
+function add_events_bulk(array $owners, string $title, string $body, string $kind = 'info', ?string $link = null, ?string $account = null): int
+{
+    $owners = array_values(array_unique(array_filter(array_map('intval', $owners))));
+    if (!$owners) {
+        return 0;
+    }
+    store_update_all('events', function (array &$rows) use ($owners, $account, $title, $body, $kind, $link) {
         $max = 0;
         foreach ($rows as $r) {
             $max = max($max, (int)$r['id']);
         }
-        $id = $max + 1;
-        $rows[(string)$id] = [
-            'id' => $id, 'owner' => $owner, 'account' => $account === null ? null : clean_text($account),
-            'title' => clean_text($title), 'body' => clean_text($body), 'kind' => $kind, 'read' => false, 'time' => date('H:i'),
-        ];
+        foreach ($owners as $owner) {
+            $id = ++$max;
+            $rows[(string)$id] = [
+                'id' => $id, 'owner' => $owner, 'account' => $account === null ? null : clean_text($account),
+                'title' => clean_text($title), 'body' => clean_text($body), 'kind' => $kind, 'read' => false, 'time' => date('H:i'),
+                'date' => date('Y-m-d'), 'link' => $link,
+            ];
+        }
         // نحتفظ بآخر EVENTS_PER_USER إشعار لكل مستخدم فقط
-        $mine = array_keys(array_filter($rows, fn($r) => (int)$r['owner'] === $owner));
-        sort($mine, SORT_NUMERIC);
-        while (count($mine) > EVENTS_PER_USER) {
-            unset($rows[(string)array_shift($mine)]);
+        $per = [];
+        foreach ($rows as $k => $r) {
+            $per[(int)$r['owner']][] = (int)$k;
+        }
+        foreach ($per as $ids) {
+            if (count($ids) > EVENTS_PER_USER) {
+                sort($ids, SORT_NUMERIC);
+                foreach (array_slice($ids, 0, count($ids) - EVENTS_PER_USER) as $k) {
+                    unset($rows[(string)$k]);
+                }
+            }
         }
     });
+    return count($owners);
 }
 
 // ---------------------------------------------------------------- حسابات واتساب (السجل المحفوظ)

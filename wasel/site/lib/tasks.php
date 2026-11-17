@@ -219,6 +219,8 @@ function handle_engine_hook(): void
                 'campaign_id' => (string)($e['campaign_id'] ?? ''),
                 'delivered' => (int)($e['delivered'] ?? 0), 'read' => (int)($e['read'] ?? 0), 'replied' => (int)($e['replied'] ?? 0),
                 'lists' => track_lists($e['lists'] ?? []), 'failed_numbers' => digit_list($e['failed_numbers'] ?? []),
+                'finished_at' => now_str(), 'media_name' => clean_text(mb_substr((string)($e['media_name'] ?? ''), 0, 120)),
+                'delay' => (int)($e['delay'] ?? 0), 'text_full' => mb_substr((string)($e['text_full'] ?? ($e['text'] ?? '')), 0, 4000),
             ]);
             // آخر 20 حملة لكل حساب فقط
             store_update_all('history', function (array &$rows) use ($accId) {

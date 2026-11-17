@@ -77,7 +77,8 @@ function api_routes(): array
         }],
         ['POST', '#^/api/plan/buy$#', function () {
             $id = require_login();
-            [$ok, $err] = buy_plan($id, (int)(request_json()['plan_id'] ?? 0) ?: null);
+            $d = request_json();
+            [$ok, $err] = buy_plan($id, (int)($d['plan_id'] ?? 0) ?: null, (string)($d['coupon'] ?? ''));
             $ok ? json_out(['ok' => true, 'me' => me_payload($id)]) : json_err($err);
         }],
 
@@ -117,6 +118,7 @@ function api_routes(): array
             record_recharge($id, $pm, $amount, 'pending', [
                 'receipt' => $receipt, 'ref' => clean_text(mb_substr(trim((string)($_POST['ref'] ?? '')), 0, 80)),
                 'plan_id' => $planId, 'plan_name' => $planId ? (store_find('plans', $planId)['name'] ?? null) : null,
+                'coupon' => $planId ? coupon_norm((string)($_POST['coupon'] ?? '')) : '',
             ]);
             add_event($id, null, 'طلب شحن قيد المراجعة', number_format($amount) . ' د.ع عبر ' . $pm['name'], 'info');
             notify_admins('طلب شحن جديد', number_format($amount) . ' د.ع عبر ' . $pm['name']);
@@ -154,11 +156,11 @@ function api_routes(): array
             record_recharge($id, $pm, $iqd, 'approved', ['ref' => $order, 'orig_amount' => $usd, 'currency' => 'USD']);
             flock($lk, LOCK_UN);
             $bal = wallet_add($id, $iqd, 'recharge', "Binance Pay \${$usd}");
-            apply_recharge_plan($id, $d['plan_id'] ?? null);
+            $planRes = apply_recharge_plan($id, $d['plan_id'] ?? null, (string)($d['coupon'] ?? ''));
             $bal = wallet_balance($id);
             add_event($id, null, 'تم شحن رصيدك', number_format($iqd) . ' د.ع عبر Binance Pay', 'success');
             notify_admins('شحن تلقائي', number_format($iqd) . " د.ع عبر Binance (\${$usd})", 'success');
-            json_out(['ok' => true, 'msg' => 'تم التحقق وإضافة ' . number_format($iqd) . ' د.ع لرصيدك', 'balance' => $bal]);
+            json_out(['ok' => true, 'msg' => 'تم التحقق وإضافة ' . number_format($iqd) . ' د.ع لرصيدك', 'balance' => $bal, 'plan' => $planRes]);
         }],
         ['POST', '#^/api/recharge/asiacell/(start|verify|confirm|cancel)$#', 'handle_asiacell'],
 
@@ -289,7 +291,7 @@ function api_routes(): array
             admin_log('recharge_' . $act, '#' . $rid . ' amount=' . $amount);
             if ($act === 'approve') {
                 wallet_add((int)$r['user_id'], $amount, 'recharge', $r['method_name']);
-                apply_recharge_plan((int)$r['user_id'], $r['plan_id'] ?? null);
+                apply_recharge_plan((int)$r['user_id'], $r['plan_id'] ?? null, (string)($r['coupon'] ?? ''));
                 add_event((int)$r['user_id'], null, 'تم شحن رصيدك', number_format($amount) . ' د.ع عبر ' . $r['method_name'], 'success');
             } else {
                 add_event((int)$r['user_id'], null, 'تم رفض طلب الشحن', $note ?: 'تواصل مع الدعم للتفاصيل', 'warning');
@@ -719,7 +721,8 @@ function handle_asiacell($step): void
             json_err($err);
         }
         asiacell_flow($uid, ['api' => $api->state(), 'phone' => $phone, 'total' => $amount, 'bonus' => (int)$tier['bonus'],
-            'paid' => 0, 'chunk' => 0, 'max' => (int)($pm['extras']['max_transfer'] ?? 10000), 'step' => 'sms', 'plan_id' => (int)($d['plan_id'] ?? 0) ?: null]);
+            'paid' => 0, 'chunk' => 0, 'max' => (int)($pm['extras']['max_transfer'] ?? 10000), 'step' => 'sms', 'plan_id' => (int)($d['plan_id'] ?? 0) ?: null,
+            'coupon' => coupon_norm((string)($d['coupon'] ?? ''))]);
         json_out(['ok' => true, 'msg' => 'وصلك رمز SMS على رقمك - اكتبه هنا']);
     }
 
@@ -780,9 +783,9 @@ function handle_asiacell($step): void
     $credit = (int)$flow['total'] + (int)$flow['bonus'];
     record_recharge($uid, $pm, $credit, 'approved', ['ref' => 'asiacell:' . $flow['phone']]);
     wallet_add($uid, $credit, 'recharge', 'آسياسيل' . ($flow['bonus'] ? ' + هدية ' . number_format($flow['bonus']) : ''));
-    apply_recharge_plan($uid, $flow['plan_id'] ?? null);
+    add_event($uid, null, 'تم شحن رصيدك', number_format($credit) . ' د.ع عبر آسياسيل', 'success');
+    $planRes = apply_recharge_plan($uid, $flow['plan_id'] ?? null, (string)($flow['coupon'] ?? ''));
     $bal = wallet_balance($uid);
     asiacell_flow($uid, null, true);
-    add_event($uid, null, 'تم شحن رصيدك', number_format($credit) . ' د.ع عبر آسياسيل', 'success');
-    json_out(['ok' => true, 'done' => true, 'balance' => $bal, 'msg' => 'تم شحن ' . number_format($credit) . ' د.ع لرصيدك']);
+    json_out(['ok' => true, 'done' => true, 'balance' => $bal, 'msg' => 'تم شحن ' . number_format($credit) . ' د.ع لرصيدك', 'plan' => $planRes]);
 }

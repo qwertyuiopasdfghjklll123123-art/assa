@@ -110,6 +110,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-message:before{content:"\f27a"}
 .fa-right-from-bracket:before{content:"\f2f5"}
 .fa-magnifying-glass-location:before{content:"\f689"}
+.fa-flag-checkered:before{content:"\f11e"}
 .fa-file-csv:before{content:"\f6dd"}
 .fa-address-book:before{content:"\f2b9"}
 .fa-clipboard-list:before{content:"\f46d"}
@@ -117,9 +118,11 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-circle-exclamation:before{content:"\f06a"}
 .fa-list:before{content:"\f03a"}
 .fa-lock:before{content:"\f023"}
+.fa-hourglass-half:before{content:"\f252"}
 .fa-users:before{content:"\f0c0"}
 .fa-eye-slash:before{content:"\f070"}
 .fa-plug:before{content:"\f1e6"}
+.fa-stopwatch:before{content:"\f2f2"}
 .fa-arrow-up-from-bracket:before{content:"\e09a"}
 .fa-wand-magic-sparkles:before{content:"\e2ca"}
 .fa-user:before{content:"\f007"}
@@ -176,6 +179,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-sliders:before{content:"\f1de"}
 .fa-map-pin:before{content:"\f276"}
 .fa-ellipsis-vertical:before{content:"\f142"}
+.fa-ticket:before{content:"\f145"}
 .fa-download:before{content:"\f019"}
 .fa-delete-left:before{content:"\f55a"}
 .fa-house:before{content:"\f015"}
@@ -185,6 +189,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-user-lock:before{content:"\f502"}
 .fa-bug:before{content:"\f188"}
 .fa-credit-card:before{content:"\f09d"}
+.fa-file-circle-xmark:before{content:"\e5a1"}
 .fa-bell:before{content:"\f0f3"}
 .fa-location-dot:before{content:"\f3c5"}
 .fa-arrow-down:before{content:"\f063"}

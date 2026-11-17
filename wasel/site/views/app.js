@@ -157,7 +157,8 @@ const PAGES = {
   admin: { nav: 'account', admin: true, slug: 'dashboard' }, users: { nav: 'account', admin: true, slug: 'users' }, recharges: { nav: 'account', admin: true, slug: 'recharges' },
   payments: { nav: 'account', admin: true, slug: 'payments' }, plansAdmin: { nav: 'account', admin: true, slug: 'plans' }, settings: { nav: 'account', admin: true, slug: 'settings' },
   security: { nav: 'account', admin: true, slug: 'security' }, backup: { nav: 'account', admin: true, slug: 'backup' }, announce: { nav: 'account', admin: true, slug: 'announce' },
-  leads: { nav: 'account', slug: 'leads' },
+  leads: { nav: 'account', slug: 'leads' }, report: { nav: 'campaign', slug: 'report' },
+  coupons: { nav: 'account', admin: true, slug: 'coupons' },
 };
 const SLUG2PAGE = Object.fromEntries(Object.entries(PAGES).map(([k, v]) => [v.slug ?? k, k]));
 
@@ -259,11 +260,12 @@ R.home = async (el) => {
 // ---------------------------------------------------------------- تقارير الحملات
 function reportCard(x) {
   const readOnly = Math.max(0, (x.read || 0) - (x.replied || 0));
-  return `<div class="card fade-in" style="margin-bottom:12px">
-    <div style="display:flex;align-items:center;gap:14px">
+  return `<div class="card fade-in rep-card" style="margin-bottom:12px">
+    <div style="display:flex;align-items:center;gap:14px;cursor:pointer" onclick="go('report',{id:${x.id}})">
       <div class="ring" style="--p:${x.success_rate}"><b class="num">${x.success_rate}%</b></div>
       <div style="flex:1;min-width:0"><b>${esc(x.account_name)}</b><div class="row-sub">${esc(x.time)} · ${esc((x.text || '').slice(0, 40)) || '—'}</div>
         <div class="row-sub"><span class="num">${fmt(x.sent)}</span> من <span class="num">${fmt(x.total)}</span> وصلت بنجاح${x.failed ? ` · <span style="color:var(--red)">فشل ${fmt(x.failed)}</span>` : ''}</div></div>
+      <span class="chev"><i class="fa-solid fa-chevron-left"></i></span>
     </div>
     ${x.tracked ? `<div class="rep-bars ${x.has_lists ? 'tap' : ''}">
       <div ${x.has_lists ? `onclick="repNumbers(${x.id},'unread')"` : ''}><b class="num" style="color:#0891b2">${fmt(x.delivered)}</b><span>استلموا</span></div>
@@ -306,6 +308,94 @@ async function repNumbers(hid, tab) {
   draw(tab);
   requestAnimationFrame(() => { bg.classList.add('show'); sh.classList.add('show'); });
 }
+// ---------------------------------------------------------------- تفاصيل حملة كاملة
+R.report = async (el, p) => {
+  if (!p.id) { go('reports', {}, false); return; }
+  el.innerHTML = head('تفاصيل الحملة') + '<div class="card"><div class="skel" style="height:200px"></div></div>';
+  const r = await api('/dashboard/campaigns/' + p.id);
+  if (!r.ok) { el.innerHTML = head('تفاصيل الحملة') + `<div class="card">${empty('fa-solid fa-file-circle-xmark', r.error || 'التقرير غير موجود')}</div>`; return; }
+  const x = r.report;
+  const dur = (() => { const a = Date.parse((x.time || '').replace(' ', 'T')), b = Date.parse((x.finished_at || '').replace(' ', 'T')); if (!a || !b || b < a) return '—'; const m = Math.round((b - a) / 60000); return m < 60 ? `${m} دقيقة` : `${Math.floor(m / 60)} ساعة ${m % 60 ? (m % 60) + ' دقيقة' : ''}`; })();
+  const bar = (k, label, n, color, ic) => `<div class="fn-row" ${x.has_lists ? `onclick="repNumbers(${x.id},'${k}')"` : ''}>
+    <span class="row-ic" style="background:color-mix(in srgb,${color} 12%,#fff);color:${color}"><i class="${ic}"></i></span>
+    <div style="flex:1;min-width:0"><div class="fn-top"><b>${label}</b><span class="num">${fmt(n)}${x.total ? ` · ${Math.round(n / x.total * 100)}%` : ''}</span></div>
+      <div class="progress"><span style="width:${x.total ? Math.min(100, n / x.total * 100) : 0}%;background:${color}"></span></div></div>
+    ${x.has_lists ? '<span class="chev"><i class="fa-solid fa-chevron-left"></i></span>' : ''}</div>`;
+  const readOnly = Math.max(0, (x.read || 0) - (x.replied || 0));
+  el.innerHTML = head('تفاصيل الحملة') + `
+    <div class="hero fade-in"><div style="display:flex;align-items:center;gap:14px">
+      <div class="ring big" style="--p:${x.success_rate}"><b class="num">${x.success_rate}%</b></div>
+      <div style="flex:1;min-width:0"><div class="hero-label">نسبة النجاح</div><div style="font-size:19px;font-weight:800">${esc(x.account_name)}</div>
+        <div class="hero-sub"><span class="num">${fmt(x.sent)}</span> من <span class="num">${fmt(x.total)}</span> رقم وصلتهم الرسالة</div></div></div></div>
+    <div class="section-head">المعلومات</div>
+    <div class="card info-grid">
+      <div><small><i class="fa-solid fa-play"></i> بدأت</small><b class="num">${esc(x.time || '—')}</b></div>
+      <div><small><i class="fa-solid fa-flag-checkered"></i> انتهت</small><b class="num">${esc(x.finished_at || '—')}</b></div>
+      <div><small><i class="fa-solid fa-hourglass-half"></i> المدة</small><b>${dur}</b></div>
+      <div><small><i class="fa-solid fa-stopwatch"></i> الفاصل بين الرسائل</small><b>${x.delay ? x.delay + ' ثانية' : '—'}</b></div>
+      <div><small><i class="fa-brands fa-whatsapp"></i> أرسلت من</small><b>${esc(x.account_name)}</b></div>
+      <div><small><i class="fa-solid fa-address-book"></i> عدد الأرقام</small><b class="num">${fmt(x.total)}</b></div>
+    </div>
+    <div class="section-head">الرسالة <a onclick="copy(${esc(JSON.stringify(x.text_full || ''))})">نسخ</a></div>
+    <div class="card"><div class="msg-full selectable">${esc(x.text_full || '—').replace(/\n/g, '<br>')}</div>
+      ${x.media_name ? `<div class="note" style="margin-top:10px"><i class="fa-solid fa-paperclip"></i> مرفق: ${esc(x.media_name)}</div>` : ''}
+      <button class="btn btn-soft btn-sm btn-block" style="margin-top:10px" id="reuse"><i class="fa-solid fa-rotate"></i> استخدم نفس الرسالة بحملة جديدة</button></div>
+    <div class="section-head">النتائج ${x.has_lists ? '<small style="font-weight:500;color:var(--text3)">اضغط لعرض الأرقام</small>' : ''}</div>
+    <div class="card funnel">
+      ${bar('unread', 'وصلت بنجاح', x.sent, '#0891b2', 'fa-solid fa-paper-plane')}
+      ${x.tracked ? bar('unread', 'استلموا', x.delivered, '#0ea5e9', 'fa-solid fa-check-double') + bar('read_only', 'شاهدوا', x.read, '#7c3aed', 'fa-solid fa-eye') + bar('replied', 'ردّوا', x.replied, '#16a34a', 'fa-solid fa-reply') + bar('read_only', 'شاهدوا بدون رد', readOnly, '#d97706', 'fa-solid fa-eye-slash') : ''}
+      ${bar('failed', 'فشلت', x.failed, '#dc2626', 'fa-solid fa-xmark')}
+    </div>
+    ${x.tracked ? `<div class="note" style="margin-top:12px">الأرقام تتحدث تلقائياً لمدة 7 أيام بعد الحملة. «شاهدوا» تعتمد على إيصالات القراءة.</div>` : ''}`;
+  el.querySelector('#reuse').onclick = () => { S.pendingText = x.text_full || ''; go('campaign', { acc: x.account_id }); };
+};
+
+// ---------------------------------------------------------------- أكواد الخصم (أدمن)
+R.coupons = async (el) => {
+  el.innerHTML = head('أكواد الخصم') + '<div id="cpl"><div class="card"><div class="skel" style="height:80px"></div></div></div>';
+  const r = await api('/api/admin/coupons');
+  const plans = r.plans || [];
+  const form = (c = {}) => `<div class="card" id="cpForm">
+    <div class="card-title"><i class="fa-solid fa-ticket"></i> ${c.id ? 'تعديل الكود' : 'كود جديد'}</div>
+    <div class="input-row"><div class="field" style="flex:1.3"><label>الكود</label><input class="input" id="fCode" dir="ltr" style="text-transform:uppercase" placeholder="RAMADAN25" value="${esc(c.code || '')}"></div>
+      <div class="field" style="flex:1"><label>النوع</label><select class="input" id="fType"><option value="percent" ${c.type !== 'fixed' ? 'selected' : ''}>نسبة %</option><option value="fixed" ${c.type === 'fixed' ? 'selected' : ''}>مبلغ ثابت</option></select></div></div>
+    <div class="input-row"><div class="field" style="flex:1"><label>قيمة الخصم</label><input class="input num" id="fVal" type="number" min="1" value="${c.value || ''}"></div>
+      <div class="field" style="flex:1"><label>عدد الاستخدامات</label><input class="input num" id="fMax" type="number" min="0" value="${c.max_uses ?? 0}"><div class="hint">0 = بدون حد</div></div></div>
+    <div class="field"><label>ينتهي بتاريخ (اختياري)</label><input class="input" id="fExp" type="date" value="${esc(c.expires || '')}"></div>
+    <div class="field"><label>الباقات المشمولة</label><div class="chips" id="fPlans">${plans.map(pl => `<button class="chip ${(c.plan_ids || []).includes(pl.id) ? 'on' : ''}" data-pl="${pl.id}">${esc(pl.name)}</button>`).join('')}</div><div class="hint">بدون تحديد = كل الباقات. كل مستخدم يستخدم الكود مرة وحدة.</div></div>
+    <div class="input-row"><button class="btn btn-primary" style="flex:2" id="fSave"><i class="fa-solid fa-check"></i> حفظ</button>${c.id ? `<button class="btn btn-ghost" style="flex:1" id="fCancel">إلغاء</button>` : ''}</div></div>`;
+  const draw = (edit) => {
+    const list = r.coupons || [];
+    el.querySelector('#cpl').innerHTML = form(edit) + `<div class="section-head">الأكواد <span class="pill pill-blue">${list.length}</span></div>` + (list.length ? list.map(c => {
+      const expired = c.expires && new Date(c.expires + 'T23:59:59') < new Date(), full = c.max_uses && c.uses >= c.max_uses;
+      return `<div class="card coupon-item ${!c.active || expired || full ? 'off' : ''}" data-id="${c.id}">
+        <div style="display:flex;align-items:center;gap:12px">
+          <span class="cp-code num">${esc(c.code)}</span>
+          <div style="flex:1;min-width:0"><b>${c.type === 'percent' ? c.value + '%' : fmt(c.value) + ' د.ع'}</b>
+            <div class="row-sub">استُخدم <b class="num">${fmt(c.uses)}</b>${c.max_uses ? ' من ' + fmt(c.max_uses) : ''}${c.expires ? ' · ينتهي ' + esc(c.expires) : ''}${expired ? ' · <span style="color:var(--red)">منتهي</span>' : ''}${c.plan_ids.length ? ' · ' + c.plan_ids.map(id => esc((plans.find(p => p.id === id) || {}).name || '')).join('، ') : ' · كل الباقات'}</div></div>
+          <label class="switch"><input type="checkbox" data-act ${c.active ? 'checked' : ''}><span></span></label></div>
+        <div class="input-row" style="margin-top:10px"><button class="btn btn-soft btn-xs" style="flex:1" data-edit><i class="fa-solid fa-pen"></i> تعديل</button><button class="btn btn-soft btn-xs" style="flex:1" data-cp><i class="fa-regular fa-copy"></i> نسخ</button><button class="btn btn-soft btn-xs" style="flex:1;color:var(--red)" data-del><i class="fa-solid fa-trash"></i> حذف</button></div></div>`;
+    }).join('') : `<div class="card">${empty('fa-solid fa-ticket', 'ما فيه أكواد بعد')}</div>`);
+    el.querySelectorAll('#fPlans [data-pl]').forEach(b => b.onclick = () => b.classList.toggle('on'));
+    el.querySelector('#fSave').onclick = async e => {
+      const body = { code: el.querySelector('#fCode').value, type: el.querySelector('#fType').value, value: +el.querySelector('#fVal').value, max_uses: +el.querySelector('#fMax').value,
+        expires: el.querySelector('#fExp').value, plan_ids: [...el.querySelectorAll('#fPlans .on')].map(b => +b.dataset.pl) };
+      busy(e.target.closest('button'), true); const s2 = await api('/api/admin/coupons' + (edit && edit.id ? '/' + edit.id : ''), { body }); busy(e.target.closest('button'), false);
+      if (!s2.ok) { toast(s2.error, 'err'); return; }
+      toast('تم حفظ الكود', 'ok'); go('coupons', {}, false);
+    };
+    if (el.querySelector('#fCancel')) el.querySelector('#fCancel').onclick = () => draw();
+    el.querySelectorAll('.coupon-item').forEach(card => {
+      const c = list.find(x => String(x.id) === card.dataset.id);
+      card.querySelector('[data-act]').onchange = async e => { await api('/api/admin/coupons/' + c.id, { body: { active: e.target.checked } }); toast(e.target.checked ? 'تم التفعيل' : 'تم الإيقاف', 'ok'); };
+      card.querySelector('[data-edit]').onclick = () => { draw(c); scrollTo({ top: 0, behavior: 'smooth' }); };
+      card.querySelector('[data-cp]').onclick = () => copy(c.code);
+      card.querySelector('[data-del]').onclick = ev => confirmTap(ev.target.closest('button'), async () => { await api('/api/admin/coupons/' + c.id, { method: 'DELETE' }); go('coupons', {}, false); }, 'الكود راح ينحذف نهائياً', { title: 'حذف الكود', ok: 'حذف' });
+    });
+  };
+  draw();
+};
+
 R.reports = async (el) => {
   el.innerHTML = head('تقارير الحملات') + '<div class="card"><div class="skel" style="height:90px"></div></div>';
   const rows = await api('/dashboard/campaigns');
@@ -375,6 +465,14 @@ R.campaign = async (el, p) => {
         <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ic-indigo"><i class="fa-solid fa-calendar-day"></i></span>
           <div style="flex:1;min-width:0"><b>إرسال <input class="drip-n num" id="dripN" type="number" min="5" max="1000" value="40"> رقم يومياً</b><div class="row-sub" id="dripSub">يتفعّل لما تكون الأرقام أكثر من 40</div></div>
           <label class="switch"><input type="checkbox" id="dripOn" disabled><span></span></label></div>
+        <div id="dripMore" class="hidden">
+          <div class="seg drip-mode" id="dripMode"><button data-m="same" class="on"><b>نفس العدد كل يوم</b></button><button data-m="custom"><b>عدد مختلف لكل يوم</b></button></div>
+          <div id="dripCustom" class="hidden">
+            <div class="chips" id="dripPresets" style="margin:8px 0"></div>
+            <div id="dripDays" class="drip-days"></div>
+            <div class="hint" id="dripSum"></div>
+          </div>
+        </div>
       </div>
       <div class="note warn hidden" id="costNote"></div>
       <div id="dailyNote"></div>
@@ -397,8 +495,10 @@ R.campaign = async (el, p) => {
     const dn = Math.max(5, +$('#dripN').value || 40), on = n > dn;
     $('#dripOn').disabled = !on; if (!on) $('#dripOn').checked = false;
     $('#dripCard').classList.toggle('on', $('#dripOn').checked);
+    $('#dripMore').classList.toggle('hidden', !$('#dripOn').checked);
+    drawDripDays(n, dn);
     $('#dripSub').innerHTML = !on ? `يتفعّل لما تكون الأرقام أكثر من ${fmt(dn)}` : $('#dripOn').checked
-      ? `${fmt(Math.min(n, dn))} الآن، و${fmt(dn)} كل 24 ساعة من نفس الرقم - تخلص خلال <b class="num">${fmt(Math.ceil(n / dn))}</b> يوم`
+      ? (dripMode === 'custom' ? `جدول مخصص - تخلص خلال <b class="num">${fmt(dripPlan(n, dn).length)}</b> يوم` : `${fmt(Math.min(n, dn))} الآن، و${fmt(dn)} كل 24 ساعة من نفس الرقم - تخلص خلال <b class="num">${fmt(Math.ceil(n / dn))}</b> يوم`)
       : `فعّله حتى ترسل ${fmt(dn)} الآن والباقي على دفعات يومية (أأمن لرقمك من الحظر)`;
     $('#rmBad').innerHTML = `<i class="fa-solid fa-eraser"></i> حذف الناقص${a.bad ? ` (${fmt(a.bad)})` : ''}`;
     const note = $('#costNote');
@@ -411,6 +511,41 @@ R.campaign = async (el, p) => {
   };
   numbersEl.addEventListener('input', count);
   $('#dripOn').onchange = count; $('#dripN').oninput = count;
+  // ---- جدول الدفعات المخصص: لكل يوم عدد (0 = كل الباقي)
+  let dripMode = 'same', sched = [];
+  const DMAX = (ME.limits || {}).daily || 0;
+  const dayName = i => i === 0 ? 'اليوم (الآن)' : i === 1 ? 'باچر' : `اليوم ${i + 1}`;
+  // يحسب توزيع الأرقام على الأيام حسب الجدول
+  const dripPlan = (n, dn) => {
+    const out = []; let left = n;
+    for (let i = 0; left > 0 && i < 60; i++) {
+      let v = sched.length ? (sched[i] ?? sched[sched.length - 1]) : dn;
+      if (DMAX) v = v === 0 ? DMAX : Math.min(v, DMAX);
+      const take = v === 0 ? left : Math.min(v, left);
+      out.push(take); left -= take;
+    }
+    return out;
+  };
+  function drawDripDays(n, dn) {
+    if (dripMode !== 'custom' || !$('#dripOn').checked) return;
+    if (!sched.length) sched = [dn, dn];
+    const pl = dripPlan(n, dn);
+    $('#dripPresets').innerHTML = [[`اليوم ${dn} والباقي باچر`, [dn, 0]], [`${dn} ثم ${dn * 2}`, [dn, dn * 2]], ['يتضاعف كل يوم', [dn, dn * 2, dn * 4, dn * 8]]]
+      .filter(([, v]) => !DMAX || v.every(x => x && x <= DMAX)).map(([t, v], i) => `<button class="chip" data-pi="${i}" data-v="${v.join(',')}">${t}</button>`).join('');
+    $('#dripDays').innerHTML = pl.slice(0, 14).map((take, i) => `<div class="dd-row"><span class="dd-day">${dayName(i)}</span>
+      <input class="input num" type="number" min="0" data-day="${i}" value="${sched[i] ?? ''}" placeholder="${sched[sched.length - 1] || 'الباقي'}">
+      <span class="dd-take num">${fmt(take)} رقم</span></div>`).join('') + (pl.length > 14 ? `<div class="hint">... و${fmt(pl.length - 14)} يوم بعد</div>` : '');
+    $('#dripSum').innerHTML = `اكتب <b>0</b> بأي يوم = يرسل كل الباقي. الأيام اللي ما حددتها تاخذ آخر عدد كتبته.${DMAX ? ` حدك اليومي ${fmt(DMAX)}.` : ''}`;
+  }
+  $('#dripMode').addEventListener('click', e => { const b = e.target.closest('[data-m]'); if (!b) return; dripMode = b.dataset.m; $$('#dripMode [data-m]').forEach(x => x.classList.toggle('on', x === b)); $('#dripCustom').classList.toggle('hidden', dripMode !== 'custom'); count(); });
+  $('#dripPresets').addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; sched = b.dataset.v.split(',').map(Number); count(); });
+  $('#dripDays').addEventListener('change', e => {
+    const i = +e.target.dataset.day; if (isNaN(i)) return;
+    const v = e.target.value === '' ? null : Math.max(0, +e.target.value);
+    while (sched.length <= i) sched.push(sched[sched.length - 1] ?? 0);
+    sched[i] = v ?? sched[i];
+    count();
+  });
   // حد الرسائل اليومي (الفترة المجانية / الباقة)
   const DL = ME.limits || {};
   if (DL.daily > 0) {
@@ -469,7 +604,8 @@ R.campaign = async (el, p) => {
   $('#rmDup').onclick = () => rewrite((it, seen) => !seen.has(it.n), 'انحذف المكرر');
   $('#rmBad').onclick = () => rewrite(it => it.ok, 'انحذف الناقص والخطأ');
   $('#rmAll').onclick = e => confirmTap(e.target.closest('button'), () => { numbersEl.value = ''; count(); }, 'راح تنمسح كل الأرقام المكتوبة', { title: 'مسح الأرقام', ok: 'مسح' });
-  if (S.pendingNumbers) { numbersEl.value = S.pendingNumbers.join('\n'); S.pendingNumbers = null; setTimeout(() => toast('تمت إضافة الأرقام من الخرائط', 'ok'), 300); }
+  if (S.pendingText) { $('#text').value = S.pendingText; S.pendingText = null; }
+  if (S.pendingNumbers) { numbersEl.value = S.pendingNumbers.join('\n'); S.pendingNumbers = null; setTimeout(() => toast(`تمت إضافة ${fmt(numbersEl.value.split('\n').length)} رقم`, 'ok'), 300); }
   const addNums = (arr, label) => {
     const clean = arr.map(x => String(x).replace(/[^\d+]/g, '').replace(/^\+/, '').replace(/^00/, '')).filter(x => x.length >= 8);
     numbersEl.value = (numbersEl.value.trim() ? numbersEl.value.trim() + '\n' : '') + clean.join('\n');
@@ -511,7 +647,10 @@ R.campaign = async (el, p) => {
     const fd = new FormData();
     fd.append('numbers_text', numbersEl.value); fd.append('country_code', $('#cc').dataset.cc); fd.append('text', $('#text').value);
     fd.append('delay', $('#delay').value || 15);
-    if ($('#dripOn').checked) { fd.append('drip', '1'); fd.append('drip_batch', Math.max(5, +$('#dripN').value || 40)); }
+    if ($('#dripOn').checked) {
+      fd.append('drip', '1'); fd.append('drip_batch', Math.max(1, +$('#dripN').value || 40));
+      if (dripMode === 'custom' && sched.length) fd.append('drip_schedule', JSON.stringify(sched));
+    }
     if ($('#sendAt').value) fd.append('send_at', $('#sendAt').value);
     if ($('#media').files[0]) fd.append('media_file', $('#media').files[0]);
     busy($('#sendBtn'), true);
@@ -568,7 +707,7 @@ R.campaign = async (el, p) => {
     const mine = r.drips.filter(x => x.account_id === accId);
     box.innerHTML = mine.length ? `<div class="section-head">دفعات يومية مجدولة <span class="pill pill-blue">${mine.length}</span></div>` + mine.map(x => `<div class="card drip-item" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ic-indigo"><i class="fa-solid fa-calendar-day"></i></span>
-        <div style="flex:1;min-width:0"><b>${esc(x.text || 'حملة')}</b><div class="row-sub">باقي <b class="num">${fmt(x.left)}</b> من ${fmt(x.total)} · ${fmt(x.batch)} يومياً · الدفعة الجاية <span class="num">${esc(x.next_at)}</span></div></div>
+        <div style="flex:1;min-width:0"><b>${esc(x.text || 'حملة')}</b><div class="row-sub">باقي <b class="num">${fmt(x.left)}</b> من ${fmt(x.total)} · ${x.custom ? 'جدول مخصص' : fmt(x.batch) + ' يومياً'} · الجاية <b class="num">${fmt(x.next_batch)}</b> رقم <span class="num">${esc(x.next_at)}</span></div></div>
         <button class="btn btn-soft btn-xs" style="color:var(--red)" data-dc="${x.id}"><i class="fa-solid fa-xmark"></i> إلغاء</button></div>
       <div class="progress" style="margin-top:10px"><span style="width:${Math.round((x.total - x.left) / x.total * 100)}%"></span></div></div>`).join('') : '';
     box.querySelectorAll('[data-dc]').forEach(b => b.onclick = () => confirmTap(b, async () => { await api('/api/drips/' + b.dataset.dc, { method: 'DELETE' }); loadDrips(); }, 'الدفعات الباقية ما راح تنرسل', { title: 'إلغاء الدفعات', ok: 'إلغاء الدفعات' }));
@@ -871,22 +1010,38 @@ R.wallet = async (el, p) => {
 
   // صفحة دفع باقة محددة
   if (chosen) {
-    const enough = ME.balance >= chosen.price;
+    const cp = S.coupon && String(S.coupon.plan_id) === String(chosen.id) ? S.coupon : null;
+    const price = cp ? cp.final : chosen.price;
+    const enough = ME.balance >= price;
     el.innerHTML = head(esc(chosen.name)) + `
       <div class="plan solid shine fade-in" style="cursor:default">
         <div class="plan-top"><span class="plan-name">${esc(chosen.name)}</span><span class="pill pill-white">${fmt(chosen.days)} يوم</span></div>
-        <div class="plan-price"><span class="num">${fmt(chosen.price)}</span> <small>د.ع</small></div>
+        <div class="plan-price">${cp ? `<s class="num old-price">${fmt(chosen.price)}</s> ` : ''}<span class="num">${fmt(price)}</span> <small>د.ع</small></div>
         <ul>${(chosen.limit_lines || []).concat(chosen.features_list).map(f => `<li>${esc(f)}</li>`).join('')}</ul>
+      </div>
+      <div class="card coupon-card">
+        ${cp ? `<div class="coupon-on"><span class="row-ic ic-green"><i class="fa-solid fa-ticket"></i></span><div style="flex:1"><b class="num">${esc(cp.code)}</b><div class="row-sub">${esc(cp.label)} - وفّرت ${fmt(cp.discount)} د.ع</div></div><button class="btn btn-soft btn-xs" id="cpOff"><i class="fa-solid fa-xmark"></i> إزالة</button></div>`
+        : `<div class="coupon-row"><i class="fa-solid fa-ticket"></i><input class="input" id="cpIn" placeholder="عندك كود خصم؟" dir="ltr" style="text-transform:uppercase"><button class="btn btn-primary btn-sm" id="cpGo">تطبيق</button></div>`}
       </div>
       <div class="stepper"><div class="st done"><b>1</b>اختر الباقة</div><div class="st ${enough ? 'done' : ''}"><b>2</b>ادفع</div><div class="st"><b>3</b>تتفعّل فوراً</div></div>
       ${enough ? `<div class="card" style="margin-top:14px"><div class="card-title"><i class="fa-solid fa-wallet"></i> الدفع من رصيدك <span class="spacer"></span><span class="pill pill-green num">${fmt(ME.balance)} د.ع</span></div>
         <button class="btn btn-primary btn-block" id="buyNow"><i class="fa-solid fa-gem"></i> تفعيل الباقة الآن</button></div>`
-        : `<div class="note warn" style="margin-top:14px">رصيدك ${fmt(ME.balance)} د.ع - ادفع ${fmt(chosen.price - ME.balance)} د.ع أو أكثر بإحدى الطرق، والباقة تتفعّل تلقائياً أول ما يوصل المبلغ.</div>`}
+        : `<div class="note warn" style="margin-top:14px">رصيدك ${fmt(ME.balance)} د.ع - ادفع ${fmt(price - ME.balance)} د.ع أو أكثر بإحدى الطرق، والباقة تتفعّل تلقائياً أول ما يوصل المبلغ.</div>`}
       <div class="section-head">${enough ? 'أو ادفع بطريقة ثانية' : 'اختر طريقة الدفع'}</div>${methodsList(chosen.id)}`;
+    const ci = el.querySelector('#cpGo');
+    if (ci) ci.onclick = async e => {
+      const code = el.querySelector('#cpIn').value.trim(); if (!code) { toast('اكتب الكود', 'err'); return; }
+      busy(e.target.closest('button'), true); const r = await api('/api/coupon/check', { body: { code, plan_id: chosen.id } }); busy(e.target.closest('button'), false);
+      if (!r.ok) { toast(r.error, 'err'); return; }
+      S.coupon = { plan_id: chosen.id, code: r.code, final: r.final, discount: r.discount, label: r.label };
+      toast(`${r.label} - السعر صار ${fmt(r.final)} د.ع`, 'ok'); go('wallet', { plan: chosen.id }, false);
+    };
+    const co = el.querySelector('#cpOff'); if (co) co.onclick = () => { S.coupon = null; go('wallet', { plan: chosen.id }, false); };
     const b = el.querySelector('#buyNow');
     if (b) b.onclick = () => confirmTap(b, async () => {
-      busy(b, true); const r = await api('/api/plan/buy', { body: { plan_id: chosen.id } }); busy(b, false);
+      busy(b, true); const r = await api('/api/plan/buy', { body: { plan_id: chosen.id, coupon: cp ? cp.code : '' } }); busy(b, false);
       if (!r.ok) { toast(r.error, 'err'); return; }
+      S.coupon = null;
       ME = r.me; document.getElementById('balChip').textContent = fmt(ME.balance); toast('تم تفعيل ' + chosen.name, 'ok'); go('wallet', {}, false);
     }, 'اضغط للتأكيد');
     return;
@@ -919,9 +1074,26 @@ R.pay = async (el, p) => {
   const top = `<div class="card" style="display:flex;align-items:center;gap:12px"><span class="row-ic ${ic}" style="width:56px;height:56px;font-size:24px">${m.image ? `<img src="${esc(m.image)}">` : `<i class="${icon}"></i>`}</span>
     <div style="flex:1"><b style="font-size:17px">${esc(m.name)}</b><div class="row-sub" style="white-space:normal">${esc(m.note || '')}</div></div></div>`;
   const plan = p.plan && S.plans ? S.plans.find(x => String(x.id) === String(p.plan)) : null;
-  const need = plan ? Math.max(0, plan.price - ME.balance) : 0;
-  el.innerHTML = head('الدفع عبر ' + esc(m.name)) + top + (plan ? `<div class="note" style="margin-top:12px"><i class="fa-solid fa-gem"></i> الدفع لـ <b>${esc(plan.name)}</b> - تتفعّل تلقائياً بعد وصول المبلغ (${fmt(plan.price)} د.ع)</div>` : '') + '<div id="payBody" style="margin-top:12px"></div>';
+  const cp = plan && S.coupon && String(S.coupon.plan_id) === String(plan.id) ? S.coupon : null;
+  const planPrice = plan ? (cp ? cp.final : plan.price) : 0;
+  const need = plan ? Math.max(0, planPrice - ME.balance) : 0;
+  el.innerHTML = head(p.rest ? 'تسديد الباقي' : 'الدفع عبر ' + esc(m.name)) + top + (plan ? `<div class="note" style="margin-top:12px"><i class="fa-solid fa-gem"></i> الدفع لـ <b>${esc(plan.name)}</b>${cp ? ` (بعد كود <b class="num">${esc(cp.code)}</b>)` : ''} - تتفعّل تلقائياً بعد وصول المبلغ (${fmt(planPrice)} د.ع)</div>` : '') + '<div id="payBody" style="margin-top:12px"></div>';
   const body = el.querySelector('#payBody');
+  const coupon = cp ? cp.code : '';
+  // بعد دفع جزء من سعر الباقة: صفحة «تسديد الباقي»
+  const showRemaining = (res, paidMsg) => {
+    const remaining = res.remaining || 0, paid = Math.max(0, planPrice - remaining);
+    body.innerHTML = `<div class="card fade-in rest-card">
+      <div style="text-align:center"><span class="row-ic ic-green" style="width:58px;height:58px;font-size:24px;margin:4px auto 10px"><i class="fa-solid fa-check"></i></span>
+        <b style="font-size:16px">${esc(paidMsg || 'تم الدفع')}</b></div>
+      <div class="rest-prog"><div class="rp-top"><span>مدفوع <b class="num">${fmt(paid)}</b></span><span>من <b class="num">${fmt(planPrice)}</b> د.ع</span></div>
+        <div class="progress"><span style="width:${Math.min(100, paid / planPrice * 100)}%"></span></div></div>
+      <div class="rest-due"><small>باقي لتفعيل ${esc(plan.name)}</small><b class="num">${fmt(remaining)}</b><small>د.ع</small></div>
+      <button class="btn btn-primary btn-block shine" id="payRest"><i class="fa-solid fa-wallet"></i> سدّد الباقي ${fmt(remaining)} د.ع</button>
+      <button class="btn btn-ghost btn-block" style="margin-top:8px" onclick="go('wallet',{plan:${plan.id}})">ادفع الباقي بطريقة ثانية</button>
+      <div class="hint" style="text-align:center;margin-top:8px">المبلغ اللي دفعته محفوظ برصيدك، والباقة تتفعّل تلقائياً أول ما يكتمل</div></div>`;
+    body.querySelector('#payRest').onclick = () => go('pay', { id: m.id, plan: plan.id, rest: 1 }, false);
+  };
 
   if (m.type === 'manual' || m.type === 'superkey') {
     const quick = [5000, 10000, 25000, 50000];
@@ -943,7 +1115,7 @@ R.pay = async (el, p) => {
     body.querySelector('#submit').onclick = async e => {
       const fd = new FormData();
       fd.append('method_id', m.id); fd.append('amount', body.querySelector('#amt').value); fd.append('ref', body.querySelector('#ref').value);
-      if (plan) fd.append('plan_id', plan.id);
+      if (plan) { fd.append('plan_id', plan.id); fd.append('coupon', coupon); }
       if (body.querySelector('#rc').files[0]) fd.append('receipt', body.querySelector('#rc').files[0]);
       busy(e.target.closest('button'), true); const r = await api('/api/recharge/manual', { body: fd }); busy(e.target.closest('button'), false);
       if (!r.ok) { toast(r.error, 'err'); return; }
@@ -966,10 +1138,13 @@ R.pay = async (el, p) => {
     if (!plan) body.querySelector('#usd').oninput = e => { const v = parseFloat(e.target.value) || 0; body.querySelector('#eq').textContent = v ? `= ${fmt(Math.round(v * m.usd_rate))} د.ع تنضاف لرصيدك` : `سعر الصرف: 1$ = ${fmt(m.usd_rate)} د.ع`; };
     body.querySelector('#verify').onclick = async e => {
       busy(e.target.closest('button'), true);
-      const r = await api('/api/recharge/binance', { body: { amount_usd: body.querySelector('#usd').value, order_id: body.querySelector('#oid').value.trim(), plan_id: plan ? plan.id : null } });
+      const r = await api('/api/recharge/binance', { body: { amount_usd: body.querySelector('#usd').value, order_id: body.querySelector('#oid').value.trim(), plan_id: plan ? plan.id : null, coupon } });
       busy(e.target.closest('button'), false);
       if (!r.ok) { toast(r.error, 'err'); return; }
-      toast(r.msg, 'ok'); await refreshMe(); go('home');
+      await refreshMe();
+      if (plan && r.plan && !r.plan.done && r.plan.remaining > 0) { showRemaining(r.plan, r.msg); return; }
+      if (plan && r.plan && r.plan.done) S.coupon = null;
+      toast(r.msg, 'ok'); go('home');
     };
   }
 
@@ -984,16 +1159,24 @@ R.pay = async (el, p) => {
         <input class="input num" id="ph" inputmode="numeric" placeholder="07701234567" style="direction:ltr;text-align:left;font-size:17px">
         <button class="btn btn-primary btn-block" id="start" style="margin-top:12px"><i class="fa-solid fa-message"></i> إرسال رمز التحقق</button>
         <div class="note" style="margin-top:12px">راح يوصلك رمز SMS من آسياسيل، وبعدها رمز ثاني لتأكيد التحويل. الرصيد ينضاف تلقائياً بعد التأكيد.</div></div>`;
-      body.querySelectorAll('.tier').forEach(t => t.onclick = () => { if (plan) return; amount = +t.dataset.a; body.querySelectorAll('.tier').forEach(x => x.classList.toggle('on', x === t)); });
+      const tierNote = () => {
+        const n = body.querySelector('#tierNote'); if (!n || !plan) return;
+        n.innerHTML = amount >= need ? `<i class="fa-solid fa-circle-check"></i> هذا المبلغ يكفي - الباقة تتفعّل مباشرة بعد التحويل`
+          : `<i class="fa-solid fa-circle-info"></i> راح تدفع ${fmt(amount)} الآن، وبعدها تظهر لك صفحة لتسديد الباقي ${fmt(need - amount)} د.ع`;
+        n.className = 'note ' + (amount >= need ? 'ok-note' : 'warn');
+      };
+      body.querySelectorAll('.tier').forEach(t => t.onclick = () => { amount = +t.dataset.a; body.querySelectorAll('.tier').forEach(x => x.classList.toggle('on', x === t)); tierNote(); });
       if (plan) {
         const opts = (m.tiers || []).map(t => +t.iqd).sort((a, b) => a - b);
         amount = opts.find(v => v >= need) || opts[opts.length - 1];
-        body.querySelectorAll('.tier').forEach(x => { const on = +x.dataset.a === amount; x.classList.toggle('on', on); if (!on) x.style.opacity = .35; });
-        if (amount < need) body.querySelector('.tier-grid').insertAdjacentHTML('afterend', `<div class="note warn" style="margin-top:8px">أقصى مبلغ بآسياسيل ${fmt(amount)} د.ع - كرر العملية حتى يكتمل مبلغ الباقة، والباقة تتفعّل تلقائياً.</div>`);
+        body.querySelectorAll('.tier').forEach(x => x.classList.toggle('on', +x.dataset.a === amount));
+        body.querySelector('.tier-grid').insertAdjacentHTML('beforebegin', `<div class="fixed-amt" style="margin-bottom:10px"><span>${p.rest ? 'الباقي' : 'المطلوب'}</span><b class="num">${fmt(need)}</b><small>د.ع</small></div>`);
+        body.querySelector('.tier-grid').insertAdjacentHTML('afterend', `<div id="tierNote" style="margin-top:8px"></div>`);
+        tierNote();
       }
       body.querySelector('#start').onclick = async e => {
         if (!amount) { toast('اختر المبلغ', 'err'); return; }
-        busy(e.target.closest('button'), true); const r = await api('/api/recharge/asiacell/start', { body: { phone: body.querySelector('#ph').value, amount, plan_id: plan ? plan.id : null } }); busy(e.target.closest('button'), false);
+        busy(e.target.closest('button'), true); const r = await api('/api/recharge/asiacell/start', { body: { phone: body.querySelector('#ph').value, amount, plan_id: plan ? plan.id : null, coupon } }); busy(e.target.closest('button'), false);
         if (!r.ok) { toast(r.error, 'err'); return; }
         codeStep('verify', r.msg);
       };
@@ -1009,7 +1192,9 @@ R.pay = async (el, p) => {
         if (!r.ok) { toast(r.error, 'err'); return; }
         if (step === 'verify' || r.done === false) { codeStep('confirm', r.msg); return; }
         await refreshMe();
-        body.innerHTML = `<div class="card fade-in" style="text-align:center"><span class="row-ic ic-green" style="width:64px;height:64px;font-size:28px;margin:6px auto 12px"><i class="fa-solid fa-check"></i></span><b style="font-size:17px">${esc(r.msg)}</b><button class="btn btn-primary btn-block" style="margin-top:14px" onclick="go('wallet')">رجوع للشحن</button></div>`;
+        if (plan && r.plan && !r.plan.done && r.plan.remaining > 0) { showRemaining(r.plan, r.msg); return; }
+        if (plan && r.plan && r.plan.done) S.coupon = null;
+        body.innerHTML = `<div class="card fade-in" style="text-align:center"><span class="row-ic ic-green" style="width:64px;height:64px;font-size:28px;margin:6px auto 12px"><i class="fa-solid fa-check"></i></span><b style="font-size:17px">${esc(r.msg)}</b>${plan && r.plan && r.plan.done ? `<div class="note ok-note" style="margin-top:10px"><i class="fa-solid fa-gem"></i> تفعّلت ${esc(plan.name)}</div>` : ''}<button class="btn btn-primary btn-block" style="margin-top:14px" onclick="go('wallet')">رجوع للباقات</button></div>`;
       };
       body.querySelector('#cancel').onclick = async () => { await api('/api/recharge/asiacell/cancel', { body: {} }); await refreshMe(); step1(); };
     };
@@ -1084,6 +1269,7 @@ R.account = async (el) => {
       ${rowItem({ icon: 'fa-solid fa-sliders', ic: 'ic-indigo', title: 'الإعدادات', sub: 'الأسعار، الشعار، المطور، Cron', onclick: "go('settings')" })}
       ${rowItem({ icon: 'fa-solid fa-shield-halved', ic: 'ic-red', title: 'مركز الأمان', sub: 'سجل الدخول والحظر والجلسات', onclick: "go('security')" })}
       ${rowItem({ icon: 'fa-brands fa-telegram', ic: 'ic-cyan', title: 'النسخ الاحتياطي', sub: 'تصدير واستيراد JSON عبر بوت تيليجرام', onclick: "go('backup')" })}
+      ${rowItem({ icon: 'fa-solid fa-ticket', ic: 'ic-pink', title: 'أكواد الخصم', sub: 'خصم على الاشتراك بالباقات', onclick: "go('coupons')" })}
       ${rowItem({ icon: 'fa-solid fa-bullhorn', ic: 'ic-wa', title: 'إعلان جماعي', sub: 'رسالة واتساب لكل المستخدمين', onclick: "go('announce')" })}
     </div>` : ''}
     ${dev ? `<div class="section-head">المطوّر</div>
@@ -1118,7 +1304,8 @@ R.profile = async (el) => {
 
 R.notifications = async (el) => {
   el.innerHTML = head('الإشعارات', true, `<button class="btn btn-ghost btn-sm" id="bulkBtn"></button>`) + `<div class="swipe-hint"><i class="fa-solid fa-hand-pointer"></i> اسحب الإشعار يمين أو يسار لحذفه</div><div id="nl"><div class="card"><div class="skel" style="height:70px"></div></div></div>`;
-  const KIND = { success: ['fa-solid fa-circle-check', 'ic-green'], warning: ['fa-solid fa-triangle-exclamation', 'ic-orange'], info: ['fa-solid fa-bell', 'ic-blue'] };
+  const KIND = { success: ['fa-solid fa-circle-check', 'ic-green'], warning: ['fa-solid fa-triangle-exclamation', 'ic-orange'], info: ['fa-solid fa-bell', 'ic-blue'], announce: ['fa-solid fa-bullhorn', 'ic-pink'] };
+  const LINKS = { wallet: 'الباقات', campaign: 'حملة جديدة', leads: 'سحب الأرقام', accounts: 'أرقامي', reports: 'التقارير', apikeys: 'ربط API' };
   let list = [];
   const bulk = el.querySelector('#bulkBtn');
   function setBulk() {
@@ -1134,11 +1321,13 @@ R.notifications = async (el) => {
     const card = e => { const [ic, cls] = KIND[e.kind] || KIND.info; return `<div class="notif-wrap" data-id="${e.id}"><div class="notif-bg"></div><div class="notif ${e.read ? '' : 'unread'}">
       <span class="row-ic ${cls}"><i class="${ic}"></i></span>
       <div class="n-body"><div class="n-head"><span class="n-title">${esc(e.title)}</span><span class="n-time num">${esc(e.time)}</span></div>
-        <div class="n-text">${e.account ? `<b>${esc(e.account)}</b> · ` : ''}${esc(e.body)}</div></div></div></div>`; };
+        <div class="n-text">${e.account ? `<b>${esc(e.account)}</b> · ` : ''}${esc(e.body)}</div>
+        ${e.link && LINKS[e.link] ? `<button class="btn btn-soft btn-xs n-link" data-go="${esc(e.link)}">${LINKS[e.link]} <i class="fa-solid fa-arrow-left"></i></button>` : ''}</div></div></div>`; };
     const unread = list.filter(e => !e.read), read = list.filter(e => e.read);
     box.innerHTML = (unread.length ? `<div class="group-label">جديدة · ${unread.length}</div>` + unread.map(card).join('') : '')
       + (read.length ? `<div class="group-label">سابقة</div>` + read.map(card).join('') : '');
     box.querySelectorAll('.notif-wrap').forEach(bindSwipe);
+    box.querySelectorAll('[data-go]').forEach(b => b.onclick = e => { e.stopPropagation(); go(b.dataset.go); });
   }
   function dropNotif(id) {
     list = list.filter(x => x.id != id);
@@ -1654,17 +1843,47 @@ R.plansAdmin = async (el) => {
 
 R.announce = async (el) => {
   const accs = (await loadAccounts()).filter(a => a.logged_in);
-  el.innerHTML = head('إعلان جماعي') + `<div class="card">
-    <div class="note" style="margin-bottom:12px">يرسل رسالة واتساب لكل مستخدمي المنصة اللي مسجلين برقم واتساب.</div>
-    <div class="field"><label>الإرسال من</label><select class="select" id="aa">${accs.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('') || '<option value="">ما عندك رقم متصل</option>'}</select></div>
-    <div class="field"><label>نص الإعلان</label><textarea class="textarea" id="at"></textarea></div>
-    <div class="field"><label>الفاصل بين الرسائل (ثانية)</label><input class="input num" id="ad" type="number" value="15"></div>
-    <button class="btn btn-primary btn-block" id="as"><i class="fa-solid fa-bullhorn"></i> إرسال الإعلان</button></div>`;
-  el.querySelector('#as').onclick = async e => {
-    const fd = new FormData(); fd.append('text', el.querySelector('#at').value); fd.append('delay', el.querySelector('#ad').value);
-    busy(e.target.closest('button'), true); const r = await api('/admin/announcement/' + el.querySelector('#aa').value, { body: fd }); busy(e.target.closest('button'), false);
-    toast(r.ok ? `بدأ الإرسال لـ ${r.total} مستخدم` : r.error, r.ok ? 'ok' : 'err');
+  let tab = 'app';
+  el.innerHTML = head('إعلان جماعي') + `<div class="tabs"><button class="tab on" data-t="app"><i class="fa-solid fa-bell"></i> إشعار بالتطبيق</button><button class="tab" data-t="wa"><i class="fa-brands fa-whatsapp"></i> رسالة واتساب</button></div><div id="anBox"></div>`;
+  const draw = () => {
+    el.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.t === tab));
+    const box = el.querySelector('#anBox');
+    if (tab === 'app') {
+      box.innerHTML = `<div class="card">
+        <div class="note" style="margin-bottom:12px"><i class="fa-solid fa-bell"></i> يوصل كإشعار داخل التطبيق لكل المستخدمين اللي تختارهم (ويطلع إشعار على جوالهم إذا سامحين بالإشعارات).</div>
+        <div class="field"><label>العنوان</label><input class="input" id="nt" maxlength="80" placeholder="مثال: عرض خاص 🎉"></div>
+        <div class="field"><label>نص الإعلان</label><textarea class="textarea" id="nb" maxlength="500" placeholder="مثال: خصم 25% على الباقة الشهرية بكود RAMADAN25"></textarea></div>
+        <div class="field"><label>يوصل لـ</label><div class="chips" id="nAud">${[['all', 'الكل'], ['plan', 'المشتركين'], ['trial', 'الفترة المجانية'], ['free', 'بدون باقة']].map(([v, t], i) => `<button class="chip ${i ? '' : 'on'}" data-v="${v}">${t}</button>`).join('')}</div></div>
+        <div class="field"><label>زر داخل الإشعار (اختياري)</label><select class="input" id="nl"><option value="">بدون زر</option><option value="wallet">الباقات</option><option value="campaign">حملة جديدة</option><option value="leads">سحب الأرقام</option><option value="accounts">أرقامي</option><option value="reports">التقارير</option></select></div>
+        <div class="n-preview" id="nPrev"></div>
+        <button class="btn btn-primary btn-block" id="ns" style="margin-top:12px"><i class="fa-solid fa-paper-plane"></i> نشر الإعلان</button></div>`;
+      let aud = 'all';
+      const prev = () => { box.querySelector('#nPrev').innerHTML = `<div class="notif unread"><span class="row-ic ic-pink"><i class="fa-solid fa-bullhorn"></i></span><div class="n-body"><div class="n-head"><span class="n-title">${esc(box.querySelector('#nt').value || 'العنوان')}</span><span class="n-time">الآن</span></div><div class="n-text">${esc(box.querySelector('#nb').value || 'نص الإعلان يظهر هنا')}</div></div></div>`; };
+      box.querySelectorAll('#nAud [data-v]').forEach(b => b.onclick = () => { aud = b.dataset.v; box.querySelectorAll('#nAud [data-v]').forEach(x => x.classList.toggle('on', x === b)); });
+      box.querySelector('#nt').oninput = prev; box.querySelector('#nb').oninput = prev; prev();
+      box.querySelector('#ns').onclick = e => confirmTap(e.target.closest('button'), async () => {
+        const btn = box.querySelector('#ns'); busy(btn, true);
+        const r = await api('/api/admin/notify', { body: { title: box.querySelector('#nt').value, body: box.querySelector('#nb').value, audience: aud, link: box.querySelector('#nl').value } });
+        busy(btn, false);
+        if (!r.ok) { toast(r.error, 'err'); return; }
+        toast(`انرسل الإعلان لـ ${fmt(r.total)} مستخدم`, 'ok'); box.querySelector('#nt').value = ''; box.querySelector('#nb').value = ''; prev();
+      }, 'الإعلان راح يوصل لكل المستخدمين المحددين', { title: 'نشر الإعلان', ok: 'نشر' });
+    } else {
+      box.innerHTML = `<div class="card">
+        <div class="note" style="margin-bottom:12px">يرسل رسالة واتساب لكل مستخدمي المنصة اللي مسجلين برقم واتساب.</div>
+        <div class="field"><label>الإرسال من</label><select class="select" id="aa">${accs.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('') || '<option value="">ما عندك رقم متصل</option>'}</select></div>
+        <div class="field"><label>نص الإعلان</label><textarea class="textarea" id="at"></textarea></div>
+        <div class="field"><label>الفاصل بين الرسائل (ثانية)</label><input class="input num" id="ad" type="number" value="15"></div>
+        <button class="btn btn-primary btn-block" id="as"><i class="fa-solid fa-bullhorn"></i> إرسال الإعلان</button></div>`;
+      box.querySelector('#as').onclick = async e => {
+        const fd = new FormData(); fd.append('text', box.querySelector('#at').value); fd.append('delay', box.querySelector('#ad').value);
+        busy(e.target.closest('button'), true); const r = await api('/admin/announcement/' + box.querySelector('#aa').value, { body: fd }); busy(e.target.closest('button'), false);
+        toast(r.ok ? `بدأ الإرسال لـ ${r.total} مستخدم` : r.error, r.ok ? 'ok' : 'err');
+      };
+    }
   };
+  el.querySelectorAll('.tab').forEach(t => t.onclick = () => { tab = t.dataset.t; draw(); });
+  draw();
 };
 
 // ================================================================ الإشعارات بالخلفية

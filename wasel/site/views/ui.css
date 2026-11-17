@@ -411,3 +411,43 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .daily-bar .btn{justify-self:start}
 .daily-bar.out{background:rgba(220,38,38,.06);border-color:rgba(220,38,38,.2)}
 .daily-bar.out .progress span{background:var(--red)}
+
+/* ===== جدول الدفعات المخصص ===== */
+.drip-mode{margin-top:12px}
+.drip-mode button b{font-size:12px}
+.drip-days{display:grid;gap:6px}
+.dd-row{display:flex;align-items:center;gap:8px}
+.dd-day{flex:1;font-size:13px;font-weight:700}
+.dd-row .input{width:90px;height:38px;text-align:center;padding:0 8px}
+.dd-take{width:70px;font-size:11.5px;color:var(--text3);text-align:left}
+/* ===== كود الخصم ===== */
+.coupon-card{margin-top:12px;padding:12px}
+.coupon-row{display:flex;align-items:center;gap:8px}
+.coupon-row>i{color:var(--primary);font-size:18px}
+.coupon-row .input{flex:1;height:42px}
+.coupon-on{display:flex;align-items:center;gap:10px}
+.old-price{font-size:18px;opacity:.6;margin-left:6px}
+.coupon-item.off{opacity:.55}
+.cp-code{padding:8px 12px;border-radius:12px;border:2px dashed var(--primary);color:var(--primary);font-weight:800;letter-spacing:.5px;direction:ltr}
+/* ===== تسديد الباقي ===== */
+.rest-prog{margin:14px 0 10px}
+.rp-top{display:flex;justify-content:space-between;font-size:12.5px;color:var(--text2);margin-bottom:6px}
+.rest-due{display:flex;align-items:baseline;justify-content:center;gap:8px;padding:14px;border-radius:18px;background:rgba(234,88,12,.07);border:1px dashed rgba(234,88,12,.35);margin-bottom:12px}
+.rest-due b{font-size:30px;color:#c2410c}.rest-due small{color:var(--text2)}
+/* ===== تفاصيل الحملة ===== */
+.ring.big{width:86px;height:86px}
+.info-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.info-grid>div{display:flex;flex-direction:column;gap:3px;padding:10px;border-radius:14px;background:rgba(10,157,178,.05)}
+.info-grid small{font-size:11px;color:var(--text3)}.info-grid small i{margin-left:4px;color:var(--primary)}
+.info-grid b{font-size:13px}
+.msg-full{font-size:14px;line-height:1.9;white-space:normal;padding:12px;border-radius:14px;background:#e9fdd8;border:1px solid rgba(22,163,74,.15);-webkit-user-select:text;user-select:text}
+.funnel{display:grid;gap:12px}
+.fn-row{display:flex;align-items:center;gap:12px;cursor:pointer}
+.fn-row .row-ic{width:38px;height:38px;flex:none}
+.fn-top{display:flex;justify-content:space-between;font-size:13px;margin-bottom:5px}
+.fn-top span{color:var(--text2);font-size:12px}
+.rep-card .chev{color:var(--text3)}
+/* ===== إعلانات الإشعارات ===== */
+.n-link{margin-top:8px}
+.n-preview{margin-top:6px}
+.n-preview .notif{border:1px dashed var(--line2)}

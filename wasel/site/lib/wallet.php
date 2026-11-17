@@ -230,17 +230,28 @@ function plans(bool $activeOnly): array
 }
 
 /** شراء/تجديد باقة من الرصيد (لو عنده نفس الباقة فعّالة تنضاف المدة فوقها) */
-function buy_plan(int $userId, ?int $planId = null): array
+function buy_plan(int $userId, ?int $planId = null, string $coupon = ''): array
 {
     $plan = $planId ? store_find('plans', $planId) : (plans(true)[0] ?? null);
     if (!$plan || empty($plan['active'])) {
         return [false, 'الباقة غير متاحة'];
     }
     $price = (int)$plan['price'];
+    $cp = null;
+    if (trim($coupon) !== '') {
+        [$cok, $cerr, $cp, $final] = coupon_check($coupon, $plan, $userId);
+        if (!$cok) {
+            return [false, $cerr];
+        }
+        $price = $final;
+    }
     $days = max(1, (int)$plan['days']);
-    $bal = wallet_add($userId, -$price, 'plan', $plan['name'] . " ({$days} يوم)");
+    $bal = $price > 0 ? wallet_add($userId, -$price, 'plan', $plan['name'] . " ({$days} يوم)" . ($cp ? ' - كود ' . $cp['code'] : '')) : wallet_balance($userId);
     if ($bal === null) {
         return [false, 'رصيدك ما يكفي لهذي الباقة (' . number_format($price) . ' د.ع)'];
+    }
+    if ($cp) {
+        coupon_use((int)$cp['id'], $userId);
     }
     $u = user_by_id($userId);
     $from = effective_plan_active($u) && ($e = parse_dt($u['plan_ends_at'] ?? null)) ? $e : time();
@@ -250,14 +261,34 @@ function buy_plan(int $userId, ?int $planId = null): array
 }
 
 /** بعد شحن مرتبط بباقة: نفعّلها تلقائياً لو الرصيد صار يكفي */
-function apply_recharge_plan(int $userId, $planId): void
+/** سعر الباقة النهائي للمستخدم (بعد كود الخصم إذا صالح) */
+function plan_final_price(array $plan, int $userId, string $coupon = ''): int
 {
-    if ($planId) {
-        [$ok, $err] = buy_plan($userId, (int)$planId);
-        if (!$ok) {
-            add_event($userId, null, 'ما تفعّلت الباقة', 'انضاف المبلغ لرصيدك، بس ' . $err . ' - تقدر تكمل وتفعّلها من الباقات', 'warning');
+    if (trim($coupon) !== '') {
+        [$ok, , , $final] = coupon_check($coupon, $plan, $userId);
+        if ($ok) {
+            return $final;
         }
     }
+    return (int)$plan['price'];
+}
+
+/** بعد شحن مرتبط بباقة: نفعّلها لو الرصيد صار يكفي، وإلا نرجع المبلغ الباقي. يرجع ['done' => bool, 'remaining' => int] */
+function apply_recharge_plan(int $userId, $planId, string $coupon = ''): array
+{
+    if (!$planId || !($plan = store_find('plans', (int)$planId))) {
+        return ['done' => false, 'remaining' => 0];
+    }
+    [$ok, $err] = buy_plan($userId, (int)$planId, $coupon);
+    if (!$ok && $coupon !== '') {
+        [$ok, $err] = buy_plan($userId, (int)$planId); // الكود صار غير صالح: نجرب بالسعر الكامل
+    }
+    if ($ok) {
+        return ['done' => true, 'remaining' => 0];
+    }
+    $remaining = max(0, plan_final_price($plan, $userId, $coupon) - wallet_balance($userId));
+    add_event($userId, null, 'باقي مبلغ لتفعيل الباقة', 'انضاف المبلغ لرصيدك - باقي ' . number_format($remaining) . ' د.ع وتتفعّل «' . $plan['name'] . '» تلقائياً', 'warning');
+    return ['done' => false, 'remaining' => $remaining, 'plan_id' => (int)$planId];
 }
 
 // ================================================================ طرق الدفع

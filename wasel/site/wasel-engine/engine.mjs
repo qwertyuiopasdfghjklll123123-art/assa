@@ -60,7 +60,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 8; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 9; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -542,7 +542,7 @@ async function runCampaign(id) {
   const cancelled = st.cancel_requested;
   trackSave();
   const entry = { time: st.started_at, total: st.total, sent: st.sent, failed: st.failed, text: st.text || (st.media_name ? '📎 ' + st.media_name : ''),
-    campaign_id: st.campaign_id, failed_numbers: (st.failed_numbers || []).slice(0, 20000), ...(tracking[st.campaign_id] ? trackStats(st.campaign_id) : {}) };
+    campaign_id: st.campaign_id, failed_numbers: (st.failed_numbers || []).slice(0, 20000), text_full: st.text || '', media_name: st.media_name || '', delay: st.delay || 0, ...(tracking[st.campaign_id] ? trackStats(st.campaign_id) : {}) };
   hook({ type: 'history', owner: acc.owner, account_id: id, account_name: acc.name, entry });
   if (cancelled) {
     const skipped = st.total - st.sent - st.failed;

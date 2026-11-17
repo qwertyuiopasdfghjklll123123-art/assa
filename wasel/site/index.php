@@ -17,6 +17,7 @@ require __DIR__ . '/lib/backup.php';
 require __DIR__ . '/lib/api.php';
 require __DIR__ . '/lib/leads.php';
 require __DIR__ . '/lib/drip.php';
+require __DIR__ . '/lib/coupons.php';
 require __DIR__ . '/lib/security.php';
 
 if (!is_dir(DATA_DIR)) {
@@ -385,6 +386,17 @@ $routes = [
         $id = require_login();
         json_out(array_map('history_public', array_slice(history_of_owner($id), 0, 20)));
     }],
+    // تفاصيل حملة كاملة (النص الكامل، الأوقات، الأرقام)
+    ['GET', '#^/dashboard/campaigns/(\d+)$#', function ($hid) {
+        $id = require_login();
+        $h = store_find('history', (int)$hid);
+        if (!$h || (int)$h['owner'] !== $id) {
+            json_err('التقرير غير موجود', 404);
+        }
+        $l = track_lists($h['lists'] ?? []);
+        json_out(['ok' => true, 'report' => history_public($h) + ['text_full' => (string)($h['text_full'] ?? $h['text'] ?? ''),
+            'counts' => array_map('count', $l) + ['failed' => count($h['failed_numbers'] ?? [])]]]);
+    }],
     // أرقام كل فئة بتقرير حملة (مين رد، مين شاهد بدون رد...)
     ['GET', '#^/dashboard/campaigns/(\d+)/numbers$#', function ($hid) {
         $id = require_login();
@@ -609,7 +621,32 @@ $routes = [
     }],
 ];
 
-$routes = array_merge($routes, api_routes(), leads_routes(), drip_routes());
+$routes[] = ['POST', '#^/api/admin/notify$#', function () {
+    require_admin();
+    $d = request_json();
+    $title = clean_text(mb_substr(trim((string)($d['title'] ?? '')), 0, 80));
+    $body = clean_text(mb_substr(trim((string)($d['body'] ?? '')), 0, 500));
+    if ($title === '' || $body === '') {
+        json_err('اكتب عنوان ونص الإعلان');
+    }
+    $links = ['wallet', 'campaign', 'leads', 'accounts', 'reports', 'apikeys'];
+    $link = in_array($d['link'] ?? '', $links, true) ? $d['link'] : null;
+    $aud = (string)($d['audience'] ?? 'all');
+    $owners = [];
+    foreach (store_all('users') as $u) {
+        if (!empty($u['banned'])) {
+            continue;
+        }
+        $k = user_limits($u)['kind'];
+        if ($aud === 'all' || ($aud === 'plan' && $k === 'plan') || ($aud === 'trial' && $k === 'trial') || ($aud === 'free' && in_array($k, ['payg'], true))) {
+            $owners[] = (int)$u['id'];
+        }
+    }
+    $n = add_events_bulk($owners, $title, $body, 'announce', $link);
+    admin_log('notify', "{$title} → {$aud} ({$n})");
+    json_out(['ok' => true, 'total' => $n]);
+}];
+$routes = array_merge($routes, api_routes(), leads_routes(), drip_routes(), coupon_routes());
 
 foreach ($routes as [$m, $re, $fn]) {
     if ($m !== $method || !preg_match($re, $path, $mm)) {
