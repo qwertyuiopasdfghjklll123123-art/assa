@@ -1,0 +1,12 @@
+{
+  "manifest_version": 3,
+  "name": "واصل - سحب أرقام الخرائط",
+  "version": "1.0.0",
+  "description": "تسحب أسماء وأرقام وعناوين المحلات من خرائط Google وترسلها للوحة أدمن منصة واصل.",
+  "permissions": ["scripting", "storage", "tabs"],
+  "host_permissions": ["https://www.google.com/maps/*", "https://www.google.iq/maps/*", "https://maps.google.com/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [{ "matches": ["http://*/*", "https://*/*"], "js": ["bridge.js"], "run_at": "document_idle" }],
+  "action": { "default_popup": "popup.html", "default_title": "واصل - سحب أرقام الخرائط" },
+  "icons": { "128": "icon128.png", "48": "icon48.png" }
+}

@@ -124,13 +124,185 @@ function leads_search(string $key, array $country, string $city, string $keyword
     return [array_values($out), $calls];
 }
 
+// ================================================================ البحث بالمتصفح (إضافة كروم أو متصفح السيرفر)
+
+if (!defined('MAPS_SEARCH_BASE')) {
+    define('MAPS_SEARCH_BASE', 'https://www.google.com/maps/search/');
+}
+
+function leads_maps_url(array $country, string $city, string $keyword): string
+{
+    return MAPS_SEARCH_BASE . rawurlencode("{$keyword} {$city} {$country[0]}") . '?hl=ar';
+}
+
+/** يحوّل نتائج المتصفح الخام لنفس صيغة نتائج API (رقم دولي + موبايل/أرضي) وينظّفها */
+function leads_normalize(array $raw, array $country): array
+{
+    $out = [];
+    foreach (array_slice($raw, 0, 1000) as $r) {
+        if (!is_array($r)) {
+            continue;
+        }
+        $p = preg_replace('/[^\d+]/', '', (string)($r['phone'] ?? ''));
+        if ($p !== '' && ($p[0] === '+' || strpos($p, '00') === 0)) {
+            $p = ltrim(preg_replace('/^00/', '', ltrim($p, '+')), '+');
+        } elseif ($p !== '') {
+            $p = apply_country_code($p, $country[2]);
+        }
+        $p = preg_replace('/\D/', '', $p);
+        if ($p !== '' && (strlen($p) < 8 || strlen($p) > 15)) {
+            $p = '';
+        }
+        [, $mobile] = lead_phone(['internationalPhoneNumber' => $p], $country);
+        $map = (string)($r['map'] ?? '');
+        $web = (string)($r['website'] ?? '');
+        $key = $p !== '' ? 'p' . $p : 'n' . md5((string)($r['name'] ?? '') . ($r['address'] ?? ''));
+        if (isset($out[$key])) {
+            continue;
+        }
+        $out[$key] = [
+            'name' => clean_text(mb_substr((string)($r['name'] ?? ''), 0, 120)),
+            'phone' => $p, 'mobile' => $p === '' ? null : $mobile,
+            'address' => clean_text(mb_substr((string)($r['address'] ?? ''), 0, 200)),
+            'type' => clean_text(mb_substr((string)($r['category'] ?? ''), 0, 60)),
+            'rating' => is_numeric($r['rating'] ?? null) ? round((float)$r['rating'], 1) : null,
+            'reviews' => (int)($r['reviews'] ?? 0),
+            'map' => preg_match('#^https://(www\.)?google\.[a-z.]+/maps/#', $map) ? $map : '',
+            'website' => preg_match('#^https?://#', $web) ? mb_substr($web, 0, 300) : '',
+        ];
+    }
+    return array_values(array_filter($out, fn($x) => $x['name'] !== ''));
+}
+
+function leads_job(int $id): ?array
+{
+    foreach (store_get_doc('leads_jobs', ['jobs' => []])['jobs'] as $j) {
+        if ((int)$j['id'] === $id) {
+            return $j;
+        }
+    }
+    return null;
+}
+
+function leads_job_save(array $job): void
+{
+    store_update_doc('leads_jobs', function ($d) use ($job) {
+        $d['jobs'] = array_values(array_filter($d['jobs'], fn($j) => (int)$j['id'] !== (int)$job['id']));
+        array_unshift($d['jobs'], $job);
+        $d['jobs'] = array_slice($d['jobs'], 0, 10);
+        return $d;
+    }, ['jobs' => []]);
+}
+
+/** ينهي المهمة: يحفظ النتائج كبحث بسجل البحث ويرجع رقمه */
+function leads_job_finish(array $job, array $raw, string $error = ''): array
+{
+    $country = lead_country($job['iso']) ?? LEAD_COUNTRIES[0];
+    $results = leads_normalize($raw, $country);
+    $job['status'] = $error !== '' && !$results ? 'error' : 'done';
+    $job['error'] = $error;
+    $job['found'] = count($results);
+    if ($results) {
+        $search = ['id' => (int)$job['id'], 'time' => date('Y-m-d H:i'), 'country' => $country[0], 'iso' => $country[1],
+            'city' => $job['city'], 'keyword' => $job['keyword'], 'depth' => 0, 'calls' => 0, 'source' => $job['mode'],
+            'count' => count($results), 'phones' => count(array_filter($results, fn($r) => $r['phone'] !== '')), 'results' => $results];
+        store_update_doc('leads', function ($doc) use ($search) {
+            $doc['searches'] = array_values(array_filter($doc['searches'], fn($s) => (int)$s['id'] !== (int)$search['id']));
+            array_unshift($doc['searches'], $search);
+            $doc['searches'] = array_slice($doc['searches'], 0, 15);
+            return $doc;
+        }, ['searches' => []]);
+        $job['search_id'] = $search['id'];
+        admin_log('leads_browser', "{$job['keyword']} / {$job['city']} ({$search['count']})");
+    }
+    leads_job_save($job);
+    return $job;
+}
+
 function leads_routes(): array
 {
     return [
+        ['POST', '#^/api/admin/leads/job$#', function () {
+            require_admin();
+            rate_limit_or_fail('leads_job', 30, 3600, 'وصلت حد البحث (30 بالساعة) - انتظر قليلاً');
+            $d = request_json();
+            $country = lead_country((string)($d['country'] ?? ''));
+            $city = clean_text(mb_substr(trim((string)($d['city'] ?? '')), 0, 60));
+            $keyword = clean_text(mb_substr(trim((string)($d['keyword'] ?? '')), 0, 60));
+            $mode = ($d['mode'] ?? '') === 'server' ? 'server' : 'ext';
+            if (!$country || $city === '' || $keyword === '') {
+                json_err('اختر الدولة واكتب المدينة ونوع النشاط');
+            }
+            $job = ['id' => (int)(microtime(true) * 1000) % 2000000000, 'mode' => $mode, 'iso' => $country[1], 'city' => $city, 'keyword' => $keyword,
+                'max' => max(10, min(1000, (int)($d['max'] ?? 200))), 'deep' => !isset($d['deep']) || !empty($d['deep']),
+                'url' => leads_maps_url($country, $city, $keyword), 'status' => 'running', 'found' => 0, 'created' => time()];
+            if ($mode === 'server') {
+                $r = engine_json('POST', '/scrape', ['id' => 'j' . $job['id'], 'url' => $job['url'], 'max' => $job['max'], 'deep' => $job['deep']]);
+                if (empty($r['ok'])) {
+                    json_err($r['error'] ?? 'تعذر بدء البحث بالسيرفر', 502);
+                }
+            }
+            leads_job_save($job);
+            json_out(['ok' => true, 'job' => $job]);
+        }],
+        ['GET', '#^/api/admin/leads/job/(\d+)$#', function ($jid) {
+            require_admin();
+            $job = leads_job((int)$jid);
+            if (!$job) {
+                json_err('المهمة غير موجودة', 404);
+            }
+            if ($job['mode'] === 'server' && $job['status'] === 'running') {
+                $r = engine_json('GET', '/scrape/j' . $job['id']);
+                if (empty($r['ok'])) {
+                    $job = leads_job_finish($job, [], $r['error'] ?? 'انقطع الاتصال بالمحرك');
+                } elseif ($r['status'] === 'running') {
+                    $job['found'] = (int)($r['found'] ?? 0);
+                    $job['stage'] = (string)($r['stage'] ?? '');
+                    $job['current'] = clean_text(mb_substr((string)($r['current'] ?? ''), 0, 120));
+                    $job['done'] = (int)($r['done'] ?? 0);
+                    $job['total'] = (int)($r['total'] ?? 0);
+                } else {
+                    $job = leads_job_finish($job, (array)($r['results'] ?? []), $r['status'] === 'error' ? (string)($r['error'] ?? 'فشل البحث') : '');
+                }
+            }
+            json_out(['ok' => true, 'job' => $job]);
+        }],
+        // الإضافة ترسل النتائج عبر صفحة الأدمن نفسها (بنفس جلسة الدخول)
+        ['POST', '#^/api/admin/leads/job/(\d+)/push$#', function ($jid) {
+            require_admin();
+            $job = leads_job((int)$jid);
+            if (!$job || $job['mode'] !== 'ext') {
+                json_err('المهمة غير موجودة', 404);
+            }
+            $d = request_json();
+            $job = leads_job_finish($job, is_array($d['results'] ?? null) ? $d['results'] : [], mb_substr((string)($d['error'] ?? ''), 0, 200));
+            json_out(['ok' => true, 'job' => $job]);
+        }],
+        ['POST', '#^/api/admin/leads/job/(\d+)/stop$#', function ($jid) {
+            require_admin();
+            $job = leads_job((int)$jid);
+            if ($job && $job['mode'] === 'server') {
+                engine_json('POST', '/scrape/j' . $job['id'] . '/stop', []);
+            }
+            json_out(['ok' => true]);
+        }],
+        ['GET', '#^/api/admin/leads/extension\.zip$#', function () {
+            require_admin();
+            $f = __DIR__ . '/../tools/wasel-maps-extension.zip';
+            if (!is_file($f)) {
+                json_err('ملف الإضافة غير موجود', 404);
+            }
+            header('Content-Type: application/zip');
+            header('Content-Disposition: attachment; filename="wasel-maps-extension.zip"');
+            header('Content-Length: ' . filesize($f));
+            readfile($f);
+            exit;
+        }],
         ['GET', '#^/api/admin/leads$#', function () {
             require_admin();
             $doc = store_get_doc('leads', ['searches' => []]);
-            json_out(['ok' => true, 'key_set' => settings()['maps_api_key'] !== '',
+            $jobs = array_values(array_filter(store_get_doc('leads_jobs', ['jobs' => []])['jobs'], fn($j) => $j['status'] === 'running' && time() - (int)$j['created'] < 7200));
+            json_out(['ok' => true, 'key_set' => settings()['maps_api_key'] !== '', 'jobs' => $jobs,
                 'countries' => array_map(fn($c) => ['iso' => $c[1], 'name' => $c[0], 'cc' => $c[2]], LEAD_COUNTRIES),
                 'searches' => array_map(fn($s) => array_diff_key($s, ['results' => 1]), $doc['searches'])]);
         }],

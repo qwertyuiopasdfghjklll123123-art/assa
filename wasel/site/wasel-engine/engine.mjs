@@ -60,7 +60,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 4; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 5; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -627,7 +627,88 @@ async function deleteAccount(id) {
   await fsp.rm(campaignFile(id), { force: true });
 }
 
+// ---------------------------------------------------------------- سحب أرقام من خرائط Google بمتصفح (Chrome مخفي)
+// اختياري: يحتاج حزمة puppeteer (أو puppeteer-core مع CHROME_PATH). لو الاستضافة ما تشغّل كروم يرجع رسالة واضحة.
+const scrapeJobs = {};
+const CHROME_PATHS = [process.env.CHROME_PATH, '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/snap/bin/chromium', '/opt/pw-browsers/chromium'].filter(Boolean);
+async function launchChrome() {
+  let pp = null, err = '';
+  for (const mod of ['puppeteer', 'puppeteer-core']) {
+    try { pp = (await import(mod)).default; break; } catch (e) { err = e.message; }
+  }
+  if (!pp) throw new Error('حزمة puppeteer غير منصّبة بالمحرك (شغّل Run NPM Install). ' + err);
+  const args = ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage', '--disable-gpu', '--lang=ar', '--window-size=1280,900'];
+  const exe = CHROME_PATHS.find((p) => { try { return fs.statSync(p).isFile() || fs.statSync(p).isDirectory(); } catch { return false; } });
+  const tries = [{}];
+  if (exe) tries.push({ executablePath: fs.statSync(exe).isDirectory() ? path.join(exe, 'chrome') : exe });
+  let last;
+  for (const t of tries) {
+    try { return await pp.launch({ headless: true, args, ...t }); } catch (e) { last = e; }
+  }
+  throw new Error('تعذر تشغيل كروم على السيرفر - غالباً الاستضافة ما تسمح. استخدم إضافة كروم بجهازك. (' + String(last?.message || last).split('\n')[0].slice(0, 160) + ')');
+}
+async function runScrape(job) {
+  let browser;
+  try {
+    browser = await launchChrome();
+    job.browser = browser;
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1280, height: 900 });
+    await page.setExtraHTTPHeaders({ 'Accept-Language': 'ar,en;q=0.8' });
+    // تخطّي صفحة الموافقة على الكوكيز
+    try { await page.setCookie({ name: 'SOCS', value: 'CAESHAgBEhJnd3NfMjAyMzA4MTAtMF9SQzIaAmVuIAEaBgiAo_CmBg', domain: '.google.com', path: '/' }); } catch { /* تجاهل */ }
+    await page.exposeFunction('__waselReport', (d) => {
+      job.found = d.found ?? job.found; job.stage = d.stage || job.stage; job.current = d.current || '';
+      if (d.done) { job.done = d.done; job.total = d.total; }
+    });
+    await page.goto(job.url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+    if (page.url().includes('consent.')) {
+      await Promise.all([page.waitForNavigation({ timeout: 30000 }).catch(() => {}), page.evaluate(() => {
+        const b = [...document.querySelectorAll('form button, button')].find((x) => /accept|agree|قبول|موافق/i.test(x.innerText + ' ' + (x.getAttribute('aria-label') || '')));
+        (b || document.querySelector('form[action*="consent"] button'))?.click();
+      })]);
+    }
+    await page.addScriptTag({ content: fs.readFileSync(path.join(__dirname, 'maps-scraper.js'), 'utf8') });
+    job.page = page;
+    const r = await page.evaluate((o) => window.waselScrape(o), { max: job.max, deep: job.deep });
+    job.results = r.results || [];
+    job.found = job.results.length;
+    if (!r.ok) { job.status = 'error'; job.error = r.error === 'captcha' ? 'Google طلبت تحقق «لست روبوت» - جرّب بعد شوي أو استخدم إضافة كروم' : r.error; }
+    else job.status = 'done';
+  } catch (e) {
+    job.status = 'error';
+    job.error = String(e.message || e);
+  } finally {
+    job.finished = now();
+    try { await browser?.close(); } catch { /* تجاهل */ }
+    delete job.browser; delete job.page;
+  }
+}
+// تنظيف المهام القديمة
+setInterval(() => { for (const [id, j] of Object.entries(scrapeJobs)) if (j.finished && now() - j.finished > 3600) delete scrapeJobs[id]; }, 600000);
+
 const routes = [
+  ['POST', /^\/scrape$/, async (_m, body) => {
+    const running = Object.values(scrapeJobs).filter((j) => j.status === 'running').length;
+    if (running >= 1) return [429, { ok: false, error: 'فيه بحث شغال حالياً - انتظره يخلص' }];
+    const id = String(body.id || crypto.randomUUID()).replace(/[^\w-]/g, '').slice(0, 40);
+    const url = String(body.url || '');
+    if (!/^https:\/\/www\.google\.[a-z.]+\/maps\//.test(url) && !process.env.SCRAPE_TEST) return [400, { ok: false, error: 'رابط غير صالح' }];
+    const job = scrapeJobs[id] = { id, url, max: Math.min(1000, Number(body.max) || 200), deep: body.deep !== false, status: 'running', stage: 'start', found: 0, results: [], started: now() };
+    runScrape(job);
+    return [200, { ok: true, id }];
+  }],
+  ['GET', /^\/scrape\/([\w-]+)$/, async (m) => {
+    const j = scrapeJobs[m[1]];
+    if (!j) return [404, { ok: false, error: 'job not found' }];
+    const { browser, page, ...pub } = j;
+    return [200, { ok: true, ...pub, results: j.status === 'running' ? [] : j.results }];
+  }],
+  ['POST', /^\/scrape\/([\w-]+)\/stop$/, async (m) => {
+    const j = scrapeJobs[m[1]];
+    if (j?.page) await j.page.evaluate(() => { window.__waselStop = true; }).catch(() => {});
+    return [200, { ok: true }];
+  }],
   ['GET', /^\/health$/, async () => [200, { ok: true, version: ENGINE_VERSION, accounts: Object.keys(registry).length, time: fmt(now()) }]],
 
   ['GET', /^\/accounts$/, async () => [200, Object.keys(registry).map(accountInfo)]],

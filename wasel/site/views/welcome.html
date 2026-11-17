@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="/assets/ui.css?v=10">
+<link rel="stylesheet" href="/assets/ui.css?v=11">
 __GOOGLE_SCRIPT__
 <style>
   body{overflow-x:hidden}
@@ -36,6 +36,20 @@ __GOOGLE_SCRIPT__
   .art .ill{width:230px;height:150px;animation:float 6s ease-in-out infinite}
   @keyframes float{50%{transform:translateY(-8px)}}
   .cta small{display:block;margin-top:10px;color:var(--text3);font-size:12px;text-align:center}
+  /* زر البدء أعلى قليلاً ويبقى ظاهر بكل الشاشات */
+  #welcome{overflow-y:auto}
+  #welcome .cta{margin-bottom:30px}
+  #welcome .head{margin-top:4px}
+  #welcome .logo-halo{width:130px;height:130px}
+  #welcome .logo-wrap{width:92px;height:92px;border-radius:27px}
+  #welcome .head h1{margin-top:10px}
+  #welcome .feats{margin-top:16px;gap:8px}
+  #welcome .feat{padding:10px 14px}
+  #welcome .art{margin-top:auto;padding-top:4px}
+  #welcome .art .ill{width:170px;height:110px}
+  #welcome #devMini .dev-mini{margin:4px auto 10px}
+  @media (max-height:820px){#welcome .art{display:none}#welcome #devMini{margin-top:auto}}
+  @media (max-height:700px){#welcome .logo-halo{width:104px;height:104px}#welcome .logo-wrap{width:76px;height:76px;border-radius:22px}#welcome .orb{display:none}#welcome .head h1{font-size:22px}#welcome .feat small{display:none}#welcome .feat .row-ic{width:36px;height:36px}#welcome .cta{margin-bottom:18px}}
   .btn-start{height:62px;font-size:18px;width:100%;border-radius:20px;justify-content:space-between;padding:0 10px 0 8px}
   .btn-start>span:first-child{flex:1;text-align:center;margin-right:40px}
   .go-arr{width:46px;height:46px;border-radius:15px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;animation:nudge 1.6s ease-in-out infinite;position:relative;z-index:4}

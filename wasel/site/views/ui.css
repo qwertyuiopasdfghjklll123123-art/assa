@@ -340,3 +340,10 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .spinner{width:34px;height:34px;margin:0 auto;border-radius:50%;border:3px solid rgba(10,157,178,.2);border-top-color:var(--primary);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .ic-gray{background:rgba(100,116,139,.1);color:#64748b}
+.lmode button{gap:2px}.lmode button i{font-size:17px;margin-bottom:2px}
+.ok-note{background:var(--green-bg);color:var(--green)}
+.inst-steps{display:grid;gap:8px;margin:10px 0 12px}
+.inst-steps>div{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:14px;background:#fff;border:1px solid var(--line);font-size:12.5px}
+.inst-steps b{flex:none;width:24px;height:24px;border-radius:8px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px}
+.inst-steps code{background:var(--primary-bg);padding:2px 6px;border-radius:6px;font-size:11.5px}
+.lead-prog b{font-size:14px}
