@@ -7,6 +7,13 @@
 function json_out_then($data, callable $after): void
 {
     ignore_user_abort(true);
+    // نوقف ضغط gzip لهذا الرد بالذات حتى يطابق طوله Content-Length (وإلا المتصفح يبقى ينتظر)
+    while (ob_get_level() > 0) {
+        @ob_end_clean();
+    }
+    if (!headers_sent()) {
+        header_remove('Content-Encoding');
+    }
     http_response_code(200);
     header('Content-Type: application/json; charset=utf-8');
     $body = json_encode($data, JSON_UNESCAPED_UNICODE);

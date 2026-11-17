@@ -149,7 +149,10 @@ function buy_plan(int $userId, ?int $planId = null): array
 function apply_recharge_plan(int $userId, $planId): void
 {
     if ($planId) {
-        buy_plan($userId, (int)$planId);
+        [$ok, $err] = buy_plan($userId, (int)$planId);
+        if (!$ok) {
+            add_event($userId, null, 'ما تفعّلت الباقة', 'انضاف المبلغ لرصيدك، بس ' . $err . ' - تقدر تكمل وتفعّلها من الباقات', 'warning');
+        }
     }
 }
 
@@ -254,6 +257,12 @@ function pm_public(array $m): array
 }
 
 // ================================================================ Binance Pay (تحقق تلقائي من رقم العملية)
+if (!defined('BINANCE_API_BASE')) {
+    define('BINANCE_API_BASE', 'https://api.binance.com');
+}
+if (!defined('ASIACELL_API_BASE')) {
+    define('ASIACELL_API_BASE', 'https://odpapp.asiacell.com');
+}
 
 function verify_binance_order(array $pm, string $orderId, float $expectedUsd): array
 {
@@ -265,7 +274,7 @@ function verify_binance_order(array $pm, string $orderId, float $expectedUsd): a
     }
     $now = (int)(microtime(true) * 1000);
     $qs = http_build_query(['timestamp' => $now, 'startTime' => $now - 7 * 86400000, 'endTime' => $now]);
-    $url = 'https://api.binance.com/sapi/v1/pay/transactions?' . $qs . '&signature=' . hash_hmac('sha256', $qs, $secret);
+    $url = BINANCE_API_BASE . '/sapi/v1/pay/transactions?' . $qs . '&signature=' . hash_hmac('sha256', $qs, $secret);
     $ch = curl_init($url);
     curl_setopt_array($ch, [CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 25, CURLOPT_HTTPHEADER => ['X-MBX-APIKEY: ' . $key]]);
     $resp = curl_exec($ch);
@@ -366,7 +375,7 @@ final class AsiaCellAPI
 
     public function login(string $phone): array
     {
-        $d = $this->post('https://odpapp.asiacell.com/api/v1/login?lang=ar', ['captchaCode' => '', 'username' => $phone]);
+        $d = $this->post(ASIACELL_API_BASE . '/api/v1/login?lang=ar', ['captchaCode' => '', 'username' => $phone]);
         if (!$d) {
             return [false, 'لا يوجد رد من آسياسيل، حاول لاحقاً'];
         }
@@ -379,7 +388,7 @@ final class AsiaCellAPI
 
     public function verifySms(string $code): array
     {
-        $d = $this->post('https://odpapp.asiacell.com/api/v1/smsvalidation?lang=ar', ['PID' => $this->pid, 'passcode' => $code, 'token' => '']);
+        $d = $this->post(ASIACELL_API_BASE . '/api/v1/smsvalidation?lang=ar', ['PID' => $this->pid, 'passcode' => $code, 'token' => '']);
         if (!$d) {
             return [false, 'لا يوجد رد من آسياسيل، حاول لاحقاً'];
         }
@@ -393,7 +402,7 @@ final class AsiaCellAPI
 
     public function startTransfer(int $amount, string $receiver): array
     {
-        $d = $this->post('https://odpapp.asiacell.com/api/v1/credit-transfer/start?lang=ar', ['amount' => $amount, 'receiverMsisdn' => $receiver]);
+        $d = $this->post(ASIACELL_API_BASE . '/api/v1/credit-transfer/start?lang=ar', ['amount' => $amount, 'receiverMsisdn' => $receiver]);
         if (!$d) {
             return [false, 'لا يوجد رد من آسياسيل، حاول لاحقاً'];
         }
@@ -406,7 +415,7 @@ final class AsiaCellAPI
 
     public function confirmTransfer(string $code): array
     {
-        $d = $this->post('https://odpapp.asiacell.com/api/v1/credit-transfer/do-transfer?lang=ar', ['PID' => $this->transferPid, 'passcode' => $code]);
+        $d = $this->post(ASIACELL_API_BASE . '/api/v1/credit-transfer/do-transfer?lang=ar', ['PID' => $this->transferPid, 'passcode' => $code]);
         if (!$d) {
             return [false, 'لا يوجد رد من آسياسيل، حاول لاحقاً'];
         }

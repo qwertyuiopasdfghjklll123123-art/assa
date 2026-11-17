@@ -36,15 +36,22 @@ $path = '/' . trim($path, '/');
 security_bootstrap();
 csrf_check($method, $path);
 
+// ضغط الصفحات والبيانات (gzip) - يقلل الحجم 70-80% ويسرّع التحميل على الإنترنت البطيء
+if (extension_loaded('zlib') && !ini_get('zlib.output_compression') && stripos((string)($_SERVER['HTTP_ACCEPT_ENCODING'] ?? ''), 'gzip') !== false
+    && !preg_match('#^/(assets/|pm-image/|branding/|pwa-|dev-photo|receipt|api/backup|backup|auth/bootstrap/qr|accounts/[^/]+/qr)#', $path)) {
+    ob_start('ob_gzhandler');
+}
+
 // مهام مجدولة تلقائية مع زيارات الموقع (بديل Cron): كل 5 دقائق كحد أقصى، بعد إرسال الرد للزائر
-if (APP_INSTALLED && $method === 'GET' && function_exists('fastcgi_finish_request')) {
+$finishFn = function_exists('fastcgi_finish_request') ? 'fastcgi_finish_request' : (function_exists('litespeed_finish_request') ? 'litespeed_finish_request' : null);
+if (APP_INSTALLED && $method === 'GET' && $finishFn) {
     $lastCron = (int)(settings()['last_cron'] ?? 0);
     if (time() - $lastCron > 300) {
-        register_shutdown_function(function () {
+        register_shutdown_function(function () use ($finishFn) {
             if (session_status() === PHP_SESSION_ACTIVE) {
                 session_write_close();
             }
-            fastcgi_finish_request();
+            $finishFn();
             run_scheduled_tasks();
         });
     }
@@ -153,17 +160,18 @@ $routes = [
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }],
     ['GET', '#^/pwa-(192|512)\.png$#', 'serve_pwa_icon'],
-    ['GET', '#^/assets/(ui\.css|app\.js|logo\.png)$#', function ($f) {
-        $types = ['css' => 'text/css; charset=utf-8', 'js' => 'application/javascript; charset=utf-8', 'png' => 'image/png'];
-        header('Content-Type: ' . $types[pathinfo($f, PATHINFO_EXTENSION)]);
-        header('Cache-Control: public, max-age=600');
-        readfile(__DIR__ . '/views/' . $f);
+    ['GET', '#^/assets/(ui\.css|app\.js|logo\.png|logo\.webp|vendor/[a-z0-9-]+\.(?:css|woff2))$#', 'serve_asset'],
+    ['GET', '#^/offline$#', function () {
+        header('Content-Type: text/html; charset=utf-8');
+        header('Cache-Control: no-cache');
+        echo strtr(view_file('offline.html'), ['__SITE_NAME__' => branding_context()[0]]);
     }],
     ['GET', '#^/icon\.svg$#', fn() => serve_pwa_icon('192')],
     ['GET', '#^/sw\.js$#', function () {
-        header('Content-Type: application/javascript');
+        header('Content-Type: application/javascript; charset=utf-8');
         header('Cache-Control: no-cache');
-        echo file_get_contents(__DIR__ . '/views/sw.js');
+        header('Service-Worker-Allowed: /');
+        echo view_file('sw.js');
     }],
     ['GET', '#^/branding/logo$#', function () {
         [, $hasLogo] = branding_context();
@@ -610,3 +618,37 @@ foreach ($routes as [$m, $re, $fn]) {
 http_response_code(404);
 header('Content-Type: text/plain; charset=utf-8');
 echo 'الصفحة غير موجودة';
+
+/** الملفات الثابتة: تخزين سنة بالمتصفح (الرابط فيه رقم نسخة)، ETag، وضغط gzip للنصوص */
+function serve_asset(string $f): void
+{
+    $file = __DIR__ . '/views/' . $f;
+    if (strpos($f, '..') !== false || !is_file($file)) {
+        http_response_code(404);
+        return;
+    }
+    $ext = pathinfo($f, PATHINFO_EXTENSION);
+    $types = ['css' => 'text/css; charset=utf-8', 'js' => 'application/javascript; charset=utf-8', 'png' => 'image/png', 'webp' => 'image/webp', 'woff2' => 'font/woff2'];
+    $etag = '"' . base_convert((string)filemtime($file), 10, 36) . '-' . base_convert((string)filesize($file), 10, 36) . '"';
+    header('Content-Type: ' . $types[$ext]);
+    header('Cache-Control: ' . (isset($_GET['v']) ? 'public, max-age=31536000, immutable' : 'public, max-age=3600'));
+    header('ETag: ' . $etag);
+    header('Vary: Accept-Encoding');
+    if (trim((string)($_SERVER['HTTP_IF_NONE_MATCH'] ?? '')) === $etag) {
+        http_response_code(304);
+        return;
+    }
+    if ($ext === 'css' || $ext === 'js') {
+        $body = str_replace('__V__', asset_version(), (string)file_get_contents($file));
+        if (extension_loaded('zlib') && !ini_get('zlib.output_compression') && stripos((string)($_SERVER['HTTP_ACCEPT_ENCODING'] ?? ''), 'gzip') !== false) {
+            $body = gzencode($body, 6);
+            header('Content-Encoding: gzip');
+        }
+        header('Content-Length: ' . strlen($body));
+        echo $body;
+        return;
+    }
+    header('Content-Length: ' . filesize($file));
+    readfile($file);
+}
+

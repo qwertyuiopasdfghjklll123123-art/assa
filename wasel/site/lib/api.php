@@ -267,12 +267,22 @@ function api_routes(): array
             if (!$r || $r['status'] !== 'pending') {
                 json_err('الطلب غير موجود أو تمت مراجعته');
             }
-            $amount = isset($d['amount']) && (int)$d['amount'] > 0 ? (int)$d['amount'] : (int)$r['amount'];
+            $amount = isset($d['amount']) && (int)$d['amount'] > 0 ? min(50000000, (int)$d['amount']) : (int)$r['amount'];
             $note = clean_text(mb_substr(trim((string)($d['note'] ?? '')), 0, 200));
+            // تغيير الحالة يصير مرة وحدة فقط (لو انضغط «قبول» مرتين أو أدمنين بنفس اللحظة)
+            $changed = false;
+            store_update('recharges', $rid, function ($x) use (&$changed, $act, $amount, $note) {
+                if ($x['status'] !== 'pending') {
+                    return $x;
+                }
+                $changed = true;
+                return array_merge($x, ['status' => $act === 'approve' ? 'approved' : 'rejected', 'amount' => $amount, 'admin_note' => $note,
+                    'reviewed_at' => now_str(), 'reviewed_by' => uid()]);
+            });
+            if (!$changed) {
+                json_err('الطلب تمت مراجعته مسبقاً');
+            }
             admin_log('recharge_' . $act, '#' . $rid . ' amount=' . $amount);
-            store_update('recharges', $rid, fn($x) => array_merge($x, [
-                'status' => $act === 'approve' ? 'approved' : 'rejected', 'amount' => $amount, 'admin_note' => $note, 'reviewed_at' => now_str(),
-            ]));
             if ($act === 'approve') {
                 wallet_add((int)$r['user_id'], $amount, 'recharge', $r['method_name']);
                 apply_recharge_plan((int)$r['user_id'], $r['plan_id'] ?? null);
@@ -643,6 +653,10 @@ function site_base_url(): string
 function handle_asiacell($step): void
 {
     $uid = require_login();
+    $lk = fopen(DATA_DIR . '/asiacell_' . $uid . '.lock', 'c');
+    if (!$lk || !flock($lk, LOCK_EX | LOCK_NB)) {
+        json_err('فيه عملية آسياسيل شغالة - انتظر ثواني', 429);
+    }
     $d = request_json();
     $pm = store_first('payment_methods', fn($m) => $m['type'] === 'asiacell' && !empty($m['active']));
     if (!$pm) {

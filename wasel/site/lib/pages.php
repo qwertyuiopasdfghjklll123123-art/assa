@@ -17,9 +17,7 @@ const ICON_CHART = '<svg width="22" height="22" viewBox="0 0 48 48" fill="none" 
 const ICON_TARGET = '<svg width="22" height="22" viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="24" cy="24" r="17"/><circle cx="24" cy="24" r="8"/><path d="M24 24l14-14"/><path d="M30 10h8v8"/></svg>';
 const ICON_WHATSAPP = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.6 7.4L3.5 20l1.2-4.2A8.5 8.5 0 1 1 20.5 11.5Z"/><path d="M8.5 8.2c.3-.4.6-.4.9-.2l1.1 1.7c.2.3.1.6-.1.9l-.6.6c.7 1.4 1.8 2.4 3.2 3.1l.6-.7c.2-.2.6-.3.9-.1l1.7 1c.3.2.3.6.1.9-.4.7-1 1.1-1.8 1-3.7-.5-7.2-3.8-7.9-7.6-.1-.2.1-.5.2-.6l1.7-.9Z"/></svg>';
 
-const FONT_LINKS = '<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">';
+const FONT_LINKS = '<link rel="stylesheet" href="/assets/vendor/fonts.css">';
 const FONT_STACK = "'IBM Plex Sans Arabic','Cairo','Tajawal',system-ui,sans-serif";
 const PAGE_TRANSITION_CSS = 'body.leaving { animation: pageFadeOut .13s ease forwards; }
 @keyframes pageFadeOut { to { opacity:0; transform:scale(.98); } }';
@@ -65,9 +63,23 @@ function logo_svg(int $size = 32): string
 const APP_SLUGS = ['campaign', 'reports', 'numbers', 'number', 'packages', 'pay', 'me', 'notifications', 'clients', 'api', 'transactions',
     'profile', 'dashboard', 'users', 'recharges', 'payments', 'plans', 'settings', 'security', 'backup', 'announce', 'leads'];
 
+/** رقم نسخة الملفات الثابتة: يتغير تلقائياً لما يتعدل أي ملف (فالمتصفح ياخذ الجديد ويخزّن القديم سنة) */
+function asset_version(): string
+{
+    static $v = null;
+    if ($v === null) {
+        $t = 0;
+        foreach (['ui.css', 'app.js', 'sw.js', 'offline.html', 'vendor/fa.css', 'vendor/fonts.css', 'logo.webp'] as $f) {
+            $t = max($t, (int)@filemtime(__DIR__ . '/../views/' . $f));
+        }
+        $v = base_convert((string)$t, 10, 36);
+    }
+    return $v;
+}
+
 function view_file(string $name): string
 {
-    return (string)file_get_contents(__DIR__ . '/../views/' . $name);
+    return str_replace('__V__', asset_version(), (string)file_get_contents(__DIR__ . '/../views/' . $name));
 }
 
 function logo_html(int $size, string $class = ''): string
@@ -76,7 +88,7 @@ function logo_html(int $size, string $class = ''): string
     if ($hasLogo) {
         return '<img src="/branding/logo?v=' . (int)@filemtime(logo_path()) . '" alt="' . $siteName . '" class="' . $class . '" style="width:' . $size . 'px;height:' . $size . 'px;object-fit:contain">';
     }
-    return '<img src="/assets/logo.png" alt="' . $siteName . '" class="' . $class . '" style="width:' . $size . 'px;height:' . $size . 'px;object-fit:contain">';
+    return '<img src="/assets/logo.webp?v=' . asset_version() . '" alt="' . $siteName . '" class="' . $class . '" style="width:' . $size . 'px;height:' . $size . 'px;object-fit:contain">';
 }
 
 function js_json($v): string

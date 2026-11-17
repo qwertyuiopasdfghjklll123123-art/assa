@@ -8,11 +8,11 @@
 <link rel="manifest" href="/app.webmanifest">
 <link rel="apple-touch-icon" href="/pwa-192.png">
 <link rel="icon" type="image/png" href="/pwa-192.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="stylesheet" href="/assets/ui.css?v=14">
+<link rel="preload" href="/assets/vendor/plex-arabic-400.woff2?v=__V__" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/vendor/fa-solid.woff2?v=__V__" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/vendor/fonts.css?v=__V__">
+<link rel="stylesheet" href="/assets/vendor/fa.css?v=__V__">
+<link rel="stylesheet" href="/assets/ui.css?v=__V__">
 <style>
   .topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:calc(66px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 18px 0;display:flex;align-items:center;justify-content:space-between;transition:background .3s,box-shadow .3s}
   .topbar.scrolled{background:rgba(243,247,248,.72);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 1px 0 rgba(255,255,255,.9),0 8px 20px rgba(3,79,92,.05)}
@@ -94,6 +94,6 @@
 </div>
 <div class="toast" id="toast"></div>
 <script>window.BOOT = __BOOT_JSON__;</script>
-<script src="/assets/app.js?v=14"></script>
+<script src="/assets/app.js?v=__V__"></script>
 </body>
 </html>

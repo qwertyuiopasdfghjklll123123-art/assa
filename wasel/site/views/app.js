@@ -28,8 +28,31 @@ async function api(url, opt = {}) {
     if (Array.isArray(d)) return d;
     if (d.ok === undefined) d.ok = r.ok;
     return d;
-  } catch (e) { return { ok: false, error: 'تعذر الاتصال - تأكد من الإنترنت' }; }
+  } catch (e) {
+    if (!navigator.onLine) setOffline(true);
+    return { ok: false, error: 'تعذر الاتصال - تأكد من الإنترنت' };
+  }
 }
+
+// شاشة «ما فيه إنترنت» داخل التطبيق: تظهر لما ينقطع الاتصال، وتختفي وتحدّث الصفحة لما يرجع
+function setOffline(on) {
+  let o = document.getElementById('offlineScr');
+  if (on && !o) {
+    document.body.insertAdjacentHTML('beforeend', `<div id="offlineScr" class="offline-scr"><div class="off-box">
+      <div class="off-ic"><i class="fa-solid fa-wifi"></i><span></span></div>
+      <h2>ما فيه اتصال بالإنترنت</h2>
+      <p>تأكد من الواي فاي أو بيانات الجوال - التطبيق يرجع لوحده أول ما يرجع الاتصال</p>
+      <button class="btn btn-primary btn-block" onclick="location.reload()"><i class="fa-solid fa-rotate-right"></i> إعادة المحاولة</button>
+      <div class="off-st"><span class="dot"></span> ننتظر رجوع الاتصال...</div></div></div>`);
+    requestAnimationFrame(() => document.getElementById('offlineScr').classList.add('show'));
+  } else if (!on && o) {
+    o.classList.remove('show'); setTimeout(() => o.remove(), 350);
+    if (typeof S !== 'undefined' && S.page) go(S.page, S.params || {}, false);
+    toast('رجع الاتصال بالإنترنت', 'ok');
+  }
+}
+window.addEventListener('offline', () => setOffline(true));
+window.addEventListener('online', () => setOffline(false));
 
 let toastT;
 function toast(msg, kind = '') {

@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f3f7f8">
+<title>ما فيه اتصال - __SITE_NAME__</title>
+<link rel="stylesheet" href="/assets/vendor/fonts.css?v=__V__">
+<style>
+  :root{--primary:#04788b;--text:#0d2a30;--text2:#4b6870;--text3:#8aa1a7}
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{height:100%}
+  body{font-family:'IBM Plex Sans Arabic',system-ui,sans-serif;background:#f3f7f8;color:var(--text);display:flex;align-items:center;justify-content:center;padding:24px;overflow:hidden;-webkit-user-select:none;user-select:none}
+  .blob{position:fixed;border-radius:50%;filter:blur(40px);opacity:.5;z-index:-1}
+  .b1{width:260px;height:260px;background:#7fe3ef;top:-80px;right:-60px}.b2{width:220px;height:220px;background:#d9ccff;bottom:-60px;left:-70px}
+  .box{width:100%;max-width:400px;text-align:center;background:rgba(255,255,255,.82);border:1px solid #fff;border-radius:30px;padding:30px 22px;box-shadow:0 20px 50px rgba(3,79,92,.12);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  .ill{width:170px;height:130px;margin:0 auto 6px;animation:float 5s ease-in-out infinite}
+  @keyframes float{50%{transform:translateY(-8px)}}
+  h1{font-size:21px;font-weight:700;margin-top:6px}
+  p{font-size:13.5px;color:var(--text2);line-height:1.9;margin-top:6px}
+  ul{list-style:none;text-align:right;margin:16px 0;display:grid;gap:8px}
+  li{display:flex;align-items:center;gap:10px;font-size:13px;padding:10px 12px;background:#fff;border-radius:14px;border:1px solid rgba(3,79,92,.07)}
+  li b{flex:none;width:26px;height:26px;border-radius:9px;background:rgba(10,157,178,.1);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:12px}
+  button{width:100%;height:54px;border:0;border-radius:18px;font:inherit;font-size:16px;font-weight:700;color:#fff;cursor:pointer;background:linear-gradient(135deg,#0ab3c9,#04788b);box-shadow:0 12px 26px rgba(4,120,139,.28)}
+  button:active{transform:scale(.98)}
+  .st{font-size:12px;color:var(--text3);margin-top:12px;display:flex;align-items:center;justify-content:center;gap:6px}
+  .dot{width:8px;height:8px;border-radius:50%;background:#f59e0b;animation:pulse 1.4s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+</style>
+</head>
+<body>
+<span class="blob b1"></span><span class="blob b2"></span>
+<div class="box">
+  <svg class="ill" viewBox="0 0 220 150" aria-hidden="true">
+    <ellipse cx="110" cy="138" rx="70" ry="8" fill="rgba(3,79,92,.08)"/>
+    <circle cx="110" cy="72" r="58" fill="#e6f6f8"/>
+    <path d="M66 96c-14 0-24-10-24-23 0-12 9-22 21-23 3-17 18-29 35-29 15 0 28 9 33 23 2-1 5-1 7-1 15 0 27 12 27 27s-12 26-27 26H66z" fill="#fff" stroke="#bfe7ee" stroke-width="2"/>
+    <g stroke="#04788b" stroke-width="6" stroke-linecap="round" fill="none" opacity=".9">
+      <path d="M86 70a36 36 0 0 1 48 0"/><path d="M95 80a22 22 0 0 1 30 0"/>
+    </g>
+    <circle cx="110" cy="90" r="5" fill="#04788b"/>
+    <path d="M78 52l64 52" stroke="#ef4444" stroke-width="6" stroke-linecap="round"/>
+  </svg>
+  <h1>ما فيه اتصال بالإنترنت</h1>
+  <p>تأكد من اتصالك وراح يرجع __SITE_NAME__ يشتغل تلقائياً أول ما يرجع الإنترنت.</p>
+  <ul>
+    <li><b>1</b>شغّل الواي فاي أو بيانات الجوال</li>
+    <li><b>2</b>طفّي وضع الطيران إذا كان شغّال</li>
+    <li><b>3</b>جرّب تفتح موقع ثاني حتى تتأكد من الشبكة</li>
+  </ul>
+  <button onclick="retry()">إعادة المحاولة</button>
+  <div class="st"><span class="dot"></span><span id="st">ننتظر رجوع الاتصال...</span></div>
+</div>
+<script>
+  function retry() { document.getElementById('st').textContent = 'نحاول...'; location.reload(); }
+  // يرجع تلقائياً أول ما يرجع الإنترنت
+  window.addEventListener('online', () => setTimeout(() => location.reload(), 600));
+  setInterval(() => { if (navigator.onLine) fetch('/sw.js', { cache: 'no-store' }).then(() => location.reload()).catch(() => {}); }, 8000);
+</script>
+</body>
+</html>
