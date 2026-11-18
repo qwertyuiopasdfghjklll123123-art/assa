@@ -158,7 +158,7 @@ const PAGES = {
   payments: { nav: 'account', admin: true, slug: 'payments' }, plansAdmin: { nav: 'account', admin: true, slug: 'plans' }, settings: { nav: 'account', admin: true, slug: 'settings' },
   security: { nav: 'account', admin: true, slug: 'security' }, backup: { nav: 'account', admin: true, slug: 'backup' }, announce: { nav: 'account', admin: true, slug: 'announce' },
   leads: { nav: 'account', slug: 'leads' }, report: { nav: 'campaign', slug: 'report' },
-  coupons: { nav: 'account', admin: true, slug: 'coupons' },
+  coupons: { nav: 'account', admin: true, slug: 'coupons' }, appearance: { nav: 'account', slug: 'appearance' },
 };
 const SLUG2PAGE = Object.fromEntries(Object.entries(PAGES).map(([k, v]) => [v.slug ?? k, k]));
 
@@ -355,6 +355,72 @@ R.report = async (el, p) => {
     </div>
     ${x.tracked ? `<div class="note" style="margin-top:12px">الأرقام تتحدث تلقائياً لمدة 7 أيام بعد الحملة. «شاهدوا» تعتمد على إيصالات القراءة.</div>` : ''}`;
   el.querySelector('#reuse').onclick = () => { S.pendingText = x.text_full || ''; go('campaign', { acc: x.account_id }); };
+};
+
+// ---------------------------------------------------------------- المظهر (ستايل، داكن/نهاري، خط، حجم)
+const UI_FONTS = [['plex', 'IBM Plex', 'الافتراضي'], ['alexandria', 'Alexandria', 'عصري وعريض'], ['readex-pro', 'Readex Pro', 'واضح ومريح'], ['cairo', 'Cairo', 'كلاسيكي مشهور'],
+  ['tajawal', 'Tajawal', 'خفيف ونظيف'], ['almarai', 'Almarai', 'ناعم ومقروء'], ['noto-kufi-arabic', 'Noto Kufi', 'كوفي رسمي'], ['reem-kufi', 'Reem Kufi', 'كوفي مزخرف'],
+  ['el-messiri', 'El Messiri', 'أنيق وفخم'], ['marhey', 'Marhey', 'مرح ومدوّر'], ['rakkas', 'Rakkas', 'عناوين قوية (خط الشعار)']];
+const UI_DEF = { style: 'teal', mode: 'light', font: 'plex', size: 'md' };
+function uiGet() { const h = document.documentElement; return { style: h.dataset.style || 'teal', mode: h.dataset.uiMode || 'light', font: h.dataset.font || 'plex', size: h.dataset.size || 'md' }; }
+function uiFontCss(f) { return `/assets/vendor/font-${f}.css?v=__V__`; }
+function uiLoadFont(f, id) {
+  if (f === 'plex') return;
+  const sel = id ? '#' + id : `link[data-uif="${f}"]`;
+  if (document.querySelector(sel) || document.querySelector(`link[data-uif="${f}"]`)) return;
+  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = uiFontCss(f); l.dataset.uif = f; document.head.appendChild(l);
+}
+/** يطبّق المظهر فوراً (بدون تحديث) ويحفظه بالمتصفح، وبالسيرفر إذا save=true */
+function uiApply(p, save = true) {
+  p = Object.assign(uiGet(), p);
+  const h = document.documentElement;
+  const dark = p.mode === 'dark' || (p.mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  uiLoadFont(p.font);
+  h.dataset.style = p.style; h.dataset.uiMode = p.mode; h.dataset.mode = dark ? 'dark' : 'light'; h.dataset.font = p.font; h.dataset.size = p.size;
+  const tc = dark ? (p.style === 'gold' ? '#0a1517' : '#0b181b') : (p.style === 'gold' ? '#f7f4ec' : '#f3f7f8');
+  let m = document.querySelector('meta[name=theme-color]'); if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); } m.content = tc;
+  try { localStorage.setItem('wasel_ui', JSON.stringify(p)); } catch (e) {}
+  if (save) { clearTimeout(S.uiT); S.uiT = setTimeout(() => api('/api/me/ui', { method: 'POST', body: p }).then(r => { if (r.ok && ME) ME.ui = r.ui; }), 350); }
+  return p;
+}
+// الوضع التلقائي يتبع الجهاز حتى لو تغيّر وهو فاتح
+try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if (uiGet().mode === 'auto') uiApply({}, false); }); } catch (e) {}
+
+R.appearance = async (el) => {
+  const draw = () => {
+    const p = uiGet();
+    const segBtns = (key, opts) => opts.map(([v, t, ic]) => `<button data-k="${key}" data-v="${v}" class="${p[key] === v ? 'on' : ''}">${ic ? `<i class="${ic}"></i> ` : ''}<b>${t}</b></button>`).join('');
+    el.innerHTML = head('المظهر') + `
+      <div class="section-head">الستايل</div>
+      <div class="ui-styles">
+        ${[['teal', 'فيروزي زجاجي', 'الستايل الأصلي'], ['gold', 'ذهبي وكحلي', 'بألوان شعار واصل']].map(([v, t, s]) => `
+        <button class="ui-style ${p.style === v ? 'on' : ''}" data-k="style" data-v="${v}">
+          <span class="ui-prev ui-prev-${v}"><span class="up-hero"><img src="/assets/${v === 'gold' ? 'logo-gold' : 'logo'}.webp?v=__V__" alt=""></span><span class="up-l"></span><span class="up-l s"></span><span class="up-btn"></span></span>
+          <b>${t}</b><small>${s}</small><span class="ui-check"><i class="fa-solid fa-check"></i></span>
+        </button>`).join('')}
+      </div>
+      <div class="section-head">الوضع</div>
+      <div class="card"><div class="seg ui-seg">${segBtns('mode', [['light', 'نهاري', 'fa-solid fa-sun'], ['dark', 'داكن', 'fa-solid fa-moon'], ['auto', 'تلقائي', 'fa-solid fa-circle-half-stroke']])}</div>
+        <div class="hint" style="margin-top:8px">«تلقائي» يتبع إعداد جهازك (نهاري بالنهار وداكن بالليل إذا جهازك مضبوط هيج).</div></div>
+      <div class="section-head">حجم الخط</div>
+      <div class="card"><div class="seg ui-seg">${segBtns('size', [['sm', 'صغير'], ['md', 'عادي'], ['lg', 'كبير'], ['xl', 'كبير جداً']])}</div>
+        <div class="ui-size-demo">مرحباً بك في واصل 👋 هذا مثال على حجم الكتابة</div></div>
+      <div class="section-head">خط الموقع <span class="pill pill-gray">${UI_FONTS.length} خطوط</span></div>
+      <div class="list ui-fonts">
+        ${UI_FONTS.map(([id, name, desc]) => `
+        <div class="row ui-font ${p.font === id ? 'on' : ''}" role="button" tabindex="0" data-k="font" data-v="${id}">
+          <span class="row-body"><span class="row-title" style="font-family:${id === 'plex' ? "'IBM Plex Sans Arabic'" : `'W-${id}','IBM Plex Sans Arabic'`};font-size:17px">واصل للرسائل الذكية 123</span>
+          <span class="row-sub">${name} · ${desc}</span></span>
+          <span class="row-end"><span class="ui-radio"></span></span>
+        </div>`).join('')}
+      </div>
+      <button class="btn btn-ghost btn-block" style="margin-top:16px" id="uiReset"><i class="fa-solid fa-rotate-left"></i> رجوع للمظهر الافتراضي</button>
+      <div class="hint" style="text-align:center;margin-top:10px">يتحفظ اختيارك بحسابك ويبقى نفسه حتى بعد التحديث أو من جهاز ثاني.</div>`;
+    el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { uiApply({ [b.dataset.k]: b.dataset.v }); draw(); });
+    el.querySelector('#uiReset').onclick = () => { uiApply(UI_DEF); draw(); toast('رجع المظهر الافتراضي', 'ok'); };
+  };
+  UI_FONTS.forEach(([id]) => uiLoadFont(id)); // نحمّل كل الخطوط هنا بس حتى تبين المعاينة
+  draw();
 };
 
 // ---------------------------------------------------------------- أكواد الخصم (أدمن)
@@ -1272,6 +1338,7 @@ R.account = async (el) => {
     <div class="list stagger">
       ${rowItem({ icon: 'fa-solid fa-chart-pie', ic: 'ic-purple', title: 'تقارير الحملات', sub: 'النجاح، المشاهدة والردود', onclick: "go('reports')" })}
       ${SET.leads_enabled || ADMIN ? rowItem({ icon: 'fa-solid fa-map-location-dot', ic: 'ic-green', title: 'سحب أرقام من الخرائط', sub: 'أرقام المحلات والشركات حسب المدينة والنشاط', onclick: "go('leads')" }) : ''}
+      ${rowItem({ icon: 'fa-solid fa-palette', ic: 'ic-pink', title: 'المظهر', sub: 'الستايل، الوضع الداكن، الخط وحجمه', onclick: "go('appearance')" })}
       ${rowItem({ icon: 'fa-solid fa-code', ic: 'ic-orange', title: 'ربط API', sub: 'أرسل رسائل ورموز تحقق من موقعك', onclick: "go('apikeys')" })}
       ${rowItem({ icon: 'fa-solid fa-clock-rotate-left', ic: 'ic-cyan', title: 'السجل المالي', sub: 'حركات الرصيد وطلبات الشحن', onclick: "go('tx')" })}
       ${rowItem({ icon: 'fa-solid fa-user-shield', ic: 'ic-indigo', title: 'الخصوصية والأمان', sub: 'كيف نحمي بياناتك وشروط الاستخدام', onclick: "window.open('/privacy','_blank')" })}

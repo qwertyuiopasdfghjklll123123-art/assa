@@ -145,6 +145,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-gem:before{content:"\f3a5"}
 .fa-circle-check:before{content:"\f058"}
 .fa-pause:before{content:"\f04c"}
+.fa-palette:before{content:"\f53f"}
 .fa-shield-halved:before{content:"\f3ed"}
 .fa-filter:before{content:"\f0b0"}
 .fa-hand-holding-heart:before{content:"\f4be"}
@@ -186,6 +187,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-rotate-right:before{content:"\f2f9"}
 .fa-upload:before{content:"\f093"}
 .fa-bolt:before{content:"\f0e7"}
+.fa-sun:before{content:"\f185"}
 .fa-user-lock:before{content:"\f502"}
 .fa-bug:before{content:"\f188"}
 .fa-credit-card:before{content:"\f09d"}
@@ -217,6 +219,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-qrcode:before{content:"\f029"}
 .fa-clock-rotate-left:before{content:"\f1da"}
 .fa-shield:before{content:"\f132"}
+.fa-moon:before{content:"\f186"}
 .fa-broom:before{content:"\f51a"}
 .fa-hashtag:before{content:"\23"}
 .fa-infinity:before{content:"\f534"}

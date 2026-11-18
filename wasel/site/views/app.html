@@ -2,8 +2,8 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="utf-8">
+__UI_HEAD__
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#f3f7f8">
 <title>__SITE_NAME__</title>
 <link rel="manifest" href="/app.webmanifest">
 <link rel="apple-touch-icon" href="/pwa-192.png">
@@ -15,7 +15,8 @@
 <link rel="stylesheet" href="/assets/ui.css?v=__V__">
 <style>
   .topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:calc(66px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 18px 0;display:flex;align-items:center;justify-content:space-between;transition:background .3s,box-shadow .3s}
-  .topbar.scrolled{background:rgba(243,247,248,.72);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 1px 0 rgba(255,255,255,.9),0 8px 20px rgba(3,79,92,.05)}
+  .topbar.scrolled{background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 1px 0 rgba(255,255,255,.9),0 8px 20px rgba(3,79,92,.05)}
+  [data-mode=dark] .topbar.scrolled{box-shadow:0 1px 0 rgba(255,255,255,.05),0 8px 20px rgba(0,0,0,.3)}
   .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;color:var(--text);cursor:pointer}
   .brand .top-logo{border-radius:11px;box-shadow:0 6px 14px var(--primary-glow)}
   .top-actions{display:flex;align-items:center;gap:8px}
@@ -31,7 +32,7 @@
   @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
   /* منيو كبسولة: الصفحة المفتوحة تتوسع ويظهر اسمها */
   .bnav{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:0 16px calc(14px + env(safe-area-inset-bottom,0px));pointer-events:none}
-  .bnav-in{pointer-events:auto;max-width:440px;margin:0 auto;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:999px;background:rgba(255,255,255,.78);border:1px solid #fff;-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 18px 40px rgba(3,79,92,.16)}
+  .bnav-in{pointer-events:auto;max-width:440px;margin:0 auto;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--surface) 78%,transparent);border:1px solid var(--glass-line);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 18px 40px rgba(3,79,92,.16)}
   .bnav-it{height:48px;min-width:48px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;color:#6b8a90;font-size:13px;font-weight:700;transition:padding .45s var(--ease),background .35s,color .3s,box-shadow .35s}
   .bnav-it i{font-size:18px;transition:transform .45s var(--ease)}
   .bnav-it .t{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transition:max-width .45s var(--ease),opacity .3s}
@@ -41,13 +42,13 @@
   .greet{display:flex;justify-content:space-between;align-items:center;margin:4px 2px 16px}
   .greet small{font-size:12.5px;color:var(--text3)}
   .greet h2{font-size:23px;font-weight:800;letter-spacing:-.3px}
-  .avatar{flex:none;width:48px;height:48px;border-radius:50%;background:#fff;color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;box-shadow:0 8px 18px rgba(3,79,92,.12)}
+  .avatar{flex:none;width:48px;height:48px;border-radius:50%;background:var(--surface);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:800;font-size:19px;box-shadow:0 8px 18px rgba(3,79,92,.12)}
   .hc-top{display:flex;justify-content:space-between;align-items:center;font-size:12.5px}
   .status-dot{width:8px;height:8px;border-radius:50%;background:var(--text3);display:inline-block}
   .status-dot.on{background:var(--green);box-shadow:0 0 0 4px var(--green-bg)}
-  .qr-frame{background:#fff;border-radius:22px;padding:16px;display:flex;justify-content:center;border:1px solid var(--line)}
+  .qr-frame{background:var(--surface);border-radius:22px;padding:16px;display:flex;justify-content:center;border:1px solid var(--line)}
   .qr-frame img{width:230px;height:230px}
-  .pair-code{font-size:34px;font-weight:800;letter-spacing:5px;text-align:center;direction:ltr;color:var(--primary);background:var(--primary-bg);border:1px dashed rgba(4,120,139,.3);border-radius:20px;padding:16px}
+  .pair-code{font-size:34px;font-weight:800;letter-spacing:5px;text-align:center;direction:ltr;color:var(--primary);background:var(--primary-bg);border:1px dashed color-mix(in srgb,var(--primary) 30%,transparent);border-radius:20px;padding:16px}
   .receipt{width:100%;max-height:360px;object-fit:contain;border-radius:18px;background:rgba(3,79,92,.04);cursor:zoom-in}
   .receipt.big{max-height:none;cursor:zoom-out}
   .mini-list .row{padding:11px 14px}

@@ -88,6 +88,21 @@ for w in (400, 500, 600, 700):
         faces.append('@font-face{font-family:"IBM Plex Sans Arabic";font-style:normal;font-weight:%d;font-display:swap;src:url(/assets/vendor/%s?v=__V__) format("woff2");unicode-range:%s}' % (w, name, ranges[sub_]))
 open(os.path.join(OUT, 'fonts.css'), 'w', encoding='utf-8').write('/* IBM Plex Sans Arabic (SIL OFL 1.1) */\n' + '\n'.join(faces) + '\n')
 
+# ------------------------------------------------------------ 2ب) خطوط المظهر (يختارها المستخدم من «المظهر») - تنحمل بس لما تنختار
+THEME_FONTS = ['alexandria', 'readex-pro', 'cairo', 'tajawal', 'almarai', 'noto-kufi-arabic', 'reem-kufi', 'el-messiri', 'marhey', 'rakkas']
+for fid in THEME_FONTS:
+    src = os.path.join(NM, '@fontsource', fid, 'files')
+    rules = []
+    for sub_, short in (('arabic', 'ar'), ('latin', 'la')):
+        for w in (400, 700):
+            fn = os.path.join(src, f'{fid}-{sub_}-{w}-normal.woff2')
+            if not os.path.isfile(fn):
+                continue
+            name = f'f-{fid}-{short}-{w}.woff2'
+            shutil.copy(fn, os.path.join(OUT, name))
+            rules.append('@font-face{font-family:"W-%s";font-style:normal;font-weight:%d;font-display:swap;src:url(/assets/vendor/%s?v=__V__) format("woff2");unicode-range:%s}' % (fid, w, name, ranges[sub_]))
+    open(os.path.join(OUT, f'font-{fid}.css'), 'w', encoding='utf-8').write(f'/* {fid} (SIL OFL 1.1) */\n' + '\n'.join(rules) + '\n')
+
 # ------------------------------------------------------------ 3) الصور
 v = os.path.join(SITE, 'views')
 im = Image.open(os.path.join(v, 'logo.png')).convert('RGBA')

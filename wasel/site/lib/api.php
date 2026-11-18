@@ -17,7 +17,7 @@ function me_payload(int $id): array
         'plan_days_left' => $active ? ($planEnds ? max(0, (int)ceil(($planEnds - time()) / 86400)) : null) : 0,
         'trial_active' => !$active && $trialEnds && $trialEnds > time(),
         'trial_days_left' => !$active && $trialEnds && $trialEnds > time() ? (int)ceil(($trialEnds - time()) / 86400) : 0,
-        'can_send' => can_send($u), 'created_at' => $u['created_at'],
+        'can_send' => can_send($u), 'created_at' => $u['created_at'], 'ui' => ui_clean($u['ui'] ?? []),
         'limits' => (function () use ($u, $id) {
             $l = user_limits($u);
             return $l + ['numbers_used' => count(wa_accounts_of($id)), 'daily_used' => $l['daily'] > 0 ? daily_used($id) : 0];
