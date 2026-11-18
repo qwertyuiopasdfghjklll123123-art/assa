@@ -748,15 +748,16 @@ function handle_start_campaign($accId): void
         $first = array_slice($numbers, 0, $batch);
         $acc = owned_account($accId);
         $startTs = $sendAt ? strtotime($sendAt) : time();
-        $dripId = drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers), $sched);
-        $r = engine_send_campaign($accId, $first, $text, $media, $delay, $mediaDelay, $sendAt, 'drip:' . $dripId);
+        $anchor = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string)($_POST['drip_time'] ?? '')) ? (string)$_POST['drip_time'] : date('H:i', $startTs);
+        $dripId = drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers), $sched, $anchor);
+        $r = engine_send_campaign($accId, $first, $text, $media, $delay, $mediaDelay, $sendAt, 'drip:' . $dripId . ':1');
         $status = $r['_status'] ?? 503;
         unset($r['_status']);
         if ($status !== 200 || empty($r['ok'])) {
             drip_delete($dripId);
             json_out($r, $status === 200 ? 400 : $status);
         }
-        $r['drip'] = ['batch' => $batch, 'total' => count($numbers), 'days' => drip_days(count($numbers), $batch, $sched)];
+        $r['drip'] = ['batch' => $batch, 'total' => count($numbers), 'days' => drip_days(count($numbers), $batch, $sched), 'time' => $anchor];
         json_out($r);
     }
     engine_start_campaign($accId, $numbers, $text, $sendAt);
@@ -791,6 +792,9 @@ function history_public(array $h): array
         'has_lists' => !empty($h['lists']) || !empty($h['failed_numbers']),
         'finished_at' => $h['finished_at'] ?? null, 'media_name' => $h['media_name'] ?? '', 'delay' => (int)($h['delay'] ?? 0),
         'account_id' => $h['account_id'] ?? '',
+        'drip_batch' => $h['drip_batch'] ?? null, 'drip_id' => $h['drip_id'] ?? null, 'drip_topup' => !empty($h['drip_topup']),
+        'failed_invalid' => (int)($h['failed_invalid'] ?? 0), 'cancelled' => (int)($h['cancelled'] ?? max(0, (int)$h['total'] - $sent - (int)$h['failed'])),
+        'legacy' => !isset($h['finished_at']),
     ];
 }
 

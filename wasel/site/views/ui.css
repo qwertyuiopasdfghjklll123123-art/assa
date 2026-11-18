@@ -453,3 +453,13 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .n-preview .notif{border:1px dashed var(--line2)}
 .drip-today{display:flex;flex-wrap:wrap;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--text2)}
 .drip-today small{color:var(--text3)}
+
+.drip-time{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:13px;font-weight:600}
+.drip-time i{color:var(--primary)}
+.drip-time .input{width:120px;height:38px;margin-right:auto;text-align:center}
+.na{font-size:12px;color:var(--text3);font-weight:500}
+.fail-why{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--text2);margin-top:-4px;padding-right:50px}
+.fail-why i{margin-left:4px;color:var(--red)}
+
+.drip-item .row-sub{white-space:normal;line-height:1.8}
+.drip-time .input{width:150px}

@@ -263,7 +263,7 @@ function reportCard(x) {
   return `<div class="card fade-in rep-card" style="margin-bottom:12px">
     <div style="display:flex;align-items:center;gap:14px;cursor:pointer" onclick="go('report',{id:${x.id}})">
       <div class="ring" style="--p:${x.success_rate}"><b class="num">${x.success_rate}%</b></div>
-      <div style="flex:1;min-width:0"><b>${esc(x.account_name)}</b><div class="row-sub">${esc(x.time)} · ${esc((x.text || '').slice(0, 40)) || '—'}</div>
+      <div style="flex:1;min-width:0"><b>${esc(x.account_name)}</b>${x.drip_batch ? ` <span class="pill pill-blue">دفعة يومية ${x.drip_batch}${x.drip_topup ? ' · تكملة' : ''}</span>` : ''}<div class="row-sub">${esc(x.time)} · ${esc((x.text || '').slice(0, 40)) || '—'}</div>
         <div class="row-sub"><span class="num">${fmt(x.sent)}</span> من <span class="num">${fmt(x.total)}</span> وصلت بنجاح${x.failed ? ` · <span style="color:var(--red)">فشل ${fmt(x.failed)}</span>` : ''}</div></div>
       <span class="chev"><i class="fa-solid fa-chevron-left"></i></span>
     </div>
@@ -315,6 +315,8 @@ R.report = async (el, p) => {
   const r = await api('/dashboard/campaigns/' + p.id);
   if (!r.ok) { el.innerHTML = head('تفاصيل الحملة') + `<div class="card">${empty('fa-solid fa-file-circle-xmark', r.error || 'التقرير غير موجود')}</div>`; return; }
   const x = r.report;
+  const NA = '<span class="na">غير مسجّل</span>';
+  const statusTxt = x.cancelled > 0 ? `<span class="pill pill-orange">توقفت - ${fmt(x.cancelled)} ما انرسلت</span>` : `<span class="pill pill-green">اكتملت</span>`;
   const dur = (() => { const a = Date.parse((x.time || '').replace(' ', 'T')), b = Date.parse((x.finished_at || '').replace(' ', 'T')); if (!a || !b || b < a) return '—'; const m = Math.round((b - a) / 60000); return m < 60 ? `${m} دقيقة` : `${Math.floor(m / 60)} ساعة ${m % 60 ? (m % 60) + ' دقيقة' : ''}`; })();
   const bar = (k, label, n, color, ic) => `<div class="fn-row" ${x.has_lists ? `onclick="repNumbers(${x.id},'${k}')"` : ''}>
     <span class="row-ic" style="background:color-mix(in srgb,${color} 12%,#fff);color:${color}"><i class="${ic}"></i></span>
@@ -327,17 +329,20 @@ R.report = async (el, p) => {
       <div class="ring big" style="--p:${x.success_rate}"><b class="num">${x.success_rate}%</b></div>
       <div style="flex:1;min-width:0"><div class="hero-label">نسبة النجاح</div><div style="font-size:19px;font-weight:800">${esc(x.account_name)}</div>
         <div class="hero-sub"><span class="num">${fmt(x.sent)}</span> من <span class="num">${fmt(x.total)}</span> رقم وصلتهم الرسالة</div></div></div></div>
+    ${x.legacy ? `<div class="note" style="margin-top:12px"><i class="fa-solid fa-circle-info"></i> هذي حملة قبل التحديث - بعض التفاصيل (وقت الانتهاء، الفاصل، المرفق) ما كانت تنسجل. الحملات الجديدة تظهر كاملة.</div>` : ''}
     <div class="section-head">المعلومات</div>
     <div class="card info-grid">
-      <div><small><i class="fa-solid fa-play"></i> بدأت</small><b class="num">${esc(x.time || '—')}</b></div>
-      <div><small><i class="fa-solid fa-flag-checkered"></i> انتهت</small><b class="num">${esc(x.finished_at || '—')}</b></div>
-      <div><small><i class="fa-solid fa-hourglass-half"></i> المدة</small><b>${dur}</b></div>
-      <div><small><i class="fa-solid fa-stopwatch"></i> الفاصل بين الرسائل</small><b>${x.delay ? x.delay + ' ثانية' : '—'}</b></div>
+      <div><small><i class="fa-solid fa-play"></i> بدأت</small><b class="num">${x.time ? esc(x.time) : NA}</b></div>
+      <div><small><i class="fa-solid fa-flag-checkered"></i> انتهت</small><b class="num">${x.finished_at ? esc(x.finished_at) : NA}</b></div>
+      <div><small><i class="fa-solid fa-hourglass-half"></i> المدة</small><b>${dur === '—' ? NA : dur}</b></div>
+      <div><small><i class="fa-solid fa-stopwatch"></i> الفاصل بين الرسائل</small><b>${x.delay ? x.delay + ' ثانية' : NA}</b></div>
       <div><small><i class="fa-brands fa-whatsapp"></i> أرسلت من</small><b>${esc(x.account_name)}</b></div>
       <div><small><i class="fa-solid fa-address-book"></i> عدد الأرقام</small><b class="num">${fmt(x.total)}</b></div>
+      <div><small><i class="fa-solid fa-circle-half-stroke"></i> الحالة</small><b>${statusTxt}</b></div>
+      <div><small><i class="fa-solid fa-calendar-day"></i> النوع</small><b>${x.drip_batch ? 'دفعة يومية رقم ' + x.drip_batch + (x.drip_topup ? ' (تكملة بدل الفاشلة)' : '') : 'حملة عادية'}</b></div>
     </div>
     <div class="section-head">الرسالة <a onclick="copy(${esc(JSON.stringify(x.text_full || ''))})">نسخ</a></div>
-    <div class="card"><div class="msg-full selectable">${esc(x.text_full || '—').replace(/\n/g, '<br>')}</div>
+    <div class="card"><div class="msg-full selectable">${x.text_full ? esc(x.text_full).replace(/\n/g, '<br>') : (x.media_name ? '<i>بدون نص - مرفق فقط</i>' : '—')}</div>
       ${x.media_name ? `<div class="note" style="margin-top:10px"><i class="fa-solid fa-paperclip"></i> مرفق: ${esc(x.media_name)}</div>` : ''}
       <button class="btn btn-soft btn-sm btn-block" style="margin-top:10px" id="reuse"><i class="fa-solid fa-rotate"></i> استخدم نفس الرسالة بحملة جديدة</button></div>
     <div class="section-head">النتائج ${x.has_lists ? '<small style="font-weight:500;color:var(--text3)">اضغط لعرض الأرقام</small>' : ''}</div>
@@ -345,6 +350,8 @@ R.report = async (el, p) => {
       ${bar('unread', 'وصلت بنجاح', x.sent, '#0891b2', 'fa-solid fa-paper-plane')}
       ${x.tracked ? bar('unread', 'استلموا', x.delivered, '#0ea5e9', 'fa-solid fa-check-double') + bar('read_only', 'شاهدوا', x.read, '#7c3aed', 'fa-solid fa-eye') + bar('replied', 'ردّوا', x.replied, '#16a34a', 'fa-solid fa-reply') + bar('read_only', 'شاهدوا بدون رد', readOnly, '#d97706', 'fa-solid fa-eye-slash') : ''}
       ${bar('failed', 'فشلت', x.failed, '#dc2626', 'fa-solid fa-xmark')}
+      ${x.failed ? `<div class="fail-why">${x.failed_invalid ? `<span><i class="fa-solid fa-ban"></i> ${fmt(x.failed_invalid)} رقم ما عليه واتساب</span>` : ''}${x.failed - x.failed_invalid > 0 ? `<span><i class="fa-solid fa-rotate-right"></i> ${fmt(x.failed - x.failed_invalid)} خطأ مؤقت${x.drip_batch ? ' (تنعاد بالدفعة الجاية)' : ''}</span>` : ''}</div>` : ''}
+      ${x.cancelled ? bar('pending', 'ما انرسلت (إيقاف/إلغاء)', x.cancelled, '#64748b', 'fa-solid fa-pause') : ''}
     </div>
     ${x.tracked ? `<div class="note" style="margin-top:12px">الأرقام تتحدث تلقائياً لمدة 7 أيام بعد الحملة. «شاهدوا» تعتمد على إيصالات القراءة.</div>` : ''}`;
   el.querySelector('#reuse').onclick = () => { S.pendingText = x.text_full || ''; go('campaign', { acc: x.account_id }); };
@@ -466,6 +473,7 @@ R.campaign = async (el, p) => {
           <div style="flex:1;min-width:0"><b>إرسال <input class="drip-n num" id="dripN" type="number" min="5" max="1000" value="40"> رقم يومياً</b><div class="row-sub" id="dripSub">يتفعّل لما تكون الأرقام أكثر من 40</div></div>
           <label class="switch"><input type="checkbox" id="dripOn" disabled><span></span></label></div>
         <div id="dripMore" class="hidden">
+          <div class="drip-time"><i class="fa-regular fa-clock"></i><span>تبدأ الدفعة كل يوم الساعة</span><input class="input num" type="time" id="dripTime"></div>
           <div class="seg drip-mode" id="dripMode"><button data-m="same" class="on"><b>نفس العدد كل يوم</b></button><button data-m="custom"><b>عدد مختلف لكل يوم</b></button></div>
           <div id="dripCustom" class="hidden">
             <div class="chips" id="dripPresets" style="margin:8px 0"></div>
@@ -511,6 +519,10 @@ R.campaign = async (el, p) => {
   };
   numbersEl.addEventListener('input', count);
   $('#dripOn').onchange = count; $('#dripN').oninput = count;
+  // وقت الدفعة اليومي: افتراضياً نفس وقت الآن (أو وقت الجدولة إذا محدد)
+  const syncDripTime = () => { const v = $('#sendAt').value; const d = v ? new Date(v) : new Date(); if (!$('#dripTime').dataset.touched) $('#dripTime').value = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
+  syncDripTime(); $('#sendAt').addEventListener('change', syncDripTime);
+  $('#dripTime').addEventListener('input', e => { e.target.dataset.touched = 1; });
   // ---- جدول الدفعات المخصص: لكل يوم عدد (0 = كل الباقي)
   let dripMode = 'same', sched = [];
   const DMAX = (ME.limits || {}).daily || 0;
@@ -648,7 +660,7 @@ R.campaign = async (el, p) => {
     fd.append('numbers_text', numbersEl.value); fd.append('country_code', $('#cc').dataset.cc); fd.append('text', $('#text').value);
     fd.append('delay', $('#delay').value || 15);
     if ($('#dripOn').checked) {
-      fd.append('drip', '1'); fd.append('drip_batch', Math.max(1, +$('#dripN').value || 40));
+      fd.append('drip', '1'); fd.append('drip_batch', Math.max(1, +$('#dripN').value || 40)); fd.append('drip_time', $('#dripTime').value);
       if (dripMode === 'custom' && sched.length) fd.append('drip_schedule', JSON.stringify(sched));
     }
     if ($('#sendAt').value) fd.append('send_at', $('#sendAt').value);
@@ -663,7 +675,7 @@ R.campaign = async (el, p) => {
       return;
     }
     if (DL.daily > 0) { DL.daily_used = (DL.daily_used || 0) + Math.min(r.total || 0, DL.daily); }
-    toast(r.drip ? `بدأت أول دفعة (${fmt(r.drip.batch)} رقم) - الباقي ${fmt(r.drip.total - r.drip.batch)} على ${fmt(r.drip.days - 1)} يوم` : r.scheduled_for ? 'تمت جدولة الحملة: ' + r.scheduled_for : `بدأت الحملة على ${fmt(r.total)} رقم`, 'ok');
+    toast(r.drip ? `بدأت أول دفعة (${fmt(r.drip.batch)} رقم) - الباقي ${fmt(r.drip.total - r.drip.batch)} على ${fmt(r.drip.days - 1)} يوم، كل يوم الساعة ${r.drip.time}` : r.scheduled_for ? 'تمت جدولة الحملة: ' + r.scheduled_for : `بدأت الحملة على ${fmt(r.total)} رقم`, 'ok');
     numbersEl.value = ''; $('#dripOn').checked = false; count(); loadStatus(); loadDrips();
   });
 
@@ -707,7 +719,7 @@ R.campaign = async (el, p) => {
     const mine = r.drips.filter(x => x.account_id === accId);
     box.innerHTML = mine.length ? `<div class="section-head">دفعات يومية مجدولة <span class="pill pill-blue">${mine.length}</span></div>` + mine.map(x => `<div class="card drip-item" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ic-indigo"><i class="fa-solid fa-calendar-day"></i></span>
-        <div style="flex:1;min-width:0"><b>${esc(x.text || 'حملة')}</b><div class="row-sub">باقي <b class="num">${fmt(x.left)}</b> من ${fmt(x.total)} · ${x.custom ? 'جدول مخصص' : fmt(x.batch) + ' يومياً'} · الجاية <b class="num">${fmt(x.next_batch)}</b> رقم <span class="num">${esc(x.next_at)}</span></div></div>
+        <div style="flex:1;min-width:0"><b>${esc(x.text || 'حملة')}</b><div class="row-sub">باقي <b class="num">${fmt(x.left)}</b> من ${fmt(x.total)} · ${x.custom ? 'جدول مخصص' : fmt(x.batch) + ' يومياً'}${x.anchor ? ` · كل يوم <b class="num">${esc(x.anchor)}</b>` : ''} · الجاية <b class="num">${fmt(x.next_batch)}</b> رقم <span class="num">${esc(x.next_at)}</span></div></div>
         <button class="btn btn-soft btn-xs" style="color:var(--red)" data-dc="${x.id}"><i class="fa-solid fa-xmark"></i> إلغاء</button></div>
       <div class="progress" style="margin-top:10px"><span style="width:${Math.round((x.total - x.left) / x.total * 100)}%"></span></div>
       <div class="drip-today">

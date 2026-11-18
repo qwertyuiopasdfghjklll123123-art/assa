@@ -70,8 +70,20 @@ function drip_days(int $total, int $first, array $sched): int
     return $days;
 }
 
+/** موعد بداية اليوم الجاي: نفس الساعة المحددة (مثلاً 10:00) باليوم اللي بعده، وإلا بعد 24 ساعة */
+function drip_next_start(array $d): int
+{
+    $base = (int)($d['day_started'] ?? time());
+    $anchor = (string)($d['anchor'] ?? '');
+    if (preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $anchor)) {
+        // دفعة وحدة لكل يوم: اليوم اللي بعده بنفس الساعة (حتى لو Cron تأخر، الوقت ما يزحف)
+        return strtotime(date('Y-m-d', $base + 86400) . ' ' . $anchor);
+    }
+    return $base + DRIP_GAP_HOURS * 3600;
+}
+
 /** يحفظ باقي الأرقام كدفعات مجدولة */
-function drip_create(int $owner, string $accId, string $accName, array $rest, string $text, ?array $media, int $delay, int $mediaDelay, int $batch, int $firstAt, int $total, array $schedule = []): int
+function drip_create(int $owner, string $accId, string $accName, array $rest, string $text, ?array $media, int $delay, int $mediaDelay, int $batch, int $firstAt, int $total, array $schedule = [], string $anchor = ''): int
 {
     $mediaRef = null;
     if ($media) {
@@ -82,7 +94,7 @@ function drip_create(int $owner, string $accId, string $accName, array $rest, st
     return (int)store_insert('drips', [
         'owner' => $owner, 'account_id' => $accId, 'account_name' => $accName, 'numbers' => array_values($rest), 'total' => $total,
         'text' => $text, 'media' => $mediaRef, 'delay' => $delay, 'media_delay' => $mediaDelay, 'batch' => $batch,
-        'next_at' => $firstAt + DRIP_GAP_HOURS * 3600, 'batches_sent' => 1, 'created_at' => now_str(), 'schedule' => $schedule,
+        'next_at' => drip_next_start(['day_started' => $firstAt, 'anchor' => $anchor]), 'anchor' => $anchor, 'batches_sent' => 1, 'created_at' => now_str(), 'schedule' => $schedule,
         // حالة اليوم الحالي: كم المطلوب، كم نجح، وهل فيه دفعة لسه ما رجعت نتيجتها
         'day_started' => $firstAt, 'day_size' => $batch, 'day_ok' => 0, 'awaiting' => true, 'launched_at' => time(), 'launched' => $batch,
         'retry' => [], 'retried' => [], 'invalid' => 0, 'result' => null,
@@ -102,7 +114,7 @@ function drip_launch(array $d, array $nums, bool $topup): bool
     if (!empty($d['media']['file']) && is_file($f = drip_media_dir() . '/' . basename($d['media']['file']))) {
         $media = ['name' => $d['media']['name'], 'mime' => $d['media']['mime'], 'data' => base64_encode((string)file_get_contents($f))];
     }
-    $r = engine_send_campaign($d['account_id'], $nums, (string)$d['text'], $media, (int)$d['delay'], (int)$d['media_delay'], null, 'drip:' . $d['id']);
+    $r = engine_send_campaign($d['account_id'], $nums, (string)$d['text'], $media, (int)$d['delay'], (int)$d['media_delay'], null, 'drip:' . $d['id'] . ':' . (int)$d['batches_sent'] . ($topup ? ':t' : ''));
     return !empty($r['ok']);
 }
 
@@ -125,7 +137,7 @@ function drip_public(array $d): array
         'batches_left' => drip_days(count($d['numbers']), $next, array_slice($d['schedule'] ?? [], (int)$d['batches_sent'])), 'batches_sent' => (int)$d['batches_sent'],
         'next_at' => date('Y-m-d H:i', (int)$d['next_at']), 'text' => mb_substr((string)$d['text'], 0, 60),
         'today_ok' => (int)($d['day_ok'] ?? 0), 'today_size' => (int)($d['day_size'] ?? 0), 'today_running' => !empty($d['awaiting']),
-        'retry' => $retry, 'invalid' => (int)($d['invalid'] ?? 0)];
+        'retry' => $retry, 'invalid' => (int)($d['invalid'] ?? 0), 'anchor' => (string)($d['anchor'] ?? '')];
 }
 
 /**
@@ -138,11 +150,39 @@ function drip_run_due(): int
 {
     $launched = 0;
     foreach (store_all('drips') as $d) {
+        $launched += drip_step((int)$d['id']);
+    }
+    return $launched;
+}
+
+/** خطوة وحدة لجدول دفعات (تنادى من Cron، وفوراً لما توصل نتيجة دفعة من المحرك). بقفل حتى ما تشتغل مرتين بنفس اللحظة */
+function drip_step(int $dripId): int
+{
+    $lk = @fopen(DATA_DIR . '/drip_' . $dripId . '.lock', 'c');
+    if (!$lk || !flock($lk, LOCK_EX | LOCK_NB)) {
+        return 0;
+    }
+    try {
+        $d = store_find('drips', $dripId);
+        return $d ? drip_step_row($d) : 0;
+    } finally {
+        flock($lk, LOCK_UN);
+        fclose($lk);
+        if (!store_find('drips', $dripId)) {
+            @unlink(DATA_DIR . '/drip_' . $dripId . '.lock');
+        }
+    }
+}
+
+function drip_step_row(array $d): int
+{
+    $launched = 0;
+    do {
         $id = (int)$d['id'];
         $owner = user_by_id((int)$d['owner']);
         if (!$owner) {
             drip_delete($id);
-            continue;
+            break;
         }
         $legacy = !array_key_exists('awaiting', $d); // جدول من النسخة السابقة
         // ---------- 1) دفعة بانتظار النتيجة
@@ -153,7 +193,7 @@ function drip_run_due(): int
                 $st = engine_json('GET', '/accounts/' . rawurlencode($d['account_id']) . '/campaign');
                 $busy = !empty($st['running']) || !empty($st['paused']) || !empty($st['scheduled_for']);
                 if ($busy || time() - (int)($d['launched_at'] ?? 0) < 6 * 3600) {
-                    continue;
+                    break;
                 }
                 $res = ['sent' => (int)($d['launched'] ?? 0), 'failed' => [], 'reasons' => []];
             }
@@ -182,7 +222,7 @@ function drip_run_due(): int
                     store_update('drips', $id, fn($x) => $d);
                     add_event((int)$d['owner'], $d['account_id'], 'إكمال دفعة اليوم', count($nums) . ' رقم بدل الرسائل اللي فشلت (حصة اليوم ' . $d['day_size'] . ')', 'info');
                     $launched++;
-                    continue;
+                    break;
                 }
                 // تعذر الإرسال: نرجع الأرقام ونكمل باچر
                 $d['numbers'] = array_merge($nums, $d['numbers']);
@@ -195,29 +235,29 @@ function drip_run_due(): int
             if (!$d['numbers']) {
                 add_event((int)$d['owner'], $d['account_id'], 'خلصت كل الدفعات', 'وصلت الرسالة لـ ' . number_format((int)$d['total'] - $invalid) . ' رقم' . ($invalid ? " ({$invalid} رقم ما عليه واتساب)" : ''), 'success');
                 drip_delete($id);
-                continue;
+                break;
             }
-            $d['next_at'] = (int)$d['day_started'] + DRIP_GAP_HOURS * 3600;
+            $d['next_at'] = drip_next_start($d);
             store_update('drips', $id, fn($x) => $d);
-            continue;
+            break;
         }
         // ---------- 2) يوم جديد
         if ((int)$d['next_at'] > time()) {
-            continue;
+            break;
         }
         if (!$d['numbers']) {
             drip_delete($id);
-            continue;
+            break;
         }
         if (!can_send($owner)) {
             store_update('drips', $id, fn($x) => array_merge($x, ['next_at' => time() + DRIP_GAP_HOURS * 3600]));
             add_event((int)$d['owner'], $d['account_id'], 'تأجلت دفعة الحملة', 'رصيدك أو اشتراكك ما يكفي - اشحن حتى تكمل الدفعات', 'warning');
-            continue;
+            break;
         }
         $st = engine_json('GET', '/accounts/' . rawurlencode($d['account_id']) . '/campaign');
         if (!empty($st['running']) || !empty($st['paused']) || empty($st['ok']) && ($st['_status'] ?? 200) >= 500) {
             store_update('drips', $id, fn($x) => array_merge($x, ['next_at' => time() + 1800]));
-            continue;
+            break;
         }
         $size = drip_batch_size($d, (int)$d['batches_sent']);
         $lim = user_limits($owner);
@@ -230,15 +270,16 @@ function drip_run_due(): int
         $d2 = array_merge($d, ['numbers' => array_slice($d['numbers'], count($batch)), 'batches_sent' => $n, 'day_started' => time(), 'day_size' => count($batch),
             'day_ok' => 0, 'awaiting' => true, 'launched_at' => time(), 'launched' => count($batch), 'result' => null, 'retry_next' => 0,
             'next_at' => time() + DRIP_GAP_HOURS * 3600] + ($legacy ? ['retry' => [], 'retried' => [], 'invalid' => 0] : []));
+        $d2['next_at'] = drip_next_start($d2);
         if (!drip_launch($d2, $batch, false)) {
             store_update('drips', $id, fn($x) => array_merge($x, ['next_at' => time() + 3600]));
-            continue;
+            break;
         }
         store_update('drips', $id, fn($x) => $d2);
         $launched++;
         $left = count($d2['numbers']);
         add_event((int)$d['owner'], $d['account_id'], "بدأت الدفعة {$n}", count($batch) . ' رقم' . ($left ? ' - باقي ' . $left : ' - آخر دفعة'), 'success');
-    }
+    } while (false);
     return $launched;
 }
 

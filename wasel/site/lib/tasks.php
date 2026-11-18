@@ -212,6 +212,7 @@ function handle_engine_hook(): void
             // no break
         case 'history':
             $e = $d['entry'] ?? [];
+            $dripTag = (bool)preg_match('/^drip:(\d+)(?::(\d+))?(:t)?$/', (string)($e['tag'] ?? ''), $tm);
             $accId = (string)($d['account_id'] ?? '');
             store_insert('history', [
                 'owner' => (int)($d['owner'] ?? 0), 'account_id' => $accId,
@@ -224,9 +225,12 @@ function handle_engine_hook(): void
                 'lists' => track_lists($e['lists'] ?? []), 'failed_numbers' => digit_list($e['failed_numbers'] ?? []),
                 'finished_at' => now_str(), 'media_name' => clean_text(mb_substr((string)($e['media_name'] ?? ''), 0, 120)),
                 'delay' => (int)($e['delay'] ?? 0), 'text_full' => mb_substr((string)($e['text_full'] ?? ($e['text'] ?? '')), 0, 4000),
+                'drip_id' => $dripTag ? (int)$tm[1] : null, 'drip_batch' => $dripTag ? (int)($tm[2] ?? 0) : null, 'drip_topup' => $dripTag && !empty($tm[3]),
+                'failed_invalid' => count(array_filter((array)($e['failed_reasons'] ?? []), fn($r) => $r === 'invalid')),
+                'cancelled' => max(0, (int)($e['total'] ?? 0) - (int)($e['sent'] ?? 0) - (int)($e['failed'] ?? 0)),
             ]);
-            // نتيجة دفعة من «إرسال يومياً»: نسجلها حتى Cron يكمّل الناقص ويعيد الفاشل
-            if (preg_match('/^drip:(\d+)$/', (string)($e['tag'] ?? ''), $tm)) {
+            // نتيجة دفعة من «إرسال يومياً»: نسجلها، وبعد الرد على المحرك نكمّل الناقص/نعيد الفاشل فوراً (بدون انتظار Cron)
+            if ($dripTag) {
                 drip_record_result((int)$tm[1], (int)($e['sent'] ?? 0), (array)($e['failed_numbers'] ?? []), (array)($e['failed_reasons'] ?? []));
             }
             // آخر 20 حملة لكل حساب فقط
@@ -237,6 +241,13 @@ function handle_engine_hook(): void
                     unset($rows[(string)array_shift($ids)]);
                 }
             });
+            if ($dripTag) {
+                $did = (int)$tm[1];
+                json_out_then(['ok' => true], function () use ($did) {
+                    usleep(800000); // نعطي المحرك لحظة يخلص تنظيف الحملة السابقة
+                    drip_step($did);
+                });
+            }
             json_out(['ok' => true]);
             // no break
         case 'ai_reply':
