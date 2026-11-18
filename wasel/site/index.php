@@ -161,7 +161,7 @@ $routes = [
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }],
     ['GET', '#^/pwa-(192|512)\.png$#', 'serve_pwa_icon'],
-    ['GET', '#^/assets/(ui\.css|app\.js|logo(?:-gold)?\.(?:png|webp)|vendor/[a-z0-9-]+\.(?:css|woff2))$#', 'serve_asset'],
+    ['GET', '#^/assets/(ui\.css|app\.js|logo(?:-(?:gold|violet|rose))?\.(?:png|webp)|vendor/[a-z0-9-]+\.(?:css|woff2))$#', 'serve_asset'],
     ['POST', '#^/api/me/ui$#', function () {
         $id = require_login();
         $p = ui_clean(request_json());

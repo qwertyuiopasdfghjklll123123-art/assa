@@ -481,6 +481,33 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 [data-style=gold] .btn-primary i,[data-style=gold] #bnav .on i{color:var(--on-btn)}
 [data-style=gold] .hero .pill-white{color:#0d2a30}
 
+/* ستايل «بنفسجي ليلي» */
+[data-style=violet]{
+  --bg:#f6f4fc;--primary:#6d28d9;--primary2:#8b5cf6;--primary-deep:#4c1d95;--primary-bg:rgba(139,92,246,.12);--primary-glow:rgba(139,92,246,.3);
+  --hero:linear-gradient(140deg,#8b5cf6,#5b21b6);--btn:linear-gradient(140deg,#a78bfa,#6d28d9);--on-btn:#fff;--g-teal:linear-gradient(140deg,#8b5cf6,#6d28d9);
+  --ill1:#7c3aed;--ill2:#c4b5fd;--ill-bg:rgba(139,92,246,.08);
+  --glow1:rgba(196,181,253,.5);--glow2:rgba(221,214,254,.55);--glow3:rgba(244,114,182,.18);
+  --line:rgba(46,16,101,.07);--line2:rgba(46,16,101,.13);--input-line:rgba(46,16,101,.11);
+}
+[data-mode=dark][data-style=violet]{
+  --bg:#110e1b;--surface:#1c1729;--card-solid:#1c1729;--card:rgba(31,25,48,.75);
+  --primary:#a78bfa;--primary2:#8b5cf6;--primary-deep:#ddd6fe;--primary-bg:rgba(167,139,250,.13);
+  --glow1:rgba(139,92,246,.2);--glow2:rgba(139,92,246,.1);--glow3:rgba(236,72,153,.07);
+}
+/* ستايل «وردي مرجاني» */
+[data-style=rose]{
+  --bg:#fcf4f5;--primary:#be123c;--primary2:#f43f5e;--primary-deep:#881337;--primary-bg:rgba(244,63,94,.11);--primary-glow:rgba(244,63,94,.28);
+  --hero:linear-gradient(140deg,#fb7185,#be123c);--btn:linear-gradient(140deg,#fb7185,#e11d48);--on-btn:#fff;--g-teal:linear-gradient(140deg,#fb7185,#e11d48);
+  --ill1:#e11d48;--ill2:#fda4af;--ill-bg:rgba(244,63,94,.08);
+  --glow1:rgba(253,164,175,.5);--glow2:rgba(254,205,211,.6);--glow3:rgba(251,191,36,.16);
+  --line:rgba(76,5,25,.07);--line2:rgba(76,5,25,.13);--input-line:rgba(76,5,25,.11);
+}
+[data-mode=dark][data-style=rose]{
+  --bg:#170e11;--surface:#25161b;--card-solid:#25161b;--card:rgba(40,24,30,.75);
+  --primary:#fb7185;--primary2:#f43f5e;--primary-deep:#fecdd3;--primary-bg:rgba(251,113,133,.13);
+  --glow1:rgba(244,63,94,.18);--glow2:rgba(244,63,94,.08);--glow3:rgba(251,191,36,.05);
+}
+
 /* الوضع الداكن */
 [data-mode=dark]{
   color-scheme:dark;
@@ -514,9 +541,9 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 [data-mode=dark] .glow{box-shadow:0 0 0 3px var(--surface),0 0 0 6px color-mix(in srgb,var(--primary2) 35%,transparent),0 0 28px color-mix(in srgb,var(--primary2) 40%,transparent);animation:none}
 
 /* الشعار حسب الستايل */
-.lg-gold{display:none!important}
-[data-style=gold] .lg-gold{display:inline-block!important}
-[data-style=gold] .lg-teal{display:none!important}
+.lg-gold,.lg-violet,.lg-rose{display:none!important}
+[data-style=gold] .lg-gold,[data-style=violet] .lg-violet,[data-style=rose] .lg-rose{display:inline-block!important}
+[data-style=gold] .lg-teal,[data-style=violet] .lg-teal,[data-style=rose] .lg-teal{display:none!important}
 
 /* صفحة المظهر */
 .ui-styles{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -533,11 +560,21 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .up-l{height:7px;border-radius:4px;background:rgba(13,42,48,.12);width:80%}.up-l.s{width:55%}
 .up-btn{height:16px;border-radius:7px;margin-top:auto}
 .ui-prev-teal .up-btn{background:linear-gradient(140deg,#0ab3c9,#04788b)}.ui-prev-gold .up-btn{background:linear-gradient(140deg,#fcd34d,#f59e0b)}
+.ui-prev-violet{background:#f3f0fb}.ui-prev-violet .up-hero{background:linear-gradient(140deg,#8b5cf6,#5b21b6)}.ui-prev-violet .up-btn{background:linear-gradient(140deg,#a78bfa,#6d28d9)}
+.ui-prev-rose{background:#fcf1f3}.ui-prev-rose .up-hero{background:linear-gradient(140deg,#fb7185,#be123c)}.ui-prev-rose .up-btn{background:linear-gradient(140deg,#fb7185,#e11d48)}
+.ui-def{position:absolute;top:8px;right:8px;font-size:10px;font-weight:800;padding:2px 7px;border-radius:8px;background:var(--text);color:var(--surface)}
 .ui-seg button{flex:1;display:flex;align-items:center;justify-content:center;gap:5px}
 .ui-size-demo{margin-top:12px;padding:12px;border-radius:14px;background:var(--input);font-size:14px;text-align:center}
 .ui-font .ui-radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);display:block;transition:.2s}
 .ui-font.on .ui-radio{border:7px solid var(--primary2)}
 .ui-font.on{background:var(--primary-bg)}
+
+/* رابط الفترة المجانية */
+.trial-foot{margin-top:10px;padding:10px 12px;border-radius:14px;border:1px dashed color-mix(in srgb,var(--orange) 55%,transparent);background:var(--orange-bg)}
+.trial-foot .tf-h{font-size:12px;font-weight:700;color:var(--orange)}
+.trial-foot pre,.tf-prev{font:inherit;font-size:12.5px;white-space:pre-wrap;direction:rtl;margin:6px 0;color:var(--text2)}
+.tf-prev{padding:10px 12px;border-radius:12px;background:var(--input);border:1px solid var(--input-line)}
+.trial-foot a{font-size:12px;font-weight:800;color:var(--primary);cursor:pointer}
 
 /* حجم الخط (يكبّر الواجهة كلها بنفس النسبة) */
 [data-size=sm] body{zoom:.92}[data-size=lg] body{zoom:1.08}[data-size=xl] body{zoom:1.17}

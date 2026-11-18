@@ -14,7 +14,7 @@ function user_send(int $owner, string $accId, string $phone, string $text): arra
     if (!$ok) {
         return [false, $res[2] ?? no_balance_error()];
     }
-    [$sent, $err] = engine_send($accId, $phone, $text);
+    [$sent, $err] = engine_send($accId, $phone, with_trial_footer($owner, $text));
     if (!$sent) {
         refund_message($owner, $charged);
         if (user_limits(user_by_id($owner))['daily'] > 0) {

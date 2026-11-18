@@ -361,8 +361,12 @@ R.report = async (el, p) => {
 const UI_FONTS = [['plex', 'IBM Plex', 'الافتراضي'], ['alexandria', 'Alexandria', 'عصري وعريض'], ['readex-pro', 'Readex Pro', 'واضح ومريح'], ['cairo', 'Cairo', 'كلاسيكي مشهور'],
   ['tajawal', 'Tajawal', 'خفيف ونظيف'], ['almarai', 'Almarai', 'ناعم ومقروء'], ['noto-kufi-arabic', 'Noto Kufi', 'كوفي رسمي'], ['reem-kufi', 'Reem Kufi', 'كوفي مزخرف'],
   ['el-messiri', 'El Messiri', 'أنيق وفخم'], ['marhey', 'Marhey', 'مرح ومدوّر'], ['rakkas', 'Rakkas', 'عناوين قوية (خط الشعار)']];
-const UI_DEF = { style: 'teal', mode: 'light', font: 'plex', size: 'md' };
-function uiGet() { const h = document.documentElement; return { style: h.dataset.style || 'teal', mode: h.dataset.uiMode || 'light', font: h.dataset.font || 'plex', size: h.dataset.size || 'md' }; }
+const UI_STYLES = [['teal', 'فيروزي زجاجي', 'الستايل الأصلي'], ['gold', 'ذهبي وكحلي', 'بألوان شعار واصل'], ['violet', 'بنفسجي ليلي', 'هادي وفخم'], ['rose', 'وردي مرجاني', 'دافي وحيوي']];
+const UI_TC = { teal: ['#f3f7f8', '#0b181b'], gold: ['#f7f4ec', '#0a1517'], violet: ['#f6f4fc', '#110e1b'], rose: ['#fcf4f5', '#170e11'] };
+const UI_DEF = { style: '', mode: 'light', font: 'plex', size: 'md' }; // style '' = الأساسي اللي يحدده الأدمن
+const uiDefStyle = () => (UI_TC[SET.default_style] ? SET.default_style : 'teal');
+/** اختيار المستخدم (style '' يعني يتبع الأساسي) */
+function uiGet() { const h = document.documentElement; return { style: ME?.ui ? (ME.ui.style || '') : (h.dataset.style || ''), mode: h.dataset.uiMode || 'light', font: h.dataset.font || 'plex', size: h.dataset.size || 'md' }; }
 function uiFontCss(f) { return `/assets/vendor/font-${f}.css?v=__V__`; }
 function uiLoadFont(f, id) {
   if (f === 'plex') return;
@@ -373,13 +377,14 @@ function uiLoadFont(f, id) {
 /** يطبّق المظهر فوراً (بدون تحديث) ويحفظه بالمتصفح، وبالسيرفر إذا save=true */
 function uiApply(p, save = true) {
   p = Object.assign(uiGet(), p);
+  if (ME) ME.ui = Object.assign({}, p);
   const h = document.documentElement;
   const dark = p.mode === 'dark' || (p.mode === 'auto' && matchMedia('(prefers-color-scheme: dark)').matches);
+  const st = UI_TC[p.style] ? p.style : uiDefStyle();
   uiLoadFont(p.font);
-  h.dataset.style = p.style; h.dataset.uiMode = p.mode; h.dataset.mode = dark ? 'dark' : 'light'; h.dataset.font = p.font; h.dataset.size = p.size;
-  const tc = dark ? (p.style === 'gold' ? '#0a1517' : '#0b181b') : (p.style === 'gold' ? '#f7f4ec' : '#f3f7f8');
-  let m = document.querySelector('meta[name=theme-color]'); if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); } m.content = tc;
-  try { localStorage.setItem('wasel_ui', JSON.stringify(p)); } catch (e) {}
+  h.dataset.style = st; h.dataset.uiMode = p.mode; h.dataset.mode = dark ? 'dark' : 'light'; h.dataset.font = p.font; h.dataset.size = p.size;
+  let m = document.querySelector('meta[name=theme-color]'); if (!m) { m = document.createElement('meta'); m.name = 'theme-color'; document.head.appendChild(m); } m.content = UI_TC[st][dark ? 1 : 0];
+  try { localStorage.setItem('wasel_ui', JSON.stringify(Object.assign({}, p, { style: st }))); } catch (e) {}
   if (save) { clearTimeout(S.uiT); S.uiT = setTimeout(() => api('/api/me/ui', { method: 'POST', body: p }).then(r => { if (r.ok && ME) ME.ui = r.ui; }), 350); }
   return p;
 }
@@ -388,17 +393,21 @@ try { matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () =
 
 R.appearance = async (el) => {
   const draw = () => {
-    const p = uiGet();
+    const p = uiGet(), cur = UI_TC[p.style] ? p.style : uiDefStyle(), def = uiDefStyle();
     const segBtns = (key, opts) => opts.map(([v, t, ic]) => `<button data-k="${key}" data-v="${v}" class="${p[key] === v ? 'on' : ''}">${ic ? `<i class="${ic}"></i> ` : ''}<b>${t}</b></button>`).join('');
     el.innerHTML = head('المظهر') + `
       <div class="section-head">الستايل</div>
       <div class="ui-styles">
-        ${[['teal', 'فيروزي زجاجي', 'الستايل الأصلي'], ['gold', 'ذهبي وكحلي', 'بألوان شعار واصل']].map(([v, t, s]) => `
-        <button class="ui-style ${p.style === v ? 'on' : ''}" data-k="style" data-v="${v}">
-          <span class="ui-prev ui-prev-${v}"><span class="up-hero"><img src="/assets/${v === 'gold' ? 'logo-gold' : 'logo'}.webp?v=__V__" alt=""></span><span class="up-l"></span><span class="up-l s"></span><span class="up-btn"></span></span>
-          <b>${t}</b><small>${s}</small><span class="ui-check"><i class="fa-solid fa-check"></i></span>
+        ${UI_STYLES.map(([v, t, s]) => `
+        <button class="ui-style ${cur === v ? 'on' : ''}" data-k="style" data-v="${v}">
+          <span class="ui-prev ui-prev-${v}"><span class="up-hero"><img src="/assets/logo${v === 'teal' ? '' : '-' + v}.webp?v=__V__" alt=""></span><span class="up-l"></span><span class="up-l s"></span><span class="up-btn"></span></span>
+          <b>${t}</b><small>${s}</small><span class="ui-check"><i class="fa-solid fa-check"></i></span>${v === def ? '<span class="ui-def">الأساسي</span>' : ''}
         </button>`).join('')}
       </div>
+      ${p.style === '' ? '<div class="hint" style="margin-top:8px">تستخدم الستايل الأساسي للموقع حالياً.</div>' : ''}
+      ${ADMIN ? `<div class="card" style="margin-top:12px"><div style="display:flex;align-items:center;gap:10px;margin-bottom:10px"><span class="row-ic ic-indigo"><i class="fa-solid fa-shield"></i></span>
+        <div style="flex:1"><b>الستايل الأساسي للموقع</b><div class="row-sub">يظهر لكل المستخدمين والزوار اللي ما اختاروا ستايل (أدمن فقط)</div></div></div>
+        <div class="seg ui-seg" id="uiDefSeg">${UI_STYLES.map(([v, t]) => `<button data-d="${v}" class="${def === v ? 'on' : ''}"><b>${t.split(' ')[0]}</b></button>`).join('')}</div></div>` : ''}
       <div class="section-head">الوضع</div>
       <div class="card"><div class="seg ui-seg">${segBtns('mode', [['light', 'نهاري', 'fa-solid fa-sun'], ['dark', 'داكن', 'fa-solid fa-moon'], ['auto', 'تلقائي', 'fa-solid fa-circle-half-stroke']])}</div>
         <div class="hint" style="margin-top:8px">«تلقائي» يتبع إعداد جهازك (نهاري بالنهار وداكن بالليل إذا جهازك مضبوط هيج).</div></div>
@@ -417,6 +426,11 @@ R.appearance = async (el) => {
       <button class="btn btn-ghost btn-block" style="margin-top:16px" id="uiReset"><i class="fa-solid fa-rotate-left"></i> رجوع للمظهر الافتراضي</button>
       <div class="hint" style="text-align:center;margin-top:10px">يتحفظ اختيارك بحسابك ويبقى نفسه حتى بعد التحديث أو من جهاز ثاني.</div>`;
     el.querySelectorAll('[data-k]').forEach(b => b.onclick = () => { uiApply({ [b.dataset.k]: b.dataset.v }); draw(); });
+    el.querySelectorAll('[data-d]').forEach(b => b.onclick = async () => {
+      const r = await api('/api/admin/settings', { body: { default_style: b.dataset.d } });
+      if (!r.ok) return toast(r.error || 'ما انحفظ', 'err');
+      SET.default_style = b.dataset.d; uiApply({}, false); draw(); toast('صار الستايل الأساسي: ' + b.textContent.trim(), 'ok');
+    });
     el.querySelector('#uiReset').onclick = () => { uiApply(UI_DEF); draw(); toast('رجع المظهر الافتراضي', 'ok'); };
   };
   UI_FONTS.forEach(([id]) => uiLoadFont(id)); // نحمّل كل الخطوط هنا بس حتى تبين المعاينة
@@ -529,6 +543,8 @@ R.campaign = async (el, p) => {
       <div class="field" style="margin-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px"><label style="margin:0">رمز الدولة للأرقام المحلية</label>${ccButton('cc')}</div>
       <div class="card-title" style="margin-top:6px"><i class="fa-solid fa-message"></i> الرسالة</div>
       <textarea class="textarea" id="text" placeholder="اكتب رسالتك هنا... (اختياري إذا أرفقت صورة أو ملف)"></textarea>
+      ${ME.trial_active && !ME.plan_active && !ADMIN ? `<div class="trial-foot"><div class="tf-h"><i class="fa-solid fa-link"></i> بالفترة المجانية ينضاف هذا تلقائياً بآخر كل رسالة:</div><pre>${esc(SET.trial_footer || '')}</pre>
+        <a onclick="go('wallet')">اشترك بباقة حتى تنشال <i class="fa-solid fa-chevron-left"></i></a></div>` : ''}
       <label class="file-drop" style="margin-top:8px"><input type="file" id="media" accept="image/*,video/*,audio/*,application/pdf,.doc,.docx,.xlsx,.zip"><span class="row-ic ic-purple"><i class="fa-solid fa-paperclip"></i></span><span style="flex:1"><b style="font-size:13.5px">إرفاق صورة / فيديو / ملف</b><span class="row-sub" id="mediaName">اختياري - ينرسل والنص تعليق عليه</span></span></label>
       <div class="input-row" style="margin-top:12px">
         <div class="field" style="flex:1"><label>الفاصل بين الرسائل (ثانية)</label><input class="input num" id="delay" type="number" min="1" value="15"></div>
@@ -1762,6 +1778,13 @@ R.settings = async (el) => {
       <div class="input-row">${f('trial_days', 'الفترة المجانية (يوم)', s.trial_days, 'number', '0 = بدون تجربة')}${f('message_price', 'سعر الرسالة (د.ع)', s.message_price, 'number', '0 = الإرسال للمشتركين فقط')}</div>
       <div class="input-row">${f('trial_max_numbers', 'أرقام واتساب بالفترة المجانية', s.trial_max_numbers, 'number', '0 = بدون حد')}${f('trial_daily_messages', 'رسائل يومياً بالفترة المجانية', s.trial_daily_messages, 'number', '0 = بدون حد')}</div>
       ${f('usd_rate', 'سعر الدولار بالدينار (لـ Binance)', s.usd_rate, 'number', 'مثال: 1500 يعني 1$ = 1500 د.ع')}
+    </div>
+    <div class="section-head">رابط الموقع برسائل الفترة المجانية</div>
+    <div class="card">
+      <div class="note" style="margin-bottom:12px">كل رسالة يرسلها مستخدم بالفترة المجانية (حملات، دفعات يومية، API، رسائل المشتركين) ينضاف بآخرها هذا النص <b>إجبارياً</b>. المشتركين بباقة ما ينضافلهم.</div>
+      <div class="field"><label>النص ({site} = اسم الموقع، {url} = الرابط)</label><textarea class="textarea" data-k="trial_footer" style="min-height:90px">${esc(s.trial_footer)}</textarea></div>
+      ${f('site_url', 'رابط الموقع', s.site_url, 'url', 'فارغ = يستخدم الرابط اللي تفتح منه لوحة الأدمن: ' + esc(s.public_url || 'ما انحفظ بعد'))}
+      <div class="hint" style="margin-bottom:6px">شكلها بالرسالة:</div><pre class="tf-prev">${esc(s.trial_footer_preview)}</pre>
     </div>
     <div class="section-head">الهوية</div>
     <div class="card">

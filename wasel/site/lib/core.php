@@ -473,6 +473,10 @@ function settings(): array
         'leads_enabled' => true, 'leads_daily' => 5, 'leads_max' => 200,
         // حدود الفترة المجانية
         'trial_max_numbers' => 1, 'trial_daily_messages' => 20,
+        // رابط الموقع اللي ينضاف إجبارياً لكل رسالة بالفترة المجانية ({site} = اسم الموقع، {url} = الرابط)
+        'trial_footer' => '', 'site_url' => '', 'public_url' => '',
+        // الستايل الأساسي للموقع (للي ما اختار ستايل)
+        'default_style' => 'teal',
         // الفوترة
         'trial_days' => TRIAL_DAYS, 'plan_days' => PLAN_ACTIVATION_DAYS, 'message_price' => 0, 'usd_rate' => 1500,
         // تسجيل الدخول والأمان

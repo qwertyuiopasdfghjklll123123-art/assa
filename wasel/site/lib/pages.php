@@ -69,7 +69,7 @@ function asset_version(): string
     static $v = null;
     if ($v === null) {
         $t = 0;
-        foreach (['ui.css', 'app.js', 'sw.js', 'offline.html', 'vendor/fa.css', 'vendor/fonts.css', 'logo.webp', 'logo-gold.webp'] as $f) {
+        foreach (['ui.css', 'app.js', 'sw.js', 'offline.html', 'vendor/fa.css', 'vendor/fonts.css', 'logo.webp', 'logo-gold.webp', 'logo-violet.webp', 'logo-rose.webp'] as $f) {
             $t = max($t, (int)@filemtime(__DIR__ . '/../views/' . $f));
         }
         $v = base_convert((string)$t, 10, 36);
@@ -78,7 +78,16 @@ function asset_version(): string
 }
 
 // ================================================================ المظهر (ستايل، وضع داكن، خط، حجم)
-const UI_STYLES = ['teal' => 'فيروزي زجاجي', 'gold' => 'ذهبي وكحلي'];
+const UI_STYLES = ['teal' => 'فيروزي زجاجي', 'gold' => 'ذهبي وكحلي', 'violet' => 'بنفسجي ليلي', 'rose' => 'وردي مرجاني'];
+// لون شريط المتصفح لكل ستايل [نهاري، داكن]
+const UI_THEME_COLORS = ['teal' => ['#f3f7f8', '#0b181b'], 'gold' => ['#f7f4ec', '#0a1517'], 'violet' => ['#f6f4fc', '#110e1b'], 'rose' => ['#fcf4f5', '#170e11']];
+
+/** الستايل الأساسي اللي حدده الأدمن (للي ما اختار) */
+function ui_default_style(): string
+{
+    $d = settings()['default_style'] ?? 'teal';
+    return isset(UI_STYLES[$d]) ? $d : 'teal';
+}
 const UI_MODES = ['light', 'dark', 'auto'];
 const UI_SIZES = ['sm', 'md', 'lg', 'xl'];
 const UI_FONTS = ['plex' => 'IBM Plex (الافتراضي)', 'alexandria' => 'Alexandria', 'readex-pro' => 'Readex Pro', 'cairo' => 'Cairo', 'tajawal' => 'Tajawal',
@@ -86,7 +95,7 @@ const UI_FONTS = ['plex' => 'IBM Plex (الافتراضي)', 'alexandria' => 'Al
 
 function ui_defaults(): array
 {
-    return ['style' => 'teal', 'mode' => 'light', 'font' => 'plex', 'size' => 'md'];
+    return ['style' => '', 'mode' => 'light', 'font' => 'plex', 'size' => 'md']; // style '' = الأساسي حسب الأدمن
 }
 
 function ui_clean($p): array
@@ -94,7 +103,7 @@ function ui_clean($p): array
     $p = is_array($p) ? $p : [];
     $d = ui_defaults();
     return [
-        'style' => isset(UI_STYLES[$p['style'] ?? '']) ? $p['style'] : $d['style'],
+        'style' => is_string($p['style'] ?? null) && isset(UI_STYLES[$p['style']]) ? $p['style'] : $d['style'],
         'mode' => in_array($p['mode'] ?? '', UI_MODES, true) ? $p['mode'] : $d['mode'],
         'font' => isset(UI_FONTS[$p['font'] ?? '']) ? $p['font'] : $d['font'],
         'size' => in_array($p['size'] ?? '', UI_SIZES, true) ? $p['size'] : $d['size'],
@@ -105,18 +114,21 @@ function ui_clean($p): array
 function ui_head(): string
 {
     $srv = null;
+    $def = ui_default_style();
     if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['user_id']) && ($u = user_by_id((int)$_SESSION['user_id']))) {
         $srv = ui_clean($u['ui'] ?? []);
+        $srv['style'] = $srv['style'] ?: $def;
     }
     $v = asset_version();
-    return '<script>(function(){var d=document.documentElement,s=' . json_encode($srv) . ',p=s;'
+    $styles = implode('|', array_keys(UI_STYLES));
+    return '<script>(function(){var d=document.documentElement,s=' . json_encode($srv) . ',p=s,TC=' . json_encode(UI_THEME_COLORS) . ';'
         . 'try{var l=JSON.parse(localStorage.getItem("wasel_ui")||"null");if(!p&&l)p=l;if(s)localStorage.setItem("wasel_ui",JSON.stringify(s));}catch(e){}'
         . 'p=p||{};var ok=function(v,re,def){return typeof v==="string"&&re.test(v)?v:def};'
-        . 'var st=ok(p.style,/^(teal|gold)$/,"teal"),md=ok(p.mode,/^(light|dark|auto)$/,"light"),f=ok(p.font,/^[a-z-]{2,30}$/,"plex"),z=ok(p.size,/^(sm|md|lg|xl)$/,"md");'
+        . 'var st=ok(p.style,/^(' . $styles . ')$/,"' . $def . '"),md=ok(p.mode,/^(light|dark|auto)$/,"light"),f=ok(p.font,/^[a-z-]{2,30}$/,"plex"),z=ok(p.size,/^(sm|md|lg|xl)$/,"md");'
         . 'var dk=md==="dark"||(md==="auto"&&window.matchMedia&&matchMedia("(prefers-color-scheme: dark)").matches);'
         . 'd.setAttribute("data-style",st);d.setAttribute("data-ui-mode",md);d.setAttribute("data-mode",dk?"dark":"light");d.setAttribute("data-font",f);d.setAttribute("data-size",z);'
         . 'if(f!=="plex")document.write(\'<link rel="stylesheet" id="uiFont" href="/assets/vendor/font-\'+f+\'.css?v=' . $v . '">\');'
-        . 'document.write(\'<meta name="theme-color" content="\'+(dk?(st==="gold"?"#0a1517":"#0b181b"):(st==="gold"?"#f7f4ec":"#f3f7f8"))+\'">\');'
+        . 'document.write(\'<meta name="theme-color" content="\'+TC[st][dk?1:0]+\'">\');'
         . '})();</script>';
 }
 
@@ -134,8 +146,12 @@ function logo_html(int $size, string $class = ''): string
     }
     // الشعار الافتراضي بنسختين (فيروزي وذهبي) - الـ CSS يظهر اللي يناسب الستايل المختار
     $st = 'width:' . $size . 'px;height:' . $size . 'px;object-fit:contain';
-    return '<img src="/assets/logo.webp?v=' . asset_version() . '" alt="' . $siteName . '" class="lg-teal ' . $class . '" style="' . $st . '">'
-        . '<img src="/assets/logo-gold.webp?v=' . asset_version() . '" alt="' . $siteName . '" class="lg-gold ' . $class . '" style="' . $st . '">';
+    $out = '';
+    foreach (array_keys(UI_STYLES) as $k) {
+        // الشعارات المخفية ما تنحمل (lazy) - بس اللي يناسب الستايل
+        $out .= '<img src="/assets/logo' . ($k === 'teal' ? '' : '-' . $k) . '.webp?v=' . asset_version() . '" alt="' . $siteName . '" class="lg-' . $k . ' ' . $class . '" style="' . $st . '"' . ($k === 'teal' ? '' : ' loading="lazy"') . '>';
+    }
+    return $out;
 }
 
 function js_json($v): string

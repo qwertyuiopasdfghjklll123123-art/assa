@@ -6,7 +6,7 @@ const V = '__V__';
 const CACHE = 'wasel-' + V;
 const PRECACHE = [
   '/offline',
-  '/assets/ui.css?v=' + V, '/assets/app.js?v=' + V, '/assets/logo.webp?v=' + V, '/assets/logo-gold.webp?v=' + V,
+  '/assets/ui.css?v=' + V, '/assets/app.js?v=' + V, '/assets/logo.webp?v=' + V, '/assets/logo-gold.webp?v=' + V, '/assets/logo-violet.webp?v=' + V, '/assets/logo-rose.webp?v=' + V,
   '/assets/vendor/fonts.css?v=' + V, '/assets/vendor/fa.css?v=' + V,
   '/assets/vendor/fa-solid.woff2?v=' + V, '/assets/vendor/fa-regular.woff2?v=' + V, '/assets/vendor/fa-brands.woff2?v=' + V,
   ...[400, 500, 600, 700].flatMap(w => ['/assets/vendor/plex-arabic-' + w + '.woff2?v=' + V, '/assets/vendor/plex-latin-' + w + '.woff2?v=' + V]),

@@ -114,7 +114,7 @@ function drip_launch(array $d, array $nums, bool $topup): bool
     if (!empty($d['media']['file']) && is_file($f = drip_media_dir() . '/' . basename($d['media']['file']))) {
         $media = ['name' => $d['media']['name'], 'mime' => $d['media']['mime'], 'data' => base64_encode((string)file_get_contents($f))];
     }
-    $r = engine_send_campaign($d['account_id'], $nums, (string)$d['text'], $media, (int)$d['delay'], (int)$d['media_delay'], null, 'drip:' . $d['id'] . ':' . (int)$d['batches_sent'] . ($topup ? ':t' : ''));
+    $r = engine_send_campaign($d['account_id'], $nums, with_trial_footer((int)$d['owner'], (string)$d['text']), $media, (int)$d['delay'], (int)$d['media_delay'], null, 'drip:' . $d['id'] . ':' . (int)$d['batches_sent'] . ($topup ? ':t' : ''));
     return !empty($r['ok']);
 }
 

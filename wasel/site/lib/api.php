@@ -7,6 +7,9 @@
 function me_payload(int $id): array
 {
     $u = user_by_id($id);
+    if (!empty($u['is_admin'])) {
+        remember_public_url();
+    }
     $trialEnds = parse_dt($u['trial_ends_at'] ?? null);
     $planEnds = parse_dt($u['plan_ends_at'] ?? null);
     $active = effective_plan_active($u);
@@ -34,6 +37,7 @@ function public_settings(): array
         'message_price' => message_price(), 'usd_rate' => usd_rate(), 'trial_days' => trial_days(),
         'support_number' => $s['whatsapp_support_number'] ?: WHATSAPP_PAY_NUMBER,
         'leads_enabled' => !isset($s['leads_enabled']) || !empty($s['leads_enabled']),
+        'default_style' => ui_default_style(), 'trial_footer' => trial_footer(),
         'dev' => $s['dev_phone'] !== '' ? ['name' => $s['dev_name'] ?: 'المطوّر', 'title' => $s['dev_title'] ?: 'مطوّر المنصة',
             'phone' => $s['dev_phone'], 'photo' => !empty($s['dev_photo']) && is_file(DATA_DIR . '/dev.bin') ? '/dev-photo?v=' . (int)filemtime(DATA_DIR . '/dev.bin') : null] : null,
     ];
@@ -430,6 +434,8 @@ function api_routes(): array
                 'ai_key_set' => $s['ai_api_key'] !== '', 'ai_knowledge_base' => $s['ai_knowledge_base'],
                 'leads_enabled' => !empty($s['leads_enabled']), 'leads_daily' => (int)$s['leads_daily'], 'leads_max' => (int)$s['leads_max'],
                 'trial_max_numbers' => (int)$s['trial_max_numbers'], 'trial_daily_messages' => (int)$s['trial_daily_messages'],
+                'trial_footer' => trim((string)$s['trial_footer']) ?: TRIAL_FOOTER_DEFAULT, 'site_url' => $s['site_url'], 'public_url' => site_public_url(),
+                'trial_footer_preview' => trial_footer(),
                 'google_client_id' => GOOGLE_CLIENT_ID,
                 'dev_name' => $s['dev_name'], 'dev_title' => $s['dev_title'], 'dev_phone' => $s['dev_phone'], 'dev_photo' => !empty($s['dev_photo']),
                 'cron_url' => site_base_url() . '/cron/setup?key=' . CRON_KEY, 'last_cron' => $s['last_cron'] ? date('Y-m-d H:i', (int)$s['last_cron']) : null,
@@ -482,6 +488,20 @@ function api_routes(): array
             }
             if (array_key_exists('trial_max_numbers', $d)) {
                 $f['trial_max_numbers'] = max(0, min(100, (int)$d['trial_max_numbers']));
+            }
+            if (array_key_exists('trial_footer', $d)) {
+                $t = trim(str_replace("\r", '', (string)$d['trial_footer']));
+                $f['trial_footer'] = $t === TRIAL_FOOTER_DEFAULT ? '' : mb_substr($t, 0, 300);
+            }
+            if (array_key_exists('site_url', $d)) {
+                $u = rtrim(trim((string)$d['site_url']), '/');
+                if ($u !== '' && !preg_match('#^https?://[a-z0-9.-]+(:\d+)?(/[\w./-]*)?$#i', $u)) {
+                    json_err('رابط الموقع لازم يبدأ بـ https:// مثل https://botiyeai.site');
+                }
+                $f['site_url'] = $u;
+            }
+            if (array_key_exists('default_style', $d)) {
+                $f['default_style'] = isset(UI_STYLES[$d['default_style']]) ? $d['default_style'] : 'teal';
             }
             if (array_key_exists('trial_daily_messages', $d)) {
                 $f['trial_daily_messages'] = max(0, min(100000, (int)$d['trial_daily_messages']));

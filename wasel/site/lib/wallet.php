@@ -602,3 +602,63 @@ function notify_admins(string $title, string $body, string $kind = 'info'): void
         add_event((int)$a['id'], null, $title, $body, $kind);
     }
 }
+
+// ================================================================ رابط الموقع برسائل الفترة المجانية
+const TRIAL_FOOTER_DEFAULT = "━━━━━━━━━━\n📲 أُرسلت مجاناً عبر {site}\n{url}";
+
+/** رابط الموقع العام: اللي حدده الأدمن، وإلا اللي انحفظ من آخر زيارة أدمن (ما ناخذه من طلبات المستخدمين حتى ما أحد يزوّره) */
+function site_public_url(): string
+{
+    $s = settings();
+    foreach ([$s['site_url'] ?? '', $s['public_url'] ?? '', ($s['domain'] ?? '') !== '' ? 'https://' . $s['domain'] : ''] as $u) {
+        if (trim((string)$u) !== '') {
+            return rtrim(trim((string)$u), '/');
+        }
+    }
+    return '';
+}
+
+/** يحفظ رابط الموقع من طلب أدمن مسجّل (مرة وحدة لما يتغير) */
+function remember_public_url(): void
+{
+    if (empty($_SERVER['HTTP_HOST']) || is_local_host()) {
+        return;
+    }
+    $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') || (($_SERVER['HTTP_X_FORWARDED_PROTO'] ?? '') === 'https');
+    $u = ($https ? 'https' : 'http') . '://' . strtolower((string)$_SERVER['HTTP_HOST']);
+    if (preg_match('#^https?://[a-z0-9.-]+(:\d+)?$#', $u) && (settings()['public_url'] ?? '') !== $u) {
+        update_settings(['public_url' => $u]);
+    }
+}
+
+/** المستخدم بالفترة المجانية؟ (مو أدمن، ما عنده باقة، وتجربته فعّالة) */
+function is_trial_user(?array $u): bool
+{
+    if (!$u || !empty($u['is_admin']) || effective_plan_active($u)) {
+        return false;
+    }
+    $t = parse_dt($u['trial_ends_at'] ?? null);
+    return $t !== null && time() < $t;
+}
+
+function trial_footer(): string
+{
+    $s = settings();
+    $tpl = trim((string)($s['trial_footer'] ?? '')) ?: TRIAL_FOOTER_DEFAULT;
+    $url = site_public_url();
+    $out = strtr($tpl, ['{site}' => ($s['site_name'] ?? '') ?: 'واصل', '{url}' => $url]);
+    if ($url !== '' && !str_contains($out, $url)) {
+        $out .= "\n" . $url; // الرابط إجباري حتى لو الأدمن شاله من النص
+    }
+    return trim($out);
+}
+
+/** يضيف رابط الموقع لنص الرسالة إذا صاحبها بالفترة المجانية */
+function with_trial_footer(int $uid, string $text): string
+{
+    if (!is_trial_user(user_by_id($uid))) {
+        return $text;
+    }
+    $f = trial_footer();
+    return trim($text) === '' ? $f : rtrim($text) . "\n\n" . $f;
+}

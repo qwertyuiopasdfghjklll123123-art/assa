@@ -750,7 +750,7 @@ function handle_start_campaign($accId): void
         $startTs = $sendAt ? strtotime($sendAt) : time();
         $anchor = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string)($_POST['drip_time'] ?? '')) ? (string)$_POST['drip_time'] : date('H:i', $startTs);
         $dripId = drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers), $sched, $anchor);
-        $r = engine_send_campaign($accId, $first, $text, $media, $delay, $mediaDelay, $sendAt, 'drip:' . $dripId . ':1');
+        $r = engine_send_campaign($accId, $first, with_trial_footer($id, $text), $media, $delay, $mediaDelay, $sendAt, 'drip:' . $dripId . ':1');
         $status = $r['_status'] ?? 503;
         unset($r['_status']);
         if ($status !== 200 || empty($r['ok'])) {
@@ -760,7 +760,7 @@ function handle_start_campaign($accId): void
         $r['drip'] = ['batch' => $batch, 'total' => count($numbers), 'days' => drip_days(count($numbers), $batch, $sched), 'time' => $anchor];
         json_out($r);
     }
-    engine_start_campaign($accId, $numbers, $text, $sendAt);
+    engine_start_campaign($accId, $numbers, with_trial_footer($id, $text), $sendAt);
 }
 
 function handle_announcement($accId): void
