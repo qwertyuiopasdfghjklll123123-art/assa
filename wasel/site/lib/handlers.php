@@ -746,15 +746,16 @@ function handle_start_campaign($accId): void
         $delay = form_int('delay', DEFAULT_DELAY);
         $mediaDelay = form_int('media_delay', DEFAULT_MEDIA_DELAY);
         $first = array_slice($numbers, 0, $batch);
-        $r = engine_send_campaign($accId, $first, $text, $media, $delay, $mediaDelay, $sendAt);
+        $acc = owned_account($accId);
+        $startTs = $sendAt ? strtotime($sendAt) : time();
+        $dripId = drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers), $sched);
+        $r = engine_send_campaign($accId, $first, $text, $media, $delay, $mediaDelay, $sendAt, 'drip:' . $dripId);
         $status = $r['_status'] ?? 503;
         unset($r['_status']);
         if ($status !== 200 || empty($r['ok'])) {
+            drip_delete($dripId);
             json_out($r, $status === 200 ? 400 : $status);
         }
-        $acc = owned_account($accId);
-        $startTs = $sendAt ? strtotime($sendAt) : time();
-        drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers), $sched);
         $r['drip'] = ['batch' => $batch, 'total' => count($numbers), 'days' => drip_days(count($numbers), $batch, $sched)];
         json_out($r);
     }

@@ -122,6 +122,18 @@ function daily_take(int $uid, int $limit): bool
     return $ok;
 }
 
+/** يرجع رسالة لحد اليوم (لما يفشل الإرسال) */
+function daily_give(int $uid): void
+{
+    store_update_doc('msg_daily', function ($d) use ($uid) {
+        $k = (string)$uid;
+        if (($d[$k]['date'] ?? '') === date('Y-m-d') && (int)$d[$k]['n'] > 0) {
+            $d[$k]['n'] = (int)$d[$k]['n'] - 1;
+        }
+        return $d;
+    });
+}
+
 function daily_limit_error(array $lim): string
 {
     return $lim['kind'] === 'trial'

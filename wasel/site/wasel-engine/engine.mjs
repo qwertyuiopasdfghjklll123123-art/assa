@@ -60,7 +60,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 9; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 10; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -442,7 +442,7 @@ function blankCampaign() {
     total: 0, sent: 0, failed: 0, running: false, failed_numbers: [], scheduled_for: null,
     pending_numbers: [], stop_requested: false, cancel_requested: false, paused: false,
     text: '', delay: DEFAULT_DELAY, media_path: null, media_mime: null, media_name: null,
-    media_delay: DEFAULT_MEDIA_DELAY, started_at: null, campaign_id: null,
+    media_delay: DEFAULT_MEDIA_DELAY, started_at: null, campaign_id: null, tag: null, failed_reasons: {},
   };
 }
 
@@ -516,7 +516,11 @@ async function runCampaign(id) {
         console.log(`[حملة] فشل الإرسال لـ ${number} (${acc.name}): ${e.message}`);
         st.failed += 1;
         st.failed_numbers.push(number);
-        if (charge.charged > 0) hook({ type: 'refund', owner: acc.owner, amount: charge.charged });
+        // سبب الفشل: الرقم ما عليه واتساب (ما يفيد نعيد) أو خطأ مؤقت (نعيد المحاولة بالدفعة الجاية)
+        st.failed_reasons = st.failed_reasons || {};
+        st.failed_reasons[digits(number)] = /لا يستخدم واتساب|غير صالح/.test(e.message) ? 'invalid' : 'error';
+        // الرسالة الفاشلة ما تنحسب: نرجع سعرها ومكانها من الحد اليومي
+        hook({ type: 'refund', owner: acc.owner, amount: charge.charged || 0, failed: 1 });
       }
       persistCampaign(id);
       if (st.pending_numbers.length && !st.stop_requested) {
@@ -542,7 +546,7 @@ async function runCampaign(id) {
   const cancelled = st.cancel_requested;
   trackSave();
   const entry = { time: st.started_at, total: st.total, sent: st.sent, failed: st.failed, text: st.text || (st.media_name ? '📎 ' + st.media_name : ''),
-    campaign_id: st.campaign_id, failed_numbers: (st.failed_numbers || []).slice(0, 20000), text_full: st.text || '', media_name: st.media_name || '', delay: st.delay || 0, ...(tracking[st.campaign_id] ? trackStats(st.campaign_id) : {}) };
+    campaign_id: st.campaign_id, failed_numbers: (st.failed_numbers || []).slice(0, 20000), text_full: st.text || '', media_name: st.media_name || '', delay: st.delay || 0, tag: st.tag || null, failed_reasons: st.failed_reasons || {}, ...(tracking[st.campaign_id] ? trackStats(st.campaign_id) : {}) };
   hook({ type: 'history', owner: acc.owner, account_id: id, account_name: acc.name, entry });
   if (cancelled) {
     const skipped = st.total - st.sent - st.failed;
@@ -774,6 +778,7 @@ const routes = [
       media_path: media?.path || null,
       media_mime: media?.mime || null,
       media_name: media?.name || null,
+      tag: body.tag ? String(body.tag).slice(0, 40) : null,
     });
     const at = body.send_at ? new Date(String(body.send_at)) : null;
     if (at && !Number.isNaN(at.getTime()) && at.getTime() > Date.now()) st.scheduled_for = fmt(at);

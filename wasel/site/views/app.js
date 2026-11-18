@@ -709,7 +709,13 @@ R.campaign = async (el, p) => {
       <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ic-indigo"><i class="fa-solid fa-calendar-day"></i></span>
         <div style="flex:1;min-width:0"><b>${esc(x.text || 'حملة')}</b><div class="row-sub">باقي <b class="num">${fmt(x.left)}</b> من ${fmt(x.total)} · ${x.custom ? 'جدول مخصص' : fmt(x.batch) + ' يومياً'} · الجاية <b class="num">${fmt(x.next_batch)}</b> رقم <span class="num">${esc(x.next_at)}</span></div></div>
         <button class="btn btn-soft btn-xs" style="color:var(--red)" data-dc="${x.id}"><i class="fa-solid fa-xmark"></i> إلغاء</button></div>
-      <div class="progress" style="margin-top:10px"><span style="width:${Math.round((x.total - x.left) / x.total * 100)}%"></span></div></div>`).join('') : '';
+      <div class="progress" style="margin-top:10px"><span style="width:${Math.round((x.total - x.left) / x.total * 100)}%"></span></div>
+      <div class="drip-today">
+        <span><i class="fa-solid fa-circle-check" style="color:var(--green)"></i> اليوم نجح <b class="num">${fmt(x.today_ok)}</b> من <b class="num">${fmt(x.today_size)}</b>${x.today_running ? ' <small>(جارِ الإرسال)</small>' : ''}</span>
+        ${x.retry ? `<span><i class="fa-solid fa-rotate-right" style="color:#d97706"></i> <b class="num">${fmt(x.retry)}</b> فشلت وتنعاد باچر</span>` : ''}
+        ${x.invalid ? `<span><i class="fa-solid fa-ban" style="color:var(--red)"></i> <b class="num">${fmt(x.invalid)}</b> بدون واتساب</span>` : ''}
+      </div>
+      <div class="hint" style="margin-top:6px">الرسائل الفاشلة ما تنحسب من حصة اليوم - نكمّل الناقص من الأرقام الباقية بنفس اليوم</div></div>`).join('') : '';
     box.querySelectorAll('[data-dc]').forEach(b => b.onclick = () => confirmTap(b, async () => { await api('/api/drips/' + b.dataset.dc, { method: 'DELETE' }); loadDrips(); }, 'الدفعات الباقية ما راح تنرسل', { title: 'إلغاء الدفعات', ok: 'إلغاء الدفعات' }));
   }
   loadStatus(); loadHist(); loadDrips(); every(3500, loadStatus);

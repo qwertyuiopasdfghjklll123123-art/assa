@@ -17,6 +17,9 @@ function user_send(int $owner, string $accId, string $phone, string $text): arra
     [$sent, $err] = engine_send($accId, $phone, $text);
     if (!$sent) {
         refund_message($owner, $charged);
+        if (user_limits(user_by_id($owner))['daily'] > 0) {
+            daily_give($owner);
+        }
     }
     return [$sent, $err];
 }
@@ -222,6 +225,10 @@ function handle_engine_hook(): void
                 'finished_at' => now_str(), 'media_name' => clean_text(mb_substr((string)($e['media_name'] ?? ''), 0, 120)),
                 'delay' => (int)($e['delay'] ?? 0), 'text_full' => mb_substr((string)($e['text_full'] ?? ($e['text'] ?? '')), 0, 4000),
             ]);
+            // نتيجة دفعة من «إرسال يومياً»: نسجلها حتى Cron يكمّل الناقص ويعيد الفاشل
+            if (preg_match('/^drip:(\d+)$/', (string)($e['tag'] ?? ''), $tm)) {
+                drip_record_result((int)$tm[1], (int)($e['sent'] ?? 0), (array)($e['failed_numbers'] ?? []), (array)($e['failed_reasons'] ?? []));
+            }
             // آخر 20 حملة لكل حساب فقط
             store_update_all('history', function (array &$rows) use ($accId) {
                 $ids = array_keys(array_filter($rows, fn($h) => $h['account_id'] === $accId));
@@ -273,6 +280,9 @@ function handle_engine_hook(): void
             // no break
         case 'refund':
             refund_message((int)($d['owner'] ?? 0), (int)($d['amount'] ?? 0));
+            if (!empty($d['failed']) && user_limits(user_by_id((int)($d['owner'] ?? 0)))['daily'] > 0) {
+                daily_give((int)$d['owner']); // الفاشلة ما تنحسب من حد اليوم
+            }
             json_out(['ok' => true]);
             // no break
         case 'tick':
