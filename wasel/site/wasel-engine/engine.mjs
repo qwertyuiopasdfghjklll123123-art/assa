@@ -60,7 +60,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 10; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 11; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -266,9 +266,14 @@ function sendTo(id, number, text, media = null, mediaDelay = DEFAULT_MEDIA_DELAY
     if (!sock || r.status !== 'connected') throw new Error('الحساب غير متصل بواتساب');
     const phone = digits(number);
     if (phone.length < 8) throw new Error('رقم غير صالح');
-    const [res] = (await sock.onWhatsApp(phone)) || [];
-    if (!res?.exists) throw new Error('الرقم لا يستخدم واتساب');
-    const jid = res.jid;
+    const c = waCached(phone);
+    let jid = c?.e ? c.j : null;
+    if (!jid) {
+      const [res] = (await sock.onWhatsApp(phone)) || [];
+      waCache.set(phone, { e: Boolean(res?.exists), j: res?.jid || null, t: Date.now() });
+      if (!res?.exists) throw new Error('الرقم لا يستخدم واتساب');
+      jid = res.jid;
+    }
     let sent;
     if (media && media.path && fs.existsSync(media.path)) {
       const content = mediaContent(media, text);
@@ -433,6 +438,48 @@ function onIncomingForTracking(id, m) {
   }
 }
 
+// ---------------------------------------------------------------- فحص الأرقام: عليها واتساب لو لا؟
+// نتيجة كل رقم تنحفظ 7 أيام (حتى ما نسأل واتساب عن نفس الرقم كل مرة)، والفحص على دفعات صغيرة مع فاصل (أأمن للحساب)
+const WA_CACHE_TTL = 7 * 86400000, WA_CHUNK = 20, WA_GAP = 900;
+const waCache = new Map(); // رقم -> { e: موجود؟, j: jid, t: وقت الفحص }
+function waCached(n) { const c = waCache.get(n); return c && Date.now() - c.t < WA_CACHE_TTL ? c : null; }
+
+/** يفحص الأرقام ويرجع { on, off } - onProgress(تم, الكل) */
+async function checkNumbers(id, numbers, onProgress = () => {}, shouldStop = () => false) {
+  const list = [...new Set(numbers.map(digits).filter((n) => n.length >= 8))];
+  const on = [], off = [], todo = [];
+  for (const n of list) { const c = waCached(n); if (c) (c.e ? on : off).push(n); else todo.push(n); }
+  let done = list.length - todo.length;
+  onProgress(done, list.length);
+  for (let i = 0; i < todo.length; i += WA_CHUNK) {
+    if (shouldStop()) break;
+    while (!isConnected(id)) { if (!registry[id] || shouldStop()) return { on, off, unknown: todo.slice(i) }; await sleep(3000); }
+    const chunk = todo.slice(i, i + WA_CHUNK);
+    let res = null;
+    for (let tries = 0; tries < 3 && !res; tries++) {
+      try { res = (await rt(id).sock.onWhatsApp(...chunk)) || []; } catch (e) { console.log('[فحص] خطأ مؤقت:', e.message); await sleep(3000); }
+    }
+    if (!res) { return { on, off, unknown: todo.slice(i) }; }
+    const found = new Map();
+    for (const r of res) { if (r?.exists) found.set(digits(String(r.jid || '').split('@')[0]), r.jid); }
+    for (const n of chunk) {
+      // واتساب أحياناً يرجع الـ jid بصيغة ثانية للرقم (مثل بدون صفر) - نطابق بآخر 9 أرقام
+      let jid = found.get(n);
+      if (!jid) for (const [k, v] of found) if (k.slice(-9) === n.slice(-9)) { jid = v; break; }
+      waCache.set(n, { e: Boolean(jid), j: jid || null, t: Date.now() });
+      (jid ? on : off).push(n);
+    }
+    done += chunk.length;
+    onProgress(done, list.length);
+    if (i + WA_CHUNK < todo.length) await sleep(WA_GAP);
+  }
+  if (waCache.size > 200000) for (const [k, v] of waCache) if (Date.now() - v.t > WA_CACHE_TTL) waCache.delete(k);
+  return { on, off, unknown: [] };
+}
+
+/** فحص يدوي من صفحة الحملة (بالخلفية، والواجهة تسأل عن التقدم) */
+const checkJobs = new Map(); // حساب -> { running, done, total, on, off, unknown, started }
+
 // ---------------------------------------------------------------- الحملات
 /** id -> حالة الحملة (نفس شكل النسخة القديمة حتى الواجهة تشتغل بدون تعديل) */
 const campaigns = new Map();
@@ -443,6 +490,7 @@ function blankCampaign() {
     pending_numbers: [], stop_requested: false, cancel_requested: false, paused: false,
     text: '', delay: DEFAULT_DELAY, media_path: null, media_mime: null, media_name: null,
     media_delay: DEFAULT_MEDIA_DELAY, started_at: null, campaign_id: null, tag: null, failed_reasons: {},
+    pre_check: false, prechecked: false, checking: null, skipped_invalid: 0,
   };
 }
 
@@ -482,6 +530,24 @@ async function runCampaign(id) {
   if (!st.campaign_id) st.campaign_id = crypto.randomBytes(6).toString('hex');
   if (!tracking[st.campaign_id]) tracking[st.campaign_id] = { owner: acc.owner, account_id: id, started: Date.now(), nums: {}, msgs: {}, delivered: {}, read: {}, replied: {} };
   persistCampaign(id);
+  // فلترة قبل البدء: نشيل الأرقام اللي ما عليها واتساب (ما تنخصم ولا تاخذ وقت فاصل)
+  if (st.pre_check && !st.prechecked && st.pending_numbers.length) {
+    st.checking = { done: 0, total: st.pending_numbers.length };
+    persistCampaign(id);
+    const r = await checkNumbers(id, st.pending_numbers, (d, t) => { st.checking = { done: d, total: t }; }, () => st.stop_requested || !registry[id]);
+    if (!registry[id]) { st._loop = false; return; }
+    const off = new Set(r.off);
+    if (off.size) {
+      st.pending_numbers = st.pending_numbers.filter((n) => !off.has(digits(n)));
+      st.failed_reasons = st.failed_reasons || {};
+      for (const n of off) { st.failed += 1; st.failed_numbers.push(n); st.failed_reasons[n] = 'invalid'; }
+      st.skipped_invalid = off.size;
+    }
+    st.checking = null;
+    if (!st.stop_requested) st.prechecked = true;
+    persistCampaign(id);
+    if (off.size) addEvent(acc, 'فلترة الأرقام', `استُبعد ${off.size} رقم ما عليه واتساب قبل البدء`, 'info');
+  }
   addEvent(acc, 'بدأت حملة جديدة', `جارِ إرسال ${st.pending_numbers.length} رسالة`, 'info');
 
   const media = st.media_path ? { path: st.media_path, mime: st.media_mime, name: st.media_name } : null;
@@ -545,7 +611,7 @@ async function runCampaign(id) {
   }
   const cancelled = st.cancel_requested;
   trackSave();
-  const entry = { time: st.started_at, total: st.total, sent: st.sent, failed: st.failed, text: st.text || (st.media_name ? '📎 ' + st.media_name : ''),
+  const entry = { skipped_invalid: st.skipped_invalid || 0, time: st.started_at, total: st.total, sent: st.sent, failed: st.failed, text: st.text || (st.media_name ? '📎 ' + st.media_name : ''),
     campaign_id: st.campaign_id, failed_numbers: (st.failed_numbers || []).slice(0, 20000), text_full: st.text || '', media_name: st.media_name || '', delay: st.delay || 0, tag: st.tag || null, failed_reasons: st.failed_reasons || {}, ...(tracking[st.campaign_id] ? trackStats(st.campaign_id) : {}) };
   hook({ type: 'history', owner: acc.owner, account_id: id, account_name: acc.name, entry });
   if (cancelled) {
@@ -752,6 +818,28 @@ const routes = [
     }
   }],
 
+  // فحص يدوي: يبدأ بالخلفية ويرجع فوراً
+  ['POST', /^\/accounts\/([\w-]+)\/check$/, async (m, body) => {
+    const id = m[1];
+    if (!registry[id]) return [404, { ok: false, error: 'حساب غير موجود' }];
+    if (!isConnected(id)) return [400, { ok: false, error: 'الرقم غير متصل بواتساب - اربطه من قسم أرقامي أولاً' }];
+    const cur = checkJobs.get(id);
+    if (cur?.running) return [200, { ok: true, ...cur }];
+    const nums = (body.numbers || []).slice(0, 5000);
+    if (!nums.length) return [400, { ok: false, error: 'ما فيه أرقام للفحص' }];
+    const job = { running: true, done: 0, total: nums.length, on: [], off: [], unknown: [], started: Date.now() };
+    checkJobs.set(id, job);
+    checkNumbers(id, nums, (d, t) => { job.done = d; job.total = t; })
+      .then((r) => Object.assign(job, r, { running: false }))
+      .catch((e) => Object.assign(job, { running: false, error: e.message }));
+    return [200, { ok: true, ...job }];
+  }],
+
+  ['GET', /^\/accounts\/([\w-]+)\/check$/, async (m) => {
+    const job = checkJobs.get(m[1]);
+    return [200, job ? { ok: true, ...job } : { ok: true, running: false, done: 0, total: 0, on: [], off: [], unknown: [] }];
+  }],
+
   ['GET', /^\/accounts\/([\w-]+)\/campaign$/, async (m) => {
     if (!registry[m[1]]) return [200, blankCampaign()];
     return [200, publicCampaign(m[1])];
@@ -779,6 +867,7 @@ const routes = [
       media_mime: media?.mime || null,
       media_name: media?.name || null,
       tag: body.tag ? String(body.tag).slice(0, 40) : null,
+      pre_check: Boolean(body.pre_check),
     });
     const at = body.send_at ? new Date(String(body.send_at)) : null;
     if (at && !Number.isNaN(at.getTime()) && at.getTime() > Date.now()) st.scheduled_for = fmt(at);

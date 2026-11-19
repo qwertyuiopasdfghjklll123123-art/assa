@@ -227,6 +227,7 @@ function handle_engine_hook(): void
                 'delay' => (int)($e['delay'] ?? 0), 'text_full' => mb_substr((string)($e['text_full'] ?? ($e['text'] ?? '')), 0, 4000),
                 'drip_id' => $dripTag ? (int)$tm[1] : null, 'drip_batch' => $dripTag ? (int)($tm[2] ?? 0) : null, 'drip_topup' => $dripTag && !empty($tm[3]),
                 'failed_invalid' => count(array_filter((array)($e['failed_reasons'] ?? []), fn($r) => $r === 'invalid')),
+                'skipped_invalid' => (int)($e['skipped_invalid'] ?? 0),
                 'cancelled' => max(0, (int)($e['total'] ?? 0) - (int)($e['sent'] ?? 0) - (int)($e['failed'] ?? 0)),
             ]);
             // نتيجة دفعة من «إرسال يومياً»: نسجلها، وبعد الرد على المحرك نكمّل الناقص/نعيد الفاشل فوراً (بدون انتظار Cron)

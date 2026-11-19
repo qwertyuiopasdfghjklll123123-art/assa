@@ -17,9 +17,9 @@ function drip_media_dir(): string
 }
 
 /** يرسل دفعة للمحرك ويرجع رده (بدون ما يطبع) */
-function engine_send_campaign(string $accId, array $numbers, string $text, ?array $media, int $delay, int $mediaDelay, ?string $sendAt = null, ?string $tag = null): array
+function engine_send_campaign(string $accId, array $numbers, string $text, ?array $media, int $delay, int $mediaDelay, ?string $sendAt = null, ?string $tag = null, bool $preCheck = true): array
 {
-    $payload = ['numbers' => array_values($numbers), 'text' => $text, 'delay' => $delay, 'media_delay' => $mediaDelay, 'media' => $media, 'tag' => $tag];
+    $payload = ['numbers' => array_values($numbers), 'text' => $text, 'delay' => $delay, 'media_delay' => $mediaDelay, 'media' => $media, 'tag' => $tag, 'pre_check' => $preCheck];
     if ($sendAt) {
         $payload['send_at'] = $sendAt;
     }
@@ -114,7 +114,7 @@ function drip_launch(array $d, array $nums, bool $topup): bool
     if (!empty($d['media']['file']) && is_file($f = drip_media_dir() . '/' . basename($d['media']['file']))) {
         $media = ['name' => $d['media']['name'], 'mime' => $d['media']['mime'], 'data' => base64_encode((string)file_get_contents($f))];
     }
-    $r = engine_send_campaign($d['account_id'], $nums, with_trial_footer((int)$d['owner'], (string)$d['text']), $media, (int)$d['delay'], (int)$d['media_delay'], null, 'drip:' . $d['id'] . ':' . (int)$d['batches_sent'] . ($topup ? ':t' : ''));
+    $r = engine_send_campaign($d['account_id'], $nums, with_trial_footer((int)$d['owner'], (string)$d['text']), $media, (int)$d['delay'], (int)$d['media_delay'], null, 'drip:' . $d['id'] . ':' . (int)$d['batches_sent'] . ($topup ? ':t' : ''), $d['pre_check'] ?? true);
     return !empty($r['ok']);
 }
 

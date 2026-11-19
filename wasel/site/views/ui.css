@@ -327,7 +327,7 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .num-stats span{flex:1;min-width:70px;text-align:center;padding:7px 6px;border-radius:12px;background:color-mix(in srgb,var(--surface) 70%,transparent);border:1px solid var(--glass-line);font-size:11.5px;color:var(--text2)}
 .num-stats b{display:block;font-size:16px;color:var(--text)}
 .num-stats .ok b{color:var(--green)}.num-stats .dup b{color:#d97706}.num-stats .bad b{color:var(--red)}
-.num-tools{display:flex;gap:6px;margin-top:8px}
+.num-tools{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .num-tools .btn{flex:1;padding-inline:6px;font-size:12.5px}
 .num-tools .btn:disabled{opacity:.45}
 /* ===== استخراج الأرقام من الخرائط ===== */
@@ -568,6 +568,16 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .ui-font .ui-radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2);display:block;transition:.2s}
 .ui-font.on .ui-radio{border:7px solid var(--primary2)}
 .ui-font.on{background:var(--primary-bg)}
+
+/* فحص واتساب */
+.num-tools .wa-check-btn{flex-basis:100%;color:var(--green);background:var(--green-bg);border-color:transparent;font-size:13px;height:40px}
+.wa-res{margin-top:10px;padding:12px;border-radius:16px;background:var(--input);border:1px solid var(--input-line)}
+.wa-res-h{font-size:13px;margin-bottom:8px}
+.wa-res-row{display:flex;flex-wrap:wrap;gap:8px}
+.wa-res-row span{font-size:12.5px;padding:6px 10px;border-radius:10px;display:inline-flex;align-items:center;gap:5px}
+.wa-ok{background:var(--green-bg);color:var(--green)}.wa-off{background:var(--red-bg);color:var(--red)}.wa-unk{background:var(--orange-bg);color:var(--orange)}
+.wa-auto{display:flex;align-items:center;gap:12px;margin-top:12px;padding:12px;border-radius:16px;border:1px solid var(--line2)}
+.wa-auto b{font-size:14px}
 
 /* رابط الفترة المجانية */
 .trial-foot{margin-top:10px;padding:10px 12px;border-radius:14px;border:1px dashed color-mix(in srgb,var(--orange) 55%,transparent);background:var(--orange-bg)}

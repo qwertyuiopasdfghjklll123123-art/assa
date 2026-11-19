@@ -1,5 +1,5 @@
 <?php
-const REQUIRED_ENGINE_VERSION = 4;
+const REQUIRED_ENGINE_VERSION = 11;
 /**
  * الاتصال بمحرك واتساب (تطبيق Node.js). كل الطلبات تحمل المفتاح السري ENGINE_SECRET.
  */

@@ -563,6 +563,33 @@ $routes = [
         unset($r['_status']);
         json_out($r);
     }],
+    // فحص الأرقام: عليها واتساب لو لا (يشتغل بالخلفية بالمحرك، والواجهة تسأل عن التقدم)
+    ['POST', '#^/accounts/([\w-]+)/wa_check$#', function ($accId) {
+        require_login();
+        if (!owned_account($accId)) {
+            json_err('الحساب غير موجود', 404);
+        }
+        $nums = array_values(array_unique(array_filter(array_map(fn($n) => preg_replace('/\D/', '', (string)$n), (array)(request_json()['numbers'] ?? [])), fn($n) => strlen($n) >= 8 && strlen($n) <= 15)));
+        if (!$nums) {
+            json_err('ما فيه أرقام صالحة للفحص');
+        }
+        if (count($nums) > 5000) {
+            json_err('الحد 5000 رقم بالفحص الواحد');
+        }
+        $r = engine_json('POST', '/accounts/' . rawurlencode($accId) . '/check', ['numbers' => $nums], 20);
+        $st = $r['_status'] ?? 503;
+        unset($r['_status']);
+        json_out($r ?: ['ok' => false, 'error' => 'المحرك غير متاح'], $st === 200 ? 200 : ($st ?: 503));
+    }],
+    ['GET', '#^/accounts/([\w-]+)/wa_check$#', function ($accId) {
+        require_login();
+        if (!owned_account($accId)) {
+            json_err('الحساب غير موجود', 404);
+        }
+        $r = engine_json('GET', '/accounts/' . rawurlencode($accId) . '/check', null, 8);
+        unset($r['_status']);
+        json_out($r + ['ok' => true]);
+    }],
     ['GET', '#^/accounts/([\w-]+)/campaigns$#', function ($accId) {
         $id = require_login();
         if (!owned_account($accId)) {

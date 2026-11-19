@@ -107,6 +107,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-stack-2x{font-size:2em}
 .fa-inverse{color:var(--fa-inverse,#fff)}
 .fa-trash-can:before{content:"\f2ed"}
+.fa-user-xmark:before{content:"\f235"}
 .fa-message:before{content:"\f27a"}
 .fa-right-from-bracket:before{content:"\f2f5"}
 .fa-magnifying-glass-location:before{content:"\f689"}
@@ -214,6 +215,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-store:before{content:"\f54e"}
 .fa-chevron-left:before{content:"\f053"}
 .fa-rotate:before{content:"\f2f1"}
+.fa-spinner:before{content:"\f110"}
 .fa-robot:before{content:"\f544"}
 .fa-sim-card:before{content:"\f7c4"}
 .fa-qrcode:before{content:"\f029"}

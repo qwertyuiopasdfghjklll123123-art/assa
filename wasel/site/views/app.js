@@ -350,7 +350,7 @@ R.report = async (el, p) => {
       ${bar('unread', 'وصلت بنجاح', x.sent, '#0891b2', 'fa-solid fa-paper-plane')}
       ${x.tracked ? bar('unread', 'استلموا', x.delivered, '#0ea5e9', 'fa-solid fa-check-double') + bar('read_only', 'شاهدوا', x.read, '#7c3aed', 'fa-solid fa-eye') + bar('replied', 'ردّوا', x.replied, '#16a34a', 'fa-solid fa-reply') + bar('read_only', 'شاهدوا بدون رد', readOnly, '#d97706', 'fa-solid fa-eye-slash') : ''}
       ${bar('failed', 'فشلت', x.failed, '#dc2626', 'fa-solid fa-xmark')}
-      ${x.failed ? `<div class="fail-why">${x.failed_invalid ? `<span><i class="fa-solid fa-ban"></i> ${fmt(x.failed_invalid)} رقم ما عليه واتساب</span>` : ''}${x.failed - x.failed_invalid > 0 ? `<span><i class="fa-solid fa-rotate-right"></i> ${fmt(x.failed - x.failed_invalid)} خطأ مؤقت${x.drip_batch ? ' (تنعاد بالدفعة الجاية)' : ''}</span>` : ''}</div>` : ''}
+      ${x.failed ? `<div class="fail-why">${x.failed_invalid ? `<span><i class="fa-solid fa-ban"></i> ${fmt(x.failed_invalid)} رقم ما عليه واتساب${x.skipped_invalid ? ' (انشالوا قبل البدء)' : ''}</span>` : ''}${x.failed - x.failed_invalid > 0 ? `<span><i class="fa-solid fa-rotate-right"></i> ${fmt(x.failed - x.failed_invalid)} خطأ مؤقت${x.drip_batch ? ' (تنعاد بالدفعة الجاية)' : ''}</span>` : ''}</div>` : ''}
       ${x.cancelled ? bar('pending', 'ما انرسلت (إيقاف/إلغاء)', x.cancelled, '#64748b', 'fa-solid fa-pause') : ''}
     </div>
     ${x.tracked ? `<div class="note" style="margin-top:12px">الأرقام تتحدث تلقائياً لمدة 7 أيام بعد الحملة. «شاهدوا» تعتمد على إيصالات القراءة.</div>` : ''}`;
@@ -525,7 +525,9 @@ R.campaign = async (el, p) => {
         <button class="btn btn-soft btn-sm" id="rmDup" disabled><i class="fa-solid fa-clone"></i> حذف المكرر</button>
         <button class="btn btn-soft btn-sm" id="rmBad" disabled><i class="fa-solid fa-eraser"></i> حذف الناقص</button>
         <button class="btn btn-soft btn-sm" id="rmAll" disabled><i class="fa-solid fa-trash-can"></i> مسح</button>
+        <button class="btn btn-soft btn-sm wa-check-btn" id="waCheck" disabled><i class="fa-brands fa-whatsapp"></i> فحص واتساب</button>
       </div>
+      <div id="waBox"></div>
       <div id="ccTools" class="cc-tools hidden">
         <div class="cc-tools-h"><b><i class="fa-solid fa-globe"></i> الأرقام حسب رمز الدولة</b><small>حدد رمز أو أكثر</small></div>
         <div class="chips" id="ccChips"></div>
@@ -564,6 +566,9 @@ R.campaign = async (el, p) => {
           </div>
         </div>
       </div>
+      <div class="wa-auto"><span class="row-ic ic-wa"><i class="fa-solid fa-filter"></i></span><div style="flex:1;min-width:0"><b>فلترة قبل البدء</b>
+        <div class="row-sub">يفحص كل رقم ويشيل اللي ما عليه واتساب قبل الإرسال - ما تنخصم ولا تاخذ وقت</div></div>
+        <label class="switch"><input type="checkbox" id="waAuto" checked><span></span></label></div>
       <div class="note warn hidden" id="costNote"></div>
       <div id="dailyNote"></div>
       <button class="btn btn-primary btn-block" id="sendBtn" style="margin-top:12px"><i class="fa-solid fa-paper-plane"></i> إرسال الحملة</button>
@@ -579,7 +584,7 @@ R.campaign = async (el, p) => {
     const n = a.valid;
     $('#numCount').textContent = fmt(n) + ' رقم';
     $('#nsAll').textContent = fmt(a.total); $('#nsOk').textContent = fmt(a.valid); $('#nsDup').textContent = fmt(a.dup); $('#nsBad').textContent = fmt(a.bad);
-    $('#rmDup').disabled = !a.dup; $('#rmBad').disabled = !a.bad; $('#rmAll').disabled = !a.total;
+    $('#rmDup').disabled = !a.dup; $('#rmBad').disabled = !a.bad; $('#rmAll').disabled = !a.total; $('#waCheck').disabled = !a.valid;
     $('#rmDup').innerHTML = `<i class="fa-solid fa-clone"></i> حذف المكرر${a.dup ? ` (${fmt(a.dup)})` : ''}`;
     drawCcTools(a);
     const dn = Math.max(5, +$('#dripN').value || 40), on = n > dn;
@@ -697,6 +702,45 @@ R.campaign = async (el, p) => {
   };
   $('#rmDup').onclick = () => rewrite((it, seen) => !seen.has(it.n), 'انحذف المكرر');
   $('#rmBad').onclick = () => rewrite(it => it.ok, 'انحذف الناقص والخطأ');
+  // ---- فحص واتساب: يكشف الأرقام اللي ما عليها واتساب
+  let waOff = null;
+  const waDraw = j => {
+    const box = $('#waBox'); if (!box) return;
+    if (!j) { box.innerHTML = ''; return; }
+    if (j.running) {
+      const pct = j.total ? Math.round(j.done / j.total * 100) : 0;
+      box.innerHTML = `<div class="wa-res"><div class="wa-res-h"><i class="fa-solid fa-spinner fa-spin"></i> نفحص الأرقام على واتساب... <b class="num">${fmt(j.done)}/${fmt(j.total)}</b></div><div class="progress"><span style="width:${pct}%"></span></div>
+        <div class="hint">الفحص يمشي على دفعات حتى يبقى رقمك بأمان. تكدر تكمّل كتابة رسالتك.</div></div>`;
+      return;
+    }
+    waOff = new Set(j.off || []);
+    const unk = (j.unknown || []).length;
+    box.innerHTML = `<div class="wa-res fade-in"><div class="wa-res-row">
+        <span class="wa-ok"><i class="fa-solid fa-circle-check"></i> <b class="num">${fmt((j.on || []).length)}</b> عليهم واتساب</span>
+        <span class="wa-off"><i class="fa-solid fa-ban"></i> <b class="num">${fmt(waOff.size)}</b> بدون واتساب</span>
+        ${unk ? `<span class="wa-unk"><i class="fa-solid fa-circle-question"></i> <b class="num">${fmt(unk)}</b> ما انفحص</span>` : ''}</div>
+      ${waOff.size ? `<div class="input-row" style="margin-top:10px"><button class="btn btn-red btn-sm" style="flex:1" id="waRm"><i class="fa-solid fa-user-xmark"></i> حذف اللي ما عليهم واتساب (${fmt(waOff.size)})</button>
+        <button class="btn btn-soft btn-sm" id="waCopy"><i class="fa-regular fa-copy"></i> نسخها</button></div>` : '<div class="hint" style="margin-top:6px">كل الأرقام عليها واتساب 👌</div>'}</div>`;
+    const rm = $('#waRm'); if (rm) rm.onclick = () => { rewrite(it => !waOff.has(it.n), 'انحذفت الأرقام اللي ما عليها واتساب'); waDraw({ ...j, off: [] }); };
+    const cp = $('#waCopy'); if (cp) cp.onclick = () => copy([...waOff].join('\n'));
+  };
+  const waPoll = async () => {
+    const j = await api(`/accounts/${accId}/wa_check`);
+    if (!j.ok) return;
+    waDraw(j.total ? j : null);
+    if (j.running && S.page === 'campaign') setTimeout(waPoll, 1500);
+  };
+  $('#waCheck').onclick = async e => {
+    const a = analyzeNumbers(numbersEl.value, $('#cc').dataset.cc), seen = new Set();
+    const nums = a.items.filter(it => it.ok && !seen.has(it.n) && seen.add(it.n)).map(it => it.n);
+    if (!nums.length) return toast('أضف أرقام صالحة أولاً', 'err');
+    if (nums.length > 5000) return toast('الحد 5000 رقم بالفحص الواحد', 'err');
+    busy(e.target.closest('button'), true);
+    const r = await api(`/accounts/${accId}/wa_check`, { body: { numbers: nums } });
+    busy(e.target.closest('button'), false);
+    if (!r.ok) return toast(r.error || 'تعذر الفحص', 'err');
+    waDraw(r); if (r.running) setTimeout(waPoll, 1200);
+  };
   $('#rmAll').onclick = e => confirmTap(e.target.closest('button'), () => { numbersEl.value = ''; count(); }, 'راح تنمسح كل الأرقام المكتوبة', { title: 'مسح الأرقام', ok: 'مسح' });
   if (S.pendingText) { $('#text').value = S.pendingText; S.pendingText = null; }
   if (S.pendingNumbers) { numbersEl.value = S.pendingNumbers.join('\n'); S.pendingNumbers = null; setTimeout(() => toast(`تمت إضافة ${fmt(numbersEl.value.split('\n').length)} رقم`, 'ok'), 300); }
@@ -740,7 +784,7 @@ R.campaign = async (el, p) => {
     if (!$('#text').value.trim() && !$('#media').files[0]) { toast('اكتب رسالة أو أرفق صورة/ملف', 'err'); return; }
     const fd = new FormData();
     fd.append('numbers_text', numbersEl.value); fd.append('country_code', $('#cc').dataset.cc); fd.append('text', $('#text').value);
-    fd.append('delay', $('#delay').value || 15);
+    fd.append('delay', $('#delay').value || 15); fd.append('wa_check', $('#waAuto').checked ? '1' : '0');
     if ($('#dripOn').checked) {
       fd.append('drip', '1'); fd.append('drip_batch', Math.max(1, +$('#dripN').value || 40)); fd.append('drip_time', $('#dripTime').value);
       if (dripMode === 'custom' && sched.length) fd.append('drip_schedule', JSON.stringify(sched));
@@ -768,6 +812,7 @@ R.campaign = async (el, p) => {
     const done = s.sent + s.failed, pct = s.total ? Math.round(done / s.total * 100) : 0;
     const pend = s.pending_numbers || [];
     box.innerHTML = `<div class="card fade-in" style="margin-bottom:12px;border-color:var(--primary)">
+      ${s.checking ? `<div class="note" style="margin-bottom:10px"><i class="fa-solid fa-filter"></i> نفحص الأرقام قبل البدء... <b class="num">${fmt(s.checking.done)}/${fmt(s.checking.total)}</b> - اللي ما عليه واتساب ينشال</div>` : s.skipped_invalid ? `<div class="note" style="margin-bottom:10px"><i class="fa-solid fa-ban"></i> انشال <b class="num">${fmt(s.skipped_invalid)}</b> رقم ما عليه واتساب قبل البدء</div>` : ''}
       <div class="card-title"><i class="fa-solid fa-satellite-dish"></i> ${s.scheduled_for ? 'حملة مجدولة' : s.paused ? 'الحملة موقوفة مؤقتاً' : 'الحملة جارية الآن'}<span class="spacer"></span>${s.scheduled_for ? `<span class="pill pill-blue num">${esc(s.scheduled_for)}</span>` : `<span class="pill pill-gray num">${pct}%</span>`}</div>
       <div class="progress"><span style="width:${pct}%"></span></div>
       <div class="stats three" style="margin-top:12px">

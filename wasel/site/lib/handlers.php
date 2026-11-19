@@ -652,6 +652,8 @@ function engine_start_campaign(string $accId, array $numbers, string $text, ?str
         'delay' => form_int('delay', DEFAULT_DELAY),
         'media_delay' => form_int('media_delay', DEFAULT_MEDIA_DELAY),
         'media' => read_upload_media(),
+        // فلترة الأرقام اللي ما عليها واتساب قبل البدء (مفعّلة افتراضياً)
+        'pre_check' => ($_POST['wa_check'] ?? '1') !== '0',
     ];
     if ($sendAt) {
         $payload['send_at'] = $sendAt;
@@ -750,7 +752,9 @@ function handle_start_campaign($accId): void
         $startTs = $sendAt ? strtotime($sendAt) : time();
         $anchor = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string)($_POST['drip_time'] ?? '')) ? (string)$_POST['drip_time'] : date('H:i', $startTs);
         $dripId = drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers), $sched, $anchor);
-        $r = engine_send_campaign($accId, $first, with_trial_footer($id, $text), $media, $delay, $mediaDelay, $sendAt, 'drip:' . $dripId . ':1');
+        $preCheck = ($_POST['wa_check'] ?? '1') !== '0';
+        store_update('drips', $dripId, fn($x) => array_merge($x, ['pre_check' => $preCheck]));
+        $r = engine_send_campaign($accId, $first, with_trial_footer($id, $text), $media, $delay, $mediaDelay, $sendAt, 'drip:' . $dripId . ':1', $preCheck);
         $status = $r['_status'] ?? 503;
         unset($r['_status']);
         if ($status !== 200 || empty($r['ok'])) {
@@ -793,7 +797,7 @@ function history_public(array $h): array
         'finished_at' => $h['finished_at'] ?? null, 'media_name' => $h['media_name'] ?? '', 'delay' => (int)($h['delay'] ?? 0),
         'account_id' => $h['account_id'] ?? '',
         'drip_batch' => $h['drip_batch'] ?? null, 'drip_id' => $h['drip_id'] ?? null, 'drip_topup' => !empty($h['drip_topup']),
-        'failed_invalid' => (int)($h['failed_invalid'] ?? 0), 'cancelled' => (int)($h['cancelled'] ?? max(0, (int)$h['total'] - $sent - (int)$h['failed'])),
+        'failed_invalid' => (int)($h['failed_invalid'] ?? 0), 'skipped_invalid' => (int)($h['skipped_invalid'] ?? 0), 'cancelled' => (int)($h['cancelled'] ?? max(0, (int)$h['total'] - $sent - (int)$h['failed'])),
         'legacy' => !isset($h['finished_at']),
     ];
 }
