@@ -1,0 +1,11 @@
+# تمريني: كل الطلبات تروح لـ index.php (عدا الملفات الموجودة فعلاً) + حماية مجلد البيانات
+Options -Indexes
+<IfModule mod_rewrite.c>
+RewriteEngine On
+RewriteRule ^(data|lib|views|tools)(/|$) - [F,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^ index.php [QSA,L]
+</IfModule>
+<FilesMatch "\.(json|md|lock)$">
+  Require all denied
+</FilesMatch>

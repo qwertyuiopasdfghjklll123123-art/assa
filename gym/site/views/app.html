@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<script>(function(){try{var u=JSON.parse(localStorage.getItem('tmr_ui')||'{}');var d=u.mode==='dark'||(u.mode==='auto'&&matchMedia('(prefers-color-scheme: dark)').matches);document.documentElement.setAttribute('data-mode',d?'dark':'light');}catch(e){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#f3f7f8">
+<title>__APP__</title>
+<link rel="manifest" href="/app.webmanifest">
+<link rel="apple-touch-icon" href="/icon-192.png">
+<link rel="icon" type="image/png" href="/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="__APP__">
+<link rel="preload" href="/assets/vendor/plex-arabic-400.woff2?v=__V__" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="/assets/vendor/fonts.css?v=__V__">
+<link rel="stylesheet" href="/assets/vendor/fa.css?v=__V__">
+<link rel="stylesheet" href="/assets/ui.css?v=__V__">
+<link rel="stylesheet" href="/assets/gym.css?v=__V__">
+<style>
+  .topbar{position:fixed;top:0;left:0;right:0;z-index:50;height:calc(66px + env(safe-area-inset-top,0px));padding:env(safe-area-inset-top,0px) 18px 0;display:flex;align-items:center;justify-content:space-between;transition:background .3s,box-shadow .3s}
+  .topbar.scrolled{background:color-mix(in srgb,var(--bg) 78%,transparent);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 8px 20px rgba(3,79,92,.05)}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:800;font-size:19px;color:var(--text);cursor:pointer}
+  .brand img{width:36px;height:36px;border-radius:11px;box-shadow:0 6px 14px var(--primary-glow)}
+  .top-actions{display:flex;align-items:center;gap:8px}
+  .round-btn{position:relative;width:42px;height:42px;border-radius:50%;background:var(--card);border:1px solid var(--glass-line);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:var(--shadow);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:16px}
+  .clock-chip{display:flex;align-items:center;gap:7px;height:42px;padding:0 14px;border-radius:999px;background:var(--card);border:1px solid var(--glass-line);box-shadow:var(--shadow);font-weight:800;font-size:14px;color:var(--primary);direction:ltr}
+  main{max-width:620px;margin:0 auto;padding:calc(78px + env(safe-area-inset-top,0px)) 18px calc(120px + env(safe-area-inset-bottom,0px))}
+  .page-head{display:flex;align-items:center;gap:12px;margin:0 2px 16px}
+  .page-head h2{font-size:22px;font-weight:800;flex:1;letter-spacing:-.3px}
+  .page-head .back{width:42px;height:42px;border-radius:14px;background:var(--card);border:1px solid var(--glass-line);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:center;color:var(--primary)}
+  .page{animation:pageIn .28s var(--ease) both}
+  @keyframes pageIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .bnav{position:fixed;left:0;right:0;bottom:0;z-index:60;padding:0 16px calc(14px + env(safe-area-inset-bottom,0px));pointer-events:none}
+  .bnav-in{pointer-events:auto;max-width:440px;margin:0 auto;height:68px;display:flex;align-items:center;justify-content:space-between;padding:0 10px;border-radius:999px;background:color-mix(in srgb,var(--surface) 78%,transparent);border:1px solid var(--glass-line);-webkit-backdrop-filter:var(--blur);backdrop-filter:var(--blur);box-shadow:0 18px 40px rgba(3,79,92,.16)}
+  .bnav-it{height:48px;min-width:48px;border-radius:999px;display:flex;align-items:center;justify-content:center;gap:8px;color:#6b8a90;font-size:13px;font-weight:700;transition:padding .45s var(--ease),background .35s,color .3s,box-shadow .35s;border:0;background:none;font-family:inherit}
+  .bnav-it i{font-size:18px}
+  .bnav-it .t{max-width:0;overflow:hidden;white-space:nowrap;opacity:0;transition:max-width .45s var(--ease),opacity .3s}
+  .bnav-it.on{background:var(--btn);color:#fff;padding:0 18px;box-shadow:0 8px 18px var(--primary-glow)}
+  .bnav-it.on .t{max-width:90px;opacity:1}
+  body.in-session .bnav{display:none}
+  body.no-user .bnav,body.no-user .topbar{display:none}
+  @media (min-width:900px){ main{max-width:700px} }
+</style>
+</head>
+<body>
+<header class="topbar" id="topbar">
+  <div class="brand" onclick="go('home')"><img src="/icon-192.png" alt=""><span>__APP__</span></div>
+  <div class="top-actions">
+    <span class="clock-chip hidden" id="sesClock"><i class="fa-solid fa-stopwatch"></i><span id="sesClockV">00:00</span></span>
+    <button class="round-btn" onclick="go('me')" aria-label="حسابي"><i class="fa-regular fa-bell" id="bellIc"></i></button>
+  </div>
+</header>
+<main id="view"></main>
+<nav class="bnav"><div class="bnav-in" id="bnav">
+  <button class="bnav-it" data-p="home"><i class="fa-solid fa-house"></i><span class="t">اليوم</span></button>
+  <button class="bnav-it" data-p="program"><i class="fa-solid fa-calendar-week"></i><span class="t">البرنامج</span></button>
+  <button class="bnav-it" data-p="library"><i class="fa-solid fa-dumbbell"></i><span class="t">التمارين</span></button>
+  <button class="bnav-it" data-p="meals"><i class="fa-solid fa-utensils"></i><span class="t">الأكل</span></button>
+  <button class="bnav-it" data-p="me"><i class="fa-solid fa-user"></i><span class="t">حسابي</span></button>
+</div></nav>
+
+<!-- مؤقت الراحة -->
+<div class="rest-bg" id="rest">
+  <div class="rest-card">
+    <h3><i class="fa-solid fa-mug-hot"></i> وقت الراحة</h3>
+    <p id="restSub">خذ نفس واشرب ماي</p>
+    <div class="rring">
+      <svg width="230" height="230" viewBox="0 0 230 230"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="var(--primary2)"/><stop offset="1" stop-color="var(--primary)"/></linearGradient></defs>
+        <circle cx="115" cy="115" r="100" fill="none" stroke-width="14" class="bgc"/><circle cx="115" cy="115" r="100" fill="none" stroke-width="14" class="fgc" id="restArc" stroke-dasharray="628.3" stroke-dashoffset="0"/></svg>
+      <div class="val"><span id="restV">1:30</span><small>متبقي</small></div>
+    </div>
+    <div class="rest-next" id="restNext"></div>
+    <div class="row-actions" style="gap:8px"><button class="btn btn-ghost" id="restMinus">-15</button><button class="btn btn-ghost" id="restPlus">+15</button><button class="btn btn-primary" id="restSkip" style="flex:2"><i class="fa-solid fa-forward"></i> تخطي الراحة</button></div>
+  </div>
+</div>
+
+<!-- نافذة سفلية عامة (تعديل، اختيار...) -->
+<div class="sheet-bg" id="shBg"></div>
+<div class="sheet" id="sh" role="dialog" aria-modal="true"><div class="sheet-handle"></div><div id="shBody"></div></div>
+<div class="toast" id="toast"></div>
+<script>window.BOOT = __BOOT__;</script>
+<script src="/assets/anim.js?v=__V__"></script>
+<script src="/assets/app.js?v=__V__"></script>
+</body>
+</html>

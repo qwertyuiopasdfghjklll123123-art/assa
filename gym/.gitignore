@@ -1,0 +1,3 @@
+site/data/*
+!site/data/.htaccess
+!site/data/index.html
