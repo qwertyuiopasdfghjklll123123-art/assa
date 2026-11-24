@@ -648,6 +648,33 @@ body.in-chat main{padding-bottom:0}
 .pr-top{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:5px}
 .poll-attach{margin-top:12px}
 
+/* ---------------------------------------------------------------- إنستغرام + القفل */
+.ic-ig{background:linear-gradient(135deg,#feda75,#fa7e1e 30%,#d62976 60%,#962fbf 85%,#4f5bd5);color:#fff}
+.btn-ig{background:linear-gradient(135deg,#fa7e1e,#d62976 50%,#962fbf);color:#fff;box-shadow:0 10px 22px rgba(214,41,118,.28)}
+.btn-ig.disabled{opacity:.5;pointer-events:none}
+.ig-empty{text-align:center;padding:26px 18px}
+.ig-empty h3{font-size:19px;margin-top:12px}
+.ig-empty p{color:var(--text2);font-size:13.5px;line-height:1.9;margin:6px 0 14px}
+.ig-logo{width:78px;height:78px;margin:0 auto;border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:40px;color:#fff;background:linear-gradient(135deg,#feda75,#fa7e1e 30%,#d62976 60%,#962fbf 85%,#4f5bd5);box-shadow:0 14px 30px rgba(214,41,118,.3)}
+.ig-req{margin-top:14px;text-align:right;font-size:12.5px;line-height:1.9;color:var(--text2);padding:10px 12px;border-radius:14px;background:var(--input)}
+.ig-accs{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;margin-bottom:10px}
+.ig-acc{flex:none;display:flex;align-items:center;gap:10px;padding:8px 12px 8px 14px;border-radius:18px;background:var(--card);border:2px solid var(--glass-line);font:inherit;color:var(--text);text-align:right;cursor:pointer}
+.ig-acc.on{border-color:#d62976;box-shadow:0 8px 20px rgba(214,41,118,.18)}
+.ig-acc b{display:block;font-size:13.5px;direction:ltr;text-align:right}
+.ig-acc small{display:block;font-size:11px;color:var(--text3)}
+.ig-av{background:linear-gradient(140deg,hsl(var(--h,320) 70% 60%),hsl(calc(var(--h,320) + 40) 70% 45%))}
+.ig-acc .ig-av{width:42px;height:42px;font-size:16px;box-shadow:0 0 0 2px var(--surface),0 0 0 4px #d62976}
+.ig-tools{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.ig-badge{width:36px;height:36px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:18px;background:linear-gradient(135deg,#fa7e1e,#d62976,#962fbf)}
+.ch-b.me.ig{background:linear-gradient(135deg,color-mix(in srgb,#962fbf 20%,var(--surface)),color-mix(in srgb,#d62976 14%,var(--surface)))}
+.ch-send.ig{background:linear-gradient(135deg,#fa7e1e,#d62976,#962fbf)}
+.ig-img{display:block;max-width:220px;border-radius:12px;margin-bottom:4px}
+.ig-seen{align-self:flex-end;font-size:11px;color:var(--text3);margin-top:-2px}
+.lock-card{text-align:center;padding:28px 18px}
+.lock-ic{width:72px;height:72px;margin:0 auto;border-radius:24px;display:flex;align-items:center;justify-content:center;font-size:30px;color:#fff;background:var(--btn);box-shadow:0 14px 30px var(--primary-glow)}
+.lock-card h3{margin-top:14px;font-size:19px}
+.lock-card p{color:var(--text2);font-size:13.5px;line-height:1.9;margin:6px 0 16px}
+
 /* رابط الفترة المجانية */
 .trial-foot{margin-top:10px;padding:10px 12px;border-radius:14px;border:1px dashed color-mix(in srgb,var(--orange) 55%,transparent);background:var(--orange-bg)}
 .trial-foot .tf-h{font-size:12px;font-weight:700;color:var(--orange)}

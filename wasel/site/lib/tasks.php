@@ -83,6 +83,7 @@ function run_scheduled_tasks(): array
     try {
         // 0) دفعات الحملات اليومية (40 كل 24 ساعة)
         $report['drip_batches'] = drip_run_due();
+        $report['ig_tokens'] = ig_refresh_tokens();
         // 1) انتهاء خطط مستخدمي المنصة اللي فعّلها الأدمن بمدة محددة
         foreach (store_all('users') as $u) {
             $ends = parse_dt($u['plan_ends_at'] ?? null);

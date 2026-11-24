@@ -160,6 +160,7 @@ const PAGES = {
   leads: { nav: 'account', slug: 'leads' }, report: { nav: 'campaign', slug: 'report' },
   coupons: { nav: 'account', admin: true, slug: 'coupons' }, appearance: { nav: 'account', slug: 'appearance' },
   inbox: { nav: 'accounts', slug: 'inbox' }, chat: { nav: 'accounts', slug: 'chat' }, ibcast: { nav: 'accounts', slug: 'broadcast' },
+  ig: { nav: 'account', slug: 'ig' }, igchat: { nav: 'account', slug: 'igchat' },
   polls: { nav: 'account', slug: 'polls' }, poll: { nav: 'account', slug: 'poll' }, pushset: { nav: 'account', slug: 'pushset' },
 };
 const SLUG2PAGE = Object.fromEntries(Object.entries(PAGES).map(([k, v]) => [v.slug ?? k, k]));
@@ -576,6 +577,136 @@ R.poll = async (el, p) => {
   draw();
 };
 
+// ---------------------------------------------------------------- الاشتراك: المحادثات (واتساب وإنستغرام) للمشتركين
+function chatsLocked(el, title) {
+  if (ME.chats_allowed) return false;
+  el.innerHTML = head(title) + `<div class="card lock-card"><div class="lock-ic"><i class="fa-solid fa-lock"></i></div>
+    <h3>${title} للمشتركين</h3><p>اشترك بباقة حتى تشوف كل محادثاتك وترد عليها من مكان واحد، ويوصلك إشعار لكل رد.</p>
+    <button class="btn btn-primary btn-block" onclick="go('wallet')"><i class="fa-solid fa-gem"></i> الباقات</button></div>`;
+  return true;
+}
+
+// ---------------------------------------------------------------- إنستغرام: الحسابات والمحادثات
+const IG = { acc: null, filter: 'all', q: '', convs: [], sig: '' };
+const igName = c => c.username ? '@' + c.username : (c.name || 'مستخدم إنستغرام');
+function igAvatar(pic, name, key) {
+  const h = [...String(key || name || '')].reduce((s, x) => s + x.charCodeAt(0), 0) % 360;
+  return `<span class="ib-av ig-av" style="--h:${h}">${esc([...String(name || '؟').replace('@', '').trim()][0] || '؟')}${pic ? `<img src="${esc(pic)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
+}
+R.ig = async (el, p) => {
+  if (chatsLocked(el, 'إنستغرام')) return;
+  el.innerHTML = head('إنستغرام') + '<div class="card"><div class="skel" style="height:180px"></div></div>';
+  const st = await api('/api/ig');
+  if (!st.ok) { el.innerHTML = head('إنستغرام') + `<div class="card">${empty('fa-solid fa-plug-circle-xmark', st.error || 'تعذر التحميل')}</div>`; return; }
+  const accs = st.accounts;
+  if (p.acc) IG.acc = +p.acc;
+  if (!accs.some(a => a.id === IG.acc)) IG.acc = accs[0]?.id || null;
+  const connectBtn = `<a class="btn btn-ig ${st.configured ? '' : 'disabled'}" ${st.configured ? 'href="/ig/connect"' : ''}><i class="fa-brands fa-instagram"></i> ربط حساب</a>`;
+  el.innerHTML = head('إنستغرام', true, accs.length ? connectBtn.replace('btn btn-ig', 'btn btn-ig btn-sm') : '') + `
+    ${!st.configured ? `<div class="note warn" style="margin-bottom:12px"><i class="fa-solid fa-gear"></i> ${ADMIN ? 'لازم تضيف بيانات تطبيق Meta (App ID و App Secret) من <a onclick="go(\'settings\')" style="font-weight:800;cursor:pointer">الإعدادات ← إنستغرام</a> أول' : 'ربط إنستغرام لسه ما تفعّل من الإدارة'}</div>` : ''}
+    ${!accs.length ? `<div class="card ig-empty"><div class="ig-logo"><i class="fa-brands fa-instagram"></i></div><h3>اربط حساب إنستغرام</h3>
+        <p>شوف كل الرسائل والطلبات من كل حساباتك بمكان واحد، ورد عليها مباشرة. تسجيل الدخول يصير من صفحة إنستغرام الرسمية - ما نطلب كلمة السر.</p>
+        ${connectBtn.replace('btn btn-ig', 'btn btn-ig btn-block')}
+        <div class="ig-req"><b>المطلوب:</b> الحساب يكون <b>احترافي</b> (أعمال أو صانع محتوى) - تحوله مجاناً من إنستغرام: الإعدادات ← نوع الحساب والأدوات ← التبديل إلى حساب احترافي. وفعّل «السماح بالوصول إلى الرسائل» من إعدادات الرسائل.</div></div>`
+    : `<div class="ig-accs" id="igAccs">${accs.map(a => `<button class="ig-acc ${a.id === IG.acc ? 'on' : ''}" data-id="${a.id}">${igAvatar(a.pic, a.username, a.ig_id)}<span><b>@${esc(a.username)}</b><small>${a.name ? esc(a.name) : 'حساب ' + (a.type === 'MEDIA_CREATOR' ? 'صانع محتوى' : 'أعمال')}${a.followers != null ? ' · ' + fmt(a.followers) + ' متابع' : ''}</small></span>${a.unread ? `<b class="ib-badge num">${a.unread}</b>` : ''}</button>`).join('')}</div>
+      <div class="ig-tools"><button class="btn btn-soft btn-sm" id="igSync"><i class="fa-solid fa-rotate"></i> تحديث من إنستغرام</button><span class="spacer"></span><button class="btn btn-ghost btn-sm" id="igDel"><i class="fa-solid fa-link-slash"></i> فصل</button></div>
+      <div class="ib-search"><i class="fa-solid fa-magnifying-glass"></i><input class="input" id="igQ" placeholder="ابحث باسم المستخدم أو الرسالة..." value="${esc(IG.q)}"></div>
+      <div class="ib-bar"><div class="chips" id="igF">${[['all', 'الكل'], ['unread', 'غير مقروءة'], ['request', 'الطلبات'], ['incoming', 'راسلوني'], ['seen', 'شافوا']].map(([k, v]) => `<button class="chip ${IG.filter === k ? 'on' : ''}" data-f="${k}">${v}<b class="num ib-cnt" data-c="${k}"></b></button>`).join('')}</div></div>
+      <div id="igList" style="margin-top:10px"><div class="card"><div class="skel" style="height:200px"></div></div></div>`}
+    ${ADMIN && st.admin && !accs.length ? `<details class="card" style="margin-top:12px"><summary style="cursor:pointer;font-weight:800"><i class="fa-solid fa-screwdriver-wrench"></i> إعداد تطبيق Meta (للأدمن)</summary><div class="hint" style="line-height:2">
+      Redirect URI: <span class="num" dir="ltr">${esc(st.admin.redirect_uri)}</span><br>Webhook: <span class="num" dir="ltr">${esc(st.admin.webhook)}</span><br>Verify token: <span class="num" dir="ltr">${esc(st.admin.verify_token)}</span></div></details>` : ''}`;
+  if (!accs.length) return;
+  const filtered = () => { const q = IG.q.toLowerCase(); return IG.convs.filter(c => (IG.filter === 'all' || (IG.filter === 'unread' && c.unread) || (IG.filter === 'request' && c.request) || (IG.filter === 'incoming' && c.incoming) || (IG.filter === 'seen' && c.seen))
+    && (!q || (c.username || '').toLowerCase().includes(q.replace('@', '')) || (c.name || '').toLowerCase().includes(q) || (c.last?.text || '').toLowerCase().includes(q))); };
+  const draw = () => {
+    const box = $('#igList'); if (!box) return;
+    const cnt = { all: IG.convs.length, unread: IG.convs.filter(c => c.unread).length, request: IG.convs.filter(c => c.request).length, incoming: IG.convs.filter(c => c.incoming).length, seen: IG.convs.filter(c => c.seen).length };
+    $$('#igF .ib-cnt').forEach(b => { b.textContent = cnt[b.dataset.c] ? ' ' + fmt(cnt[b.dataset.c]) : ''; });
+    const list = filtered();
+    if (!IG.convs.length) { box.innerHTML = `<div class="card">${empty('fa-regular fa-comments', 'ما فيه محادثات محفوظة بعد')}<div class="hint" style="text-align:center">اضغط «تحديث من إنستغرام» - والرسائل الجديدة توصل وتنحفظ تلقائياً</div></div>`; return; }
+    box.innerHTML = `<div class="list ib-list">${list.slice(0, 400).map(c => `<div class="row ib-row" data-p="${esc(c.peer)}">${igAvatar(c.pic, c.username || c.name, c.peer)}
+      <span class="row-body"><span class="row-title">${esc(igName(c))} ${c.request ? '<span class="pill pill-orange">طلب</span>' : ''}</span><span class="row-sub ib-prev">${c.last ? (c.last.me ? (c.seen ? '<i class="fa-solid fa-check-double tick read"></i> ' : '<i class="fa-solid fa-check tick"></i> ') : '') + esc(c.last.text || ({ image: '📷 صورة', video: '🎥 فيديو', audio: '🎤 صوت', story: '📖 ستوري', file: '📎 مرفق' })[c.last.type] || '') : (c.name ? esc(c.name) : '')}</span></span>
+      <span class="ib-end"><small class="${c.unread ? 'un' : ''}">${ibTime(c.ts)}</small>${c.unread ? `<b class="ib-badge num">${c.unread}</b>` : ''}</span></div>`).join('') || '<div class="hint" style="padding:16px;text-align:center">ما فيه نتائج</div>'}</div>`;
+  };
+  async function load() {
+    const r = await api(`/api/ig/${IG.acc}/convs`);
+    if (!r.ok) { $('#igList').innerHTML = `<div class="card">${empty('fa-solid fa-triangle-exclamation', r.error)}</div>`; return; }
+    const sig = JSON.stringify(r.convs);
+    if (sig === IG.sig && $('#igList .ib-list')) return;
+    IG.sig = sig; IG.convs = r.convs; draw();
+  }
+  $('#igAccs').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (!b) return; IG.acc = +b.dataset.id; IG.sig = ''; IG.convs = []; go('ig', { acc: IG.acc }, false); });
+  $('#igList').addEventListener('click', e => { const r = e.target.closest('[data-p]'); if (r) go('igchat', { acc: IG.acc, peer: r.dataset.p }); });
+  $('#igQ').addEventListener('input', e => { IG.q = e.target.value.trim(); draw(); });
+  $('#igF').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; IG.filter = b.dataset.f; $$('#igF .chip').forEach(x => x.classList.toggle('on', x === b)); draw(); });
+  $('#igSync').onclick = async e => { busy(e.target.closest('button'), true); const r = await api(`/api/ig/${IG.acc}/sync`, { body: {} }); busy(e.target.closest('button'), false); toast(r.ok ? `تحدثت ${fmt(r.convs)} محادثة` : r.error, r.ok ? 'ok' : 'err'); IG.sig = ''; load(); };
+  $('#igDel').onclick = e => confirmTap(e.target.closest('button'), async () => { await api(`/api/ig/${IG.acc}/delete`, { body: {} }); IG.acc = null; toast('انفصل الحساب', 'ok'); go('ig', {}, false); }, 'فصل الحساب وحذف محادثاته المحفوظة؟');
+  await load();
+  S.timers.push(setInterval(load, 8000));
+};
+
+R.igchat = async (el, p) => {
+  if (chatsLocked(el, 'إنستغرام')) return;
+  if (!p.acc || !p.peer) return go('ig', {}, false);
+  document.body.classList.add('in-chat');
+  let last = 0, msgs = [];
+  const seenIds = new Set();
+  el.innerHTML = `<div class="ch-head"><button class="back" onclick="goBack()"><i class="fa-solid fa-arrow-right"></i></button>
+      <span id="igAv">${igAvatar(null, '؟', p.peer)}</span><div style="flex:1;min-width:0"><b id="igN">...</b><div class="row-sub" id="igSub"></div></div>
+      <span class="ig-badge"><i class="fa-brands fa-instagram"></i></span></div>
+    <div class="ch-msgs" id="igMsgs"><div class="skel" style="height:120px;border-radius:18px"></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', `<div class="ch-compose portal"><div class="hint" style="text-align:center;margin:0 0 6px">إنستغرام يسمح بالرد خلال 24 ساعة من آخر رسالة من الشخص</div>
+    <div class="ch-row"><textarea id="igTxt" rows="1" maxlength="1000" placeholder="اكتب رسالة..."></textarea><button class="ch-send ig" id="igSend" aria-label="إرسال"><i class="fa-solid fa-paper-plane"></i></button></div></div>`);
+  const box = $('#igMsgs');
+  const bubble = m => {
+    const d = new Date(m.ts * 1000);
+    let body = '';
+    if (m.type === 'image' && m.url) body = `<a href="${esc(m.url)}" target="_blank" rel="noopener"><img class="ig-img" src="${esc(m.url)}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('📷 صورة'))"></a>`;
+    else if (m.type === 'video' && m.url) body = `<a class="ch-doc" href="${esc(m.url)}" target="_blank" rel="noopener"><i class="fa-solid fa-video"></i> فيديو</a>`;
+    else if (m.type === 'audio') body = m.url ? `<audio src="${esc(m.url)}" controls></audio>` : '<span class="hint">🎤 رسالة صوتية</span>';
+    else if (m.type === 'story') body = '<span class="hint"><i class="fa-solid fa-circle-play"></i> رد على ستوري</span>';
+    else if (m.type === 'file') body = m.url ? `<a class="ch-doc" href="${esc(m.url)}" target="_blank" rel="noopener"><i class="fa-solid fa-paperclip"></i> مرفق</a>` : '<span class="hint">📎 مرفق</span>';
+    return `<div class="ch-b ${m.me ? 'me ig' : 'them'}">${body}${m.text ? `<div class="ch-text">${esc(m.text)}</div>` : ''}<span class="ch-t num">${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</span></div>`;
+  };
+  const render = (conv) => {
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80 || !box.dataset.r;
+    let out = '', lastDay = '';
+    for (const m of msgs) { const dl = new Date(m.ts * 1000).toDateString(); if (dl !== lastDay) { out += `<div class="ch-day"><span>${new Date(m.ts * 1000).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'long' })}</span></div>`; lastDay = dl; } out += bubble(m); }
+    const lastMe = [...msgs].reverse().find(m => m.me);
+    if (conv && lastMe && conv.seen_at >= lastMe.ts) out += '<div class="ig-seen">شاف <i class="fa-solid fa-eye"></i></div>';
+    box.innerHTML = out || '<div class="hint" style="text-align:center;padding:30px">ما فيه رسائل محفوظة</div>';
+    box.dataset.r = 1; if (atBottom) box.scrollTop = box.scrollHeight;
+  };
+  async function load(first) {
+    if (S.page !== 'igchat') return;
+    const r = await api(`/api/ig/${p.acc}/conv/${encodeURIComponent(p.peer)}?since=${first ? 0 : Math.max(0, last - 60)}`);
+    if (!r.ok) { if (first) box.innerHTML = `<div class="hint" style="text-align:center;padding:30px">${esc(r.error)}</div>`; return; }
+    const c = r.conv;
+    $('#igN').textContent = igName(c); $('#igSub').innerHTML = (c.name && c.username ? esc(c.name) : '') + (c.request ? ' <span class="pill pill-orange">طلب مراسلة</span>' : '');
+    if (first) $('#igAv').innerHTML = igAvatar(c.pic, c.username || c.name, c.peer);
+    let added = first;
+    for (const m of r.messages) { if (seenIds.has(m.id)) continue; seenIds.add(m.id); msgs = msgs.filter(x => !(x._tmp && x.text === m.text && m.me)); msgs.push(m); added = true; }
+    msgs.sort((a, b) => a.ts - b.ts);
+    if (msgs.length) last = msgs[msgs.length - 1].ts;
+    if (added) render(c);
+  }
+  const ta = $d('#igTxt');
+  ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; });
+  ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); $d('#igSend').click(); } });
+  $d('#igSend').onclick = async () => {
+    const text = ta.value.trim(); if (!text) return;
+    const tmp = { id: 'tmp' + Date.now(), _tmp: 1, me: true, ts: Math.floor(Date.now() / 1000), type: 'text', text };
+    msgs.push(tmp); render(); ta.value = ''; ta.style.height = 'auto';
+    busy($d('#igSend'), true);
+    const r = await api(`/api/ig/${p.acc}/send`, { body: { peer: p.peer, text } });
+    busy($d('#igSend'), false);
+    if (!r.ok) { msgs = msgs.filter(m => m !== tmp); render(); ta.value = text; return toast(r.error, 'err'); }
+    setTimeout(() => load(false), 600);
+  };
+  await load(true);
+  S.timers.push(setInterval(() => load(false), 4000));
+};
+
 // ---------------------------------------------------------------- المحادثات (صندوق واتساب)
 const $d = s => document.querySelector(s); // للعناصر الثابتة المضافة للـ body
 const IB = { sel: new Set(), selMode: false, filter: 'all', q: '', acc: null, chats: [] };
@@ -596,6 +727,7 @@ function ibPreview(l) {
 }
 
 R.inbox = async (el, p) => {
+  if (chatsLocked(el, 'محادثات واتساب')) return;
   el.innerHTML = head('المحادثات') + '<div class="card"><div class="skel" style="height:220px"></div></div>';
   const accs = await loadAccounts();
   if (!accs.length) { el.innerHTML = head('المحادثات') + `<div class="card">${empty('fa-brands fa-whatsapp', 'اربط رقم واتساب أولاً حتى تشوف محادثاته', `<button class="btn btn-wa" onclick="go('accounts')"><i class="fa-solid fa-link"></i> ربط رقم</button>`)}</div>`; return; }
@@ -681,6 +813,7 @@ R.inbox = async (el, p) => {
 };
 
 R.chat = async (el, p) => {
+  if (chatsLocked(el, 'محادثات واتساب')) return;
   if (!p.acc || (!p.jid && !p.phone)) return go('inbox', {}, false);
   document.body.classList.add('in-chat');
   let jid = p.jid || null, lastTs = 0, chat = null, msgs = [];
@@ -802,6 +935,7 @@ R.chat = async (el, p) => {
 };
 
 R.ibcast = async (el, p) => {
+  if (chatsLocked(el, 'محادثات واتساب')) return;
   const jids = [...IB.sel];
   if (!jids.length) return go('inbox', { acc: p.acc });
   const names = jids.map(j => IB.chats.find(c => c.jid === j)).filter(Boolean);
@@ -1758,7 +1892,8 @@ R.account = async (el) => {
     </div>
     <div class="section-head">حسابي</div>
     <div class="list stagger">
-      ${rowItem({ icon: 'fa-solid fa-comments', ic: 'ic-wa', title: 'المحادثات', sub: 'شوف محادثات رقمك ورد عليها، وراسل مجموعة دفعة وحدة', onclick: "go('inbox')" })}
+      ${rowItem({ icon: 'fa-solid fa-comments', ic: 'ic-wa', title: 'محادثات واتساب' + (ME.chats_allowed ? '' : ' <i class="fa-solid fa-lock" style="font-size:11px;color:var(--text3)"></i>'), sub: 'شوف محادثات رقمك ورد عليها، وراسل مجموعة دفعة وحدة', onclick: "go('inbox')" })}
+      ${rowItem({ icon: 'fa-brands fa-instagram', ic: 'ic-ig', title: 'إنستغرام' + (ME.chats_allowed ? '' : ' <i class="fa-solid fa-lock" style="font-size:11px;color:var(--text3)"></i>'), sub: 'اربط حساباتك وشوف كل الرسائل والطلبات ورد عليها', onclick: "go('ig')" })}
       ${rowItem({ icon: 'fa-solid fa-hand-pointer', ic: 'ic-teal', title: 'الأزرار والاستبيانات', sub: 'أزرار تنضغط بواتساب، استبيانات وتقييم، ونتائجها', onclick: "go('polls')" })}
       ${rowItem({ icon: 'fa-solid fa-bell', ic: 'ic-orange', title: 'إشعارات الجوال', sub: 'لما أحد يرد أو يشوف رسالتك أو يضغط زر', onclick: "go('pushset')" })}
       ${rowItem({ icon: 'fa-solid fa-chart-pie', ic: 'ic-purple', title: 'تقارير الحملات', sub: 'النجاح، المشاهدة والردود', onclick: "go('reports')" })}
@@ -1815,7 +1950,7 @@ R.profile = async (el) => {
 R.notifications = async (el) => {
   el.innerHTML = head('الإشعارات', true, `<button class="btn btn-ghost btn-sm" id="bulkBtn"></button>`) + `<div class="swipe-hint"><i class="fa-solid fa-hand-pointer"></i> اسحب الإشعار يمين أو يسار لحذفه</div><div id="nl"><div class="card"><div class="skel" style="height:70px"></div></div></div>`;
   const KIND = { success: ['fa-solid fa-circle-check', 'ic-green'], warning: ['fa-solid fa-triangle-exclamation', 'ic-orange'], info: ['fa-solid fa-bell', 'ic-blue'], announce: ['fa-solid fa-bullhorn', 'ic-pink'] };
-  const LINKS = { inbox: 'المحادثات', polls: 'الأزرار والاستبيانات', wallet: 'الباقات', campaign: 'حملة جديدة', leads: 'سحب الأرقام', accounts: 'أرقامي', reports: 'التقارير', apikeys: 'ربط API' };
+  const LINKS = { ig: 'إنستغرام', inbox: 'المحادثات', polls: 'الأزرار والاستبيانات', wallet: 'الباقات', campaign: 'حملة جديدة', leads: 'سحب الأرقام', accounts: 'أرقامي', reports: 'التقارير', apikeys: 'ربط API' };
   let list = [];
   const bulk = el.querySelector('#bulkBtn');
   function setBulk() {
@@ -2187,6 +2322,17 @@ R.settings = async (el) => {
       <div class="input-row">${f('trial_days', 'الفترة المجانية (يوم)', s.trial_days, 'number', '0 = بدون تجربة')}${f('message_price', 'سعر الرسالة (د.ع)', s.message_price, 'number', '0 = الإرسال للمشتركين فقط')}</div>
       <div class="input-row">${f('trial_max_numbers', 'أرقام واتساب بالفترة المجانية', s.trial_max_numbers, 'number', '0 = بدون حد')}${f('trial_daily_messages', 'رسائل يومياً بالفترة المجانية', s.trial_daily_messages, 'number', '0 = بدون حد')}</div>
       ${f('usd_rate', 'سعر الدولار بالدينار (لـ Binance)', s.usd_rate, 'number', 'مثال: 1500 يعني 1$ = 1500 د.ع')}
+    </div>
+    <div class="section-head"><i class="fa-brands fa-instagram"></i> إنستغرام</div>
+    <div class="card">
+      <div class="note" style="margin-bottom:12px;line-height:1.9">1) سوّي تطبيق من <b dir="ltr">developers.facebook.com</b> نوعه Business وأضف منتج «Instagram» ← «API setup with Instagram login».<br>
+        2) بإعدادات «Business login» حط الـ Redirect URI تحت، وبالـ Webhooks حط الرابط والرمز تحت واشترك بـ <b dir="ltr">messages</b>.<br>
+        3) انسخ Instagram App ID و App Secret هنا. (حتى يربطون مستخدمين غيرك لازم «App Review» لصلاحية instagram_business_manage_messages)</div>
+      ${f('ig_app_id', 'Instagram App ID', s.ig_app_id)}
+      ${f('ig_app_secret', 'Instagram App Secret ' + (s.ig_secret_set ? '(محفوظ)' : ''), '', 'password')}
+      <div class="kv"><span>Redirect URI</span></div><div class="copy-box"><span class="v num" style="font-size:12px">${esc(s.ig_redirect)}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(s.ig_redirect)}')">نسخ</button></div>
+      <div class="kv" style="margin-top:8px"><span>Webhook URL</span></div><div class="copy-box"><span class="v num" style="font-size:12px">${esc(s.ig_webhook)}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(s.ig_webhook)}')">نسخ</button></div>
+      <div class="kv" style="margin-top:8px"><span>Verify token</span></div><div class="copy-box"><span class="v num" style="font-size:12px">${esc(s.ig_verify_token)}</span><button class="btn btn-soft btn-xs" onclick="copy('${esc(s.ig_verify_token)}')">نسخ</button></div>
     </div>
     <div class="section-head">رابط الموقع برسائل الفترة المجانية</div>
     <div class="card">

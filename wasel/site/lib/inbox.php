@@ -30,7 +30,7 @@ function inbox_send_guard(int $uid, string $accId, int $count): void
 
 function inbox_acc(string $accId): array
 {
-    require_login();
+    require_chats(); // المحادثات تحتاج اشتراك فعّال
     $acc = owned_account($accId);
     if (!$acc) {
         json_err('الحساب غير موجود', 404);

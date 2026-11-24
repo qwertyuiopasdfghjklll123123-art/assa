@@ -61,7 +61,7 @@ function logo_svg(int $size = 32): string
 
 /** روابط صفحات التطبيق (للأدمن): لازم تطابق PAGES بملف app.js */
 const APP_SLUGS = ['campaign', 'reports', 'numbers', 'number', 'packages', 'pay', 'me', 'notifications', 'clients', 'api', 'transactions',
-    'profile', 'dashboard', 'users', 'recharges', 'payments', 'plans', 'settings', 'security', 'backup', 'announce', 'leads', 'report', 'coupons', 'appearance', 'inbox', 'chat', 'broadcast', 'polls', 'poll', 'pushset'];
+    'profile', 'dashboard', 'users', 'recharges', 'payments', 'plans', 'settings', 'security', 'backup', 'announce', 'leads', 'report', 'coupons', 'appearance', 'inbox', 'chat', 'broadcast', 'polls', 'poll', 'pushset', 'ig', 'igchat'];
 
 /** رقم نسخة الملفات الثابتة: يتغير تلقائياً لما يتعدل أي ملف (فالمتصفح ياخذ الجديد ويخزّن القديم سنة) */
 function asset_version(): string

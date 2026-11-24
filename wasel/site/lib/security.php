@@ -79,7 +79,7 @@ function csrf_check(string $method, string $path): void
         return;
     }
     // نقاط تستلم من خارج الموقع وعندها حمايتها الخاصة (مفتاح/توقيع)
-    foreach (['/engine_hook', '/api/v1/', '/telegram/webhook/', '/cron'] as $pfx) {
+    foreach (['/engine_hook', '/api/v1/', '/telegram/webhook/', '/cron', '/ig/webhook'] as $pfx) {
         if (strpos($path, $pfx) === 0) {
             return;
         }

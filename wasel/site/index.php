@@ -21,6 +21,7 @@ require __DIR__ . '/lib/coupons.php';
 require __DIR__ . '/lib/inbox.php';
 require __DIR__ . '/lib/push.php';
 require __DIR__ . '/lib/polls.php';
+require __DIR__ . '/lib/instagram.php';
 require __DIR__ . '/lib/security.php';
 
 if (!is_dir(DATA_DIR)) {
@@ -658,7 +659,7 @@ $routes[] = ['POST', '#^/api/admin/notify$#', function () {
     admin_log('notify', "{$title} → {$aud} ({$n})");
     json_out(['ok' => true, 'total' => $n]);
 }];
-$routes = array_merge($routes, api_routes(), leads_routes(), drip_routes(), coupon_routes(), inbox_routes(), push_routes(), poll_routes());
+$routes = array_merge($routes, api_routes(), leads_routes(), drip_routes(), coupon_routes(), inbox_routes(), push_routes(), poll_routes(), ig_routes());
 
 foreach ($routes as [$m, $re, $fn]) {
     if ($m !== $method || !preg_match($re, $path, $mm)) {

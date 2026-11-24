@@ -149,6 +149,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-microphone:before{content:"\f130"}
 .fa-rotate-left:before{content:"\f2ea"}
 .fa-gem:before{content:"\f3a5"}
+.fa-circle-play:before{content:"\f144"}
 .fa-circle-check:before{content:"\f058"}
 .fa-pause:before{content:"\f04c"}
 .fa-address-card:before{content:"\f2bb"}
@@ -162,6 +163,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-file-contract:before{content:"\f56c"}
 .fa-chart-line:before{content:"\f201"}
 .fa-arrow-right:before{content:"\f061"}
+.fa-screwdriver-wrench:before{content:"\f7d9"}
 .fa-circle-pause:before{content:"\f28b"}
 .fa-money-bill-transfer:before{content:"\e528"}
 .fa-satellite-dish:before{content:"\f7c0"}
@@ -182,6 +184,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-circle-info:before{content:"\f05a"}
 .fa-camera:before{content:"\f030"}
 .fa-check-double:before{content:"\f560"}
+.fa-gear:before{content:"\f013"}
 .fa-clock:before{content:"\f017"}
 .fa-mobile-screen:before{content:"\f3cf"}
 .fa-coins:before{content:"\f51e"}
@@ -237,6 +240,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-broom:before{content:"\f51a"}
 .fa-hashtag:before{content:"\23"}
 .fa-infinity:before{content:"\f534"}
+.fa-link-slash:before{content:"\f127"}
 .fa-clone:before{content:"\f24d"}
 .fa-user-plus:before{content:"\f234"}
 .fa-check:before{content:"\f00c"}
@@ -251,6 +255,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-brands,.fab{font-weight:400}
 .fa-google:before{content:"\f1a0"}
 .fa-bitcoin:before{content:"\f379"}
+.fa-instagram:before{content:"\f16d"}
 .fa-whatsapp:before{content:"\f232"}
 .fa-telegram:before{content:"\f2c6"}
 :host,:root{--fa-font-regular:normal 400 1em/1 "Font Awesome 6 Free"}
