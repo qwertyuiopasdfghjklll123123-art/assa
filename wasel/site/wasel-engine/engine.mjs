@@ -27,6 +27,7 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
+import { setupInstagram } from './ig.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -64,7 +65,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 13; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 14; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -1347,6 +1348,9 @@ const routes = [
     return [200, { ok: true }];
   }],
 ];
+
+// إنستغرام (تسجيل دخول بالحساب) - يضيف مساراته /ig/...
+setupInstagram({ CFG, hook, routes, sleep });
 
 const server = http.createServer(async (req, res) => {
   try {

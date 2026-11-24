@@ -83,7 +83,6 @@ function run_scheduled_tasks(): array
     try {
         // 0) دفعات الحملات اليومية (40 كل 24 ساعة)
         $report['drip_batches'] = drip_run_due();
-        $report['ig_tokens'] = ig_refresh_tokens();
         // 1) انتهاء خطط مستخدمي المنصة اللي فعّلها الأدمن بمدة محددة
         foreach (store_all('users') as $u) {
             $ends = parse_dt($u['plan_ends_at'] ?? null);
@@ -237,6 +236,10 @@ function handle_engine_hook(): void
                 $b = count($reads) === 1 ? clean_text(mb_substr((string)($reads[0]['text'] ?? ''), 0, 120)) : implode('، ', array_slice(array_map($who, $reads), 0, 6));
                 push_user($owner, $t, $b, '/app', 'read');
             }
+            json_out(['ok' => true]);
+            // no break
+        case 'ig_msg':
+            ig_on_messages($d);
             json_out(['ok' => true]);
             // no break
         case 'poll_vote':

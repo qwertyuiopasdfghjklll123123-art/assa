@@ -434,8 +434,6 @@ function api_routes(): array
                 'ai_key_set' => $s['ai_api_key'] !== '', 'ai_knowledge_base' => $s['ai_knowledge_base'],
                 'leads_enabled' => !empty($s['leads_enabled']), 'leads_daily' => (int)$s['leads_daily'], 'leads_max' => (int)$s['leads_max'],
                 'trial_max_numbers' => (int)$s['trial_max_numbers'], 'trial_daily_messages' => (int)$s['trial_daily_messages'],
-                'ig_app_id' => $s['ig_app_id'] ?? '', 'ig_secret_set' => ($s['ig_app_secret'] ?? '') !== '', 'ig_redirect' => site_base_url() . '/ig/callback', 'ig_webhook' => site_base_url() . '/ig/webhook',
-                'ig_verify_token' => ($s['ig_verify_token'] ?? '') ?: (function () { $t = bin2hex(random_bytes(12)); update_settings(['ig_verify_token' => $t]); return $t; })(),
                 'trial_footer' => trim((string)$s['trial_footer']) ?: TRIAL_FOOTER_DEFAULT, 'site_url' => $s['site_url'], 'public_url' => site_public_url(),
                 'trial_footer_preview' => trial_footer(),
                 'google_client_id' => GOOGLE_CLIENT_ID,
@@ -537,12 +535,6 @@ function api_routes(): array
                 }
                 @unlink(DATA_DIR . '/pwa-192.png');
                 @unlink(DATA_DIR . '/pwa-512.png');
-            }
-            if (array_key_exists('ig_app_id', $d)) {
-                $f['ig_app_id'] = preg_replace('/\D/', '', (string)$d['ig_app_id']);
-            }
-            if (trim((string)($d['ig_app_secret'] ?? '')) !== '') {
-                $f['ig_app_secret'] = preg_replace('/[^a-f0-9]/i', '', (string)$d['ig_app_secret']);
             }
             foreach (['dev_name' => 40, 'dev_title' => 60] as $k => $max) {
                 if (array_key_exists($k, $d)) {

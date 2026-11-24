@@ -477,8 +477,6 @@ function settings(): array
         'trial_footer' => '', 'site_url' => '', 'public_url' => '',
         // الستايل الأساسي للموقع (للي ما اختار ستايل)
         'default_style' => 'teal',
-        // إنستغرام (تطبيق Meta)
-        'ig_app_id' => '', 'ig_app_secret' => '', 'ig_verify_token' => '',
         // الفوترة
         'trial_days' => TRIAL_DAYS, 'plan_days' => PLAN_ACTIVATION_DAYS, 'message_price' => 0, 'usd_rate' => 1500,
         // تسجيل الدخول والأمان
