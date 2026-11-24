@@ -113,11 +113,14 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-flag-checkered:before{content:"\f11e"}
 .fa-file-csv:before{content:"\f6dd"}
 .fa-address-book:before{content:"\f2b9"}
+.fa-comments:before{content:"\f086"}
 .fa-clipboard-list:before{content:"\f46d"}
 .fa-reply:before{content:"\f3e5"}
 .fa-circle-exclamation:before{content:"\f06a"}
+.fa-square-check:before{content:"\f14a"}
 .fa-list:before{content:"\f03a"}
 .fa-lock:before{content:"\f023"}
+.fa-pen-to-square:before{content:"\f044"}
 .fa-hourglass-half:before{content:"\f252"}
 .fa-users:before{content:"\f0c0"}
 .fa-eye-slash:before{content:"\f070"}
@@ -138,13 +141,16 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-headset:before{content:"\f590"}
 .fa-wifi:before{content:"\f1eb"}
 .fa-map-location-dot:before{content:"\f5a0"}
+.fa-square-poll-vertical:before{content:"\f681"}
 .fa-gift:before{content:"\f06b"}
 .fa-square-plus:before{content:"\f0fe"}
 .fa-image:before{content:"\f03e"}
+.fa-microphone:before{content:"\f130"}
 .fa-rotate-left:before{content:"\f2ea"}
 .fa-gem:before{content:"\f3a5"}
 .fa-circle-check:before{content:"\f058"}
 .fa-pause:before{content:"\f04c"}
+.fa-address-card:before{content:"\f2bb"}
 .fa-palette:before{content:"\f53f"}
 .fa-shield-halved:before{content:"\f3ed"}
 .fa-filter:before{content:"\f0b0"}
@@ -169,6 +175,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-shield-virus:before{content:"\e06c"}
 .fa-trash:before{content:"\f1f8"}
 .fa-arrow-left:before{content:"\f060"}
+.fa-comment:before{content:"\f075"}
 .fa-envelope:before{content:"\f0e0"}
 .fa-paperclip:before{content:"\f0c6"}
 .fa-circle-info:before{content:"\f05a"}
@@ -186,6 +193,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-house:before{content:"\f015"}
 .fa-rotate-right:before{content:"\f2f9"}
 .fa-upload:before{content:"\f093"}
+.fa-file-arrow-down:before{content:"\f56d"}
 .fa-bolt:before{content:"\f0e7"}
 .fa-sun:before{content:"\f185"}
 .fa-user-lock:before{content:"\f502"}
@@ -193,13 +201,16 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-credit-card:before{content:"\f09d"}
 .fa-file-circle-xmark:before{content:"\e5a1"}
 .fa-bell:before{content:"\f0f3"}
+.fa-plug-circle-xmark:before{content:"\e560"}
 .fa-location-dot:before{content:"\f3c5"}
+.fa-file:before{content:"\f15b"}
 .fa-arrow-down:before{content:"\f063"}
 .fa-eraser:before{content:"\f12d"}
 .fa-inbox:before{content:"\f01c"}
 .fa-gauge-high:before{content:"\f625"}
 .fa-link:before{content:"\f0c1"}
 .fa-play:before{content:"\f04b"}
+.fa-magnifying-glass:before{content:"\f002"}
 .fa-receipt:before{content:"\f543"}
 .fa-chevron-down:before{content:"\f078"}
 .fa-list-check:before{content:"\f0ae"}
@@ -213,6 +224,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-rocket:before{content:"\f135"}
 .fa-store:before{content:"\f54e"}
 .fa-chevron-left:before{content:"\f053"}
+.fa-face-smile:before{content:"\f118"}
 .fa-rotate:before{content:"\f2f1"}
 .fa-robot:before{content:"\f544"}
 .fa-sim-card:before{content:"\f7c4"}
@@ -220,6 +232,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-clock-rotate-left:before{content:"\f1da"}
 .fa-shield:before{content:"\f132"}
 .fa-moon:before{content:"\f186"}
+.fa-music:before{content:"\f001"}
 .fa-broom:before{content:"\f51a"}
 .fa-hashtag:before{content:"\23"}
 .fa-infinity:before{content:"\f534"}
@@ -230,6 +243,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-paper-plane:before{content:"\f1d8"}
 .fa-calendar-day:before{content:"\f783"}
 .fa-building-columns:before{content:"\f19c"}
+.fa-video:before{content:"\f03d"}
 
 .fa-sr-only,.fa-sr-only-focusable:not(:focus),.sr-only,.sr-only-focusable:not(:focus){position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border-width:0}
 :host,:root{--fa-style-family-brands:"Font Awesome 6 Brands";--fa-font-brands:normal 400 1em/1 "Font Awesome 6 Brands"}

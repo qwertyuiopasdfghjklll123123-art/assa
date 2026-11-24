@@ -159,6 +159,7 @@ const PAGES = {
   security: { nav: 'account', admin: true, slug: 'security' }, backup: { nav: 'account', admin: true, slug: 'backup' }, announce: { nav: 'account', admin: true, slug: 'announce' },
   leads: { nav: 'account', slug: 'leads' }, report: { nav: 'campaign', slug: 'report' },
   coupons: { nav: 'account', admin: true, slug: 'coupons' }, appearance: { nav: 'account', slug: 'appearance' },
+  inbox: { nav: 'accounts', slug: 'inbox' }, chat: { nav: 'accounts', slug: 'chat' }, ibcast: { nav: 'accounts', slug: 'broadcast' },
 };
 const SLUG2PAGE = Object.fromEntries(Object.entries(PAGES).map(([k, v]) => [v.slug ?? k, k]));
 
@@ -166,6 +167,8 @@ function go(page, params = {}, push = true) {
   if (!PAGES[page] || (PAGES[page].admin && !ADMIN)) page = 'home';
   S.timers.forEach(clearInterval); S.timers = [];
   S.page = page; S.params = params;
+  document.body.classList.remove('in-chat', 'ib-selecting');
+  document.querySelectorAll('.portal').forEach(x => x.remove());
   document.querySelectorAll('#bnav [data-p]').forEach(b => b.classList.toggle('on', b.dataset.p === PAGES[page].nav));
   if (push) {
     const slug = PAGES[page].slug ?? page;
@@ -435,6 +438,235 @@ R.appearance = async (el) => {
   };
   UI_FONTS.forEach(([id]) => uiLoadFont(id)); // نحمّل كل الخطوط هنا بس حتى تبين المعاينة
   draw();
+};
+
+// ---------------------------------------------------------------- المحادثات (صندوق واتساب)
+const $d = s => document.querySelector(s); // للعناصر الثابتة المضافة للـ body
+const IB = { sel: new Set(), selMode: false, filter: 'all', q: '', acc: null, chats: [] };
+const ibTime = ts => {
+  if (!ts) return '';
+  const d = new Date(ts * 1000), n = new Date(), p = x => String(x).padStart(2, '0');
+  if (d.toDateString() === n.toDateString()) return p(d.getHours()) + ':' + p(d.getMinutes());
+  const y = new Date(n); y.setDate(n.getDate() - 1);
+  if (d.toDateString() === y.toDateString()) return 'أمس';
+  return d.getDate() + '/' + (d.getMonth() + 1);
+};
+const ibName = c => c.name || (c.phone ? '+' + c.phone : 'جهة اتصال');
+const IB_TYPE = { image: ['fa-solid fa-image', 'صورة'], video: ['fa-solid fa-video', 'فيديو'], voice: ['fa-solid fa-microphone', 'رسالة صوتية'], audio: ['fa-solid fa-music', 'صوت'], document: ['fa-solid fa-file', 'ملف'], sticker: ['fa-regular fa-face-smile', 'ملصق'], location: ['fa-solid fa-location-dot', 'موقع'], contact: ['fa-solid fa-address-card', 'جهة اتصال'], poll: ['fa-solid fa-square-poll-vertical', 'تصويت'] };
+function ibPreview(l) {
+  if (!l) return '';
+  const t = IB_TYPE[l.type];
+  return (l.me ? '<i class="fa-solid fa-check-double" style="color:var(--primary)"></i> ' : '') + (t ? `<i class="${t[0]}"></i> ` : '') + esc(l.text || l.file || (t ? t[1] : ''));
+}
+
+R.inbox = async (el, p) => {
+  el.innerHTML = head('المحادثات') + '<div class="card"><div class="skel" style="height:220px"></div></div>';
+  const accs = await loadAccounts();
+  if (!accs.length) { el.innerHTML = head('المحادثات') + `<div class="card">${empty('fa-brands fa-whatsapp', 'اربط رقم واتساب أولاً حتى تشوف محادثاته', `<button class="btn btn-wa" onclick="go('accounts')"><i class="fa-solid fa-link"></i> ربط رقم</button>`)}</div>`; return; }
+  if (p.acc) IB.acc = p.acc;
+  if (!accs.some(a => a.id === IB.acc)) { IB.acc = (accs.find(a => a.logged_in) || accs[0]).id; IB.sel.clear(); }
+  const acc = () => accs.find(a => a.id === IB.acc);
+  el.innerHTML = head('المحادثات', true, `<button class="btn btn-primary btn-sm" id="ibNew"><i class="fa-solid fa-pen-to-square"></i> جديدة</button>`) + `
+    ${accs.length > 1 ? `<div class="chips" style="margin-bottom:10px;flex-wrap:nowrap;overflow-x:auto" id="ibAccs">${accs.map(a => `<button class="chip ${a.id === IB.acc ? 'on' : ''}" data-id="${esc(a.id)}"><span class="status-dot ${a.logged_in ? 'on' : ''}"></span> ${esc(a.name)}</button>`).join('')}</div>` : ''}
+    <div id="ibNewBox"></div>
+    <div class="ib-search"><i class="fa-solid fa-magnifying-glass"></i><input class="input" id="ibQ" placeholder="ابحث بالاسم أو الرقم أو الرسالة..." value="${esc(IB.q)}"></div>
+    <div class="ib-bar">
+      <div class="chips" id="ibF">${[['all', 'الكل'], ['unread', 'غير مقروءة'], ['incoming', 'راسلوني'], ['mine', 'راسلتهم أنا بس']].map(([k, v]) => `<button class="chip ${IB.filter === k ? 'on' : ''}" data-f="${k}">${v}<b class="num ib-cnt" data-c="${k}"></b></button>`).join('')}</div>
+    </div>
+    <div class="ib-sel ${IB.selMode ? 'on' : ''}" id="ibSelBar">
+      <button class="btn btn-soft btn-sm" id="ibSelMode"><i class="fa-regular fa-square-check"></i> <span>${IB.selMode ? 'إلغاء التحديد' : 'تحديد'}</span></button>
+      <button class="btn btn-soft btn-sm ${IB.selMode ? '' : 'hidden'}" id="ibAll"><i class="fa-solid fa-check-double"></i> تحديد الكل</button>
+      <span class="spacer"></span><span class="pill pill-blue num ${IB.selMode ? '' : 'hidden'}" id="ibSelN">0</span>
+    </div>
+    <div id="ibList"><div class="card"><div class="skel" style="height:200px"></div></div></div>`;
+  document.body.insertAdjacentHTML('beforeend', `<div class="ib-send-bar portal hidden" id="ibSendBar"><button class="btn btn-primary btn-block shine" id="ibSend"><i class="fa-solid fa-paper-plane"></i> <span>إرسال رسالة للمحددين</span></button></div>`);
+  const filtered = () => {
+    const q = IB.q.toLowerCase();
+    return IB.chats.filter(c => (IB.filter === 'all' || (IB.filter === 'unread' && c.unread) || (IB.filter === 'incoming' && c.incoming) || (IB.filter === 'mine' && !c.incoming))
+      && (!q || ibName(c).toLowerCase().includes(q) || (c.phone || '').includes(q.replace(/\D/g, '') || '§') || (c.last?.text || '').toLowerCase().includes(q)));
+  };
+  const drawSel = () => {
+    const n = IB.sel.size;
+    $('#ibSelN').textContent = fmt(n) + ' محدد';
+    $d('#ibSendBar').classList.toggle('hidden', !(IB.selMode && n));
+    document.body.classList.toggle('ib-selecting', !!(IB.selMode && n));
+    $d('#ibSend span').textContent = `إرسال رسالة لـ ${fmt(n)} محادثة`;
+  };
+  const draw = () => {
+    const list = filtered(), box = $('#ibList'); if (!box) return;
+    const counts = { all: IB.chats.length, unread: IB.chats.filter(c => c.unread).length, incoming: IB.chats.filter(c => c.incoming).length, mine: IB.chats.filter(c => !c.incoming).length };
+    $$('.ib-cnt').forEach(b => { b.textContent = counts[b.dataset.c] ? ' ' + fmt(counts[b.dataset.c]) : ''; });
+    if (!IB.chats.length) {
+      box.innerHTML = `<div class="card">${empty('fa-regular fa-comments', 'ما فيه محادثات لحد الآن')}<div class="hint" style="text-align:center;line-height:1.9">المحادثات تنضاف تلقائياً من لحظة تحديث المحرك: كل رسالة توصلك أو ترسلها (حتى من جوالك).<br>إذا ربطت الرقم من جديد ينسحب آخر سجل محادثاتك.</div></div>`;
+      return;
+    }
+    box.innerHTML = `<div class="list ib-list">${list.slice(0, 400).map(c => `<div class="row ib-row ${IB.sel.has(c.jid) ? 'picked' : ''}" data-j="${esc(c.jid)}">
+        ${IB.selMode ? `<span class="ib-check"><i class="fa-solid fa-check"></i></span>` : ''}
+        <span class="ib-av" style="--h:${[...c.jid].reduce((s, x) => s + x.charCodeAt(0), 0) % 360}">${c.name ? esc([...c.name.trim()][0] || '؟') : '<i class="fa-solid fa-user"></i>'}</span>
+        <span class="row-body"><span class="row-title">${esc(ibName(c))}</span><span class="row-sub ib-prev">${ibPreview(c.last)}</span></span>
+        <span class="ib-end"><small class="${c.unread ? 'un' : ''}">${ibTime(c.ts)}</small>${c.unread ? `<b class="ib-badge num">${c.unread}</b>` : ''}</span></div>`).join('') || '<div class="hint" style="padding:16px;text-align:center">ما فيه نتائج</div>'}</div>
+      ${list.length > 400 ? `<div class="hint" style="text-align:center">يظهر أول 400 - استخدم البحث</div>` : ''}`;
+    drawSel();
+  };
+  async function load() {
+    const r = await api(`/api/inbox/${IB.acc}`);
+    if (!r.ok) { if (!IB.chats.length) $('#ibList').innerHTML = `<div class="card">${empty('fa-solid fa-plug-circle-xmark', r.error || 'تعذر جلب المحادثات')}</div>`; return; }
+    IB.chats = r.chats || [];
+    draw();
+  }
+  $('#ibList').addEventListener('click', e => {
+    const row = e.target.closest('[data-j]'); if (!row) return;
+    const j = row.dataset.j;
+    if (IB.selMode) { IB.sel.has(j) ? IB.sel.delete(j) : IB.sel.add(j); row.classList.toggle('picked'); drawSel(); return; }
+    go('chat', { acc: IB.acc, jid: j });
+  });
+  $('#ibQ').addEventListener('input', e => { IB.q = e.target.value.trim(); draw(); });
+  $('#ibF').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; IB.filter = b.dataset.f; $$('#ibF .chip').forEach(x => x.classList.toggle('on', x === b)); draw(); });
+  $('#ibSelMode').onclick = () => { IB.selMode = !IB.selMode; if (!IB.selMode) IB.sel.clear(); $('#ibSelBar').classList.toggle('on', IB.selMode); $('#ibSelMode span').textContent = IB.selMode ? 'إلغاء التحديد' : 'تحديد'; $('#ibAll').classList.toggle('hidden', !IB.selMode); $('#ibSelN').classList.toggle('hidden', !IB.selMode); draw(); };
+  $('#ibAll').onclick = () => { const l = filtered(), all = l.every(c => IB.sel.has(c.jid)); l.forEach(c => all ? IB.sel.delete(c.jid) : IB.sel.add(c.jid)); draw(); };
+  $d('#ibSend').onclick = () => go('ibcast', { acc: IB.acc });
+  const accChips = $('#ibAccs'); if (accChips) accChips.addEventListener('click', e => { const c = e.target.closest('[data-id]'); if (!c) return; IB.acc = c.dataset.id; IB.sel.clear(); IB.chats = []; go('inbox', { acc: IB.acc }, false); });
+  $('#ibNew').onclick = () => {
+    const box = $('#ibNewBox');
+    if (box.innerHTML) { box.innerHTML = ''; return; }
+    box.innerHTML = `<div class="card fade-in"><div class="card-title"><i class="fa-solid fa-user-plus"></i> مراسلة رقم جديد</div>
+      <div style="display:flex;gap:8px">${ccButton('ibCc')}<input class="input num" id="ibPh" inputmode="tel" dir="ltr" placeholder="07701234567" style="flex:1"></div>
+      <button class="btn btn-primary btn-block" style="margin-top:10px" id="ibGo"><i class="fa-solid fa-comment"></i> افتح المحادثة</button></div>`;
+    $('#ibGo').onclick = () => { const ph = $('#ibPh').value.replace(/\D/g, ''); if (ph.length < 7) return toast('اكتب رقم صحيح', 'err'); go('chat', { acc: IB.acc, phone: ph, cc: $('#ibCc').dataset.cc }); };
+    $('#ibPh').focus();
+  };
+  if (!acc()?.logged_in) $('#ibList').insertAdjacentHTML('beforebegin', `<div class="note warn" style="margin-bottom:10px"><i class="fa-solid fa-plug-circle-xmark"></i> الرقم غير متصل - تشوف المحادثات المحفوظة بس، وما توصل رسائل جديدة لحد ما تربطه</div>`);
+  await load();
+  S.timers.push(setInterval(load, 6000));
+};
+
+R.chat = async (el, p) => {
+  document.body.classList.add('in-chat');
+  let jid = p.jid || null, lastTs = 0, chat = null, msgs = [];
+  const seen = new Set();
+  el.innerHTML = `<div class="ch-head"><button class="back" onclick="goBack()"><i class="fa-solid fa-arrow-right"></i></button>
+      <span class="ib-av" id="chAv"><i class="fa-solid fa-user"></i></span><div style="flex:1;min-width:0"><b id="chName">${p.phone ? '+' + esc(p.phone) : '...'}</b><div class="row-sub num" id="chPhone" dir="ltr" style="text-align:right"></div></div>
+      <a class="icon-btn" id="chWa" target="_blank" rel="noopener" title="فتح بواتساب" style="display:none"><i class="fa-brands fa-whatsapp"></i></a></div>
+    <div class="ch-msgs" id="chMsgs">${jid ? '<div class="skel" style="height:120px;border-radius:18px"></div>' : '<div class="hint" style="text-align:center;padding:30px">اكتب أول رسالة لهذا الرقم 👇</div>'}</div>
+`;
+  document.body.insertAdjacentHTML('beforeend', `<div class="ch-compose portal"><div id="chFile" class="ch-file hidden"></div>
+      <div class="ch-row"><label class="ch-btn"><input type="file" id="chAtt" hidden><i class="fa-solid fa-paperclip"></i></label>
+        <textarea id="chTxt" rows="1" placeholder="اكتب رسالة..."></textarea>
+        <button class="ch-send" id="chSend" aria-label="إرسال"><i class="fa-solid fa-paper-plane"></i></button></div></div>`);
+  const box = $('#chMsgs');
+  const bubble = m => {
+    const t = IB_TYPE[m.type], src = `/api/inbox/${encodeURIComponent(p.acc)}/media?jid=${encodeURIComponent(jid)}&mid=${encodeURIComponent(m.id)}`;
+    let body = '';
+    if (m.type === 'image' || m.type === 'sticker' || m.type === 'video') {
+      body = `<div class="ch-media" data-src="${esc(src)}" data-kind="${m.type}">${m.thumb ? `<img src="data:image/jpeg;base64,${esc(m.thumb)}" alt="">` : `<span class="ch-ph"><i class="${t[0]}"></i></span>`}<span class="ch-play"><i class="fa-solid ${m.type === 'video' ? 'fa-play' : 'fa-expand'}"></i></span></div>`;
+    } else if (m.type === 'voice' || m.type === 'audio') {
+      body = `<button class="ch-audio" data-src="${esc(src)}"><i class="fa-solid fa-play"></i> ${t[1]}${m.secs ? ` <span class="num">${Math.floor(m.secs / 60)}:${String(m.secs % 60).padStart(2, '0')}</span>` : ''}</button>`;
+    } else if (m.type === 'document') {
+      body = `<a class="ch-doc" href="${esc(src)}" target="_blank" rel="noopener"><i class="fa-solid fa-file-arrow-down"></i> ${esc(m.file || 'ملف')}</a>`;
+    } else if (m.type === 'location') {
+      body = `<a class="ch-doc" href="https://maps.google.com/?q=${Number(m.lat)},${Number(m.lng)}" target="_blank" rel="noopener"><i class="fa-solid fa-location-dot"></i> ${esc(m.text || 'موقع')}</a>`;
+    } else if (t && m.type !== 'text') body = `<span class="hint"><i class="${t[0]}"></i> ${t[1]}</span>`;
+    const txt = m.text && !(m.type === 'location') ? `<div class="ch-text">${esc(m.text)}</div>` : '';
+    const d = new Date(m.ts * 1000);
+    return `<div class="ch-b ${m.me ? 'me' : 'them'}">${body}${txt}<span class="ch-t num">${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}${m.me ? ' <i class="fa-solid fa-check"></i>' : ''}</span>${m.react ? `<span class="ch-react">${esc(m.react)}</span>` : ''}</div>`;
+  };
+  const dayLbl = ts => { const d = new Date(ts * 1000), n = new Date(); if (d.toDateString() === n.toDateString()) return 'اليوم'; const y = new Date(n); y.setDate(n.getDate() - 1); if (d.toDateString() === y.toDateString()) return 'أمس'; return d.toLocaleDateString('ar-IQ', { day: 'numeric', month: 'long', year: 'numeric' }); };
+  const render = () => {
+    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80 || !box.dataset.r;
+    let out = '', last = '';
+    for (const m of msgs) { const dl = dayLbl(m.ts); if (dl !== last) { out += `<div class="ch-day"><span>${dl}</span></div>`; last = dl; } out += bubble(m); }
+    box.innerHTML = out || '<div class="hint" style="text-align:center;padding:30px">ما فيه رسائل محفوظة لهذي المحادثة - اكتب رسالة 👇</div>';
+    box.dataset.r = 1;
+    if (atBottom) box.scrollTop = box.scrollHeight;
+  };
+  const head2 = () => {
+    if (!chat) return;
+    $('#chName').textContent = ibName(chat);
+    $('#chPhone').textContent = chat.phone ? '+' + chat.phone : '';
+    $('#chAv').innerHTML = chat.name ? esc([...chat.name.trim()][0] || '؟') : '<i class="fa-solid fa-user"></i>';
+    if (chat.phone) { const a = $('#chWa'); a.href = 'https://wa.me/' + chat.phone; a.style.display = ''; }
+  };
+  async function load(first) {
+    if (!jid || S.page !== 'chat') return;
+    const r = await api(`/api/inbox/${encodeURIComponent(p.acc)}/chat?jid=${encodeURIComponent(jid)}&since=${lastTs}${first ? '&read=1' : ''}`);
+    if (!r.ok) { if (first) box.innerHTML = `<div class="hint" style="text-align:center;padding:30px">${esc(r.error || 'تعذر التحميل')}</div>`; return; }
+    chat = r.chat; head2();
+    let added = false;
+    for (const m of r.messages || []) { if (seen.has(m.id)) continue; seen.add(m.id); msgs.push(m); added = true; }
+    msgs = msgs.filter(m => !m._tmp || !msgs.some(x => !x._tmp && x.me && x.text === m.text && Math.abs(x.ts - m.ts) < 120));
+    msgs.sort((a, b) => a.ts - b.ts);
+    if (msgs.length) lastTs = Math.max(lastTs, msgs[msgs.length - 1].ts - 1);
+    if (added || first) render();
+  }
+  // الوسائط تنحمل لما تضغط (حتى ما نستهلك نت)
+  box.addEventListener('click', e => {
+    const md = e.target.closest('.ch-media');
+    if (md && !md.dataset.loaded) {
+      md.dataset.loaded = 1; md.classList.add('loading');
+      if (md.dataset.kind === 'video') md.innerHTML = `<video src="${md.dataset.src}" controls autoplay playsinline></video>`;
+      else { const im = new Image(); im.onload = () => { md.classList.remove('loading'); md.innerHTML = ''; md.appendChild(im); md.classList.add('full'); }; im.onerror = () => { md.classList.remove('loading'); toast('تعذر تحميل الصورة - تأكد إن الرقم متصل', 'err'); delete md.dataset.loaded; }; im.src = md.dataset.src; }
+      return;
+    }
+    const au = e.target.closest('.ch-audio');
+    if (au) { au.outerHTML = `<audio src="${au.dataset.src}" controls autoplay></audio>`; }
+  });
+  let file = null;
+  $d('#chAtt').onchange = e => { file = e.target.files[0] || null; const f = $d('#chFile'); f.classList.toggle('hidden', !file); if (file) f.innerHTML = `<i class="fa-solid fa-paperclip"></i> ${esc(file.name)} <span class="num">(${(file.size / 1048576).toFixed(1)}MB)</span> <button class="icon-btn" id="chFx"><i class="fa-solid fa-xmark"></i></button>`; const x = $d('#chFx'); if (x) x.onclick = () => { file = null; $d('#chAtt').value = ''; f.classList.add('hidden'); }; };
+  const ta = $d('#chTxt');
+  ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; });
+  ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); $d('#chSend').click(); } });
+  $d('#chSend').onclick = async () => {
+    const text = ta.value.trim();
+    if (!text && !file) return;
+    if (file && file.size > 40 * 1048576) return toast('حجم الملف كبير (الحد 40 ميغابايت)', 'err');
+    const fd = new FormData(); fd.append('text', text);
+    if (jid) fd.append('jid', jid); else { fd.append('phone', p.phone); fd.append('country_code', p.cc || ''); }
+    if (file) fd.append('media_file', file);
+    const tmp = { id: 'tmp' + Date.now(), _tmp: 1, me: true, ts: Math.floor(Date.now() / 1000), type: file ? 'document' : 'text', text, file: file?.name };
+    msgs.push(tmp); render(); box.scrollTop = box.scrollHeight;
+    ta.value = ''; ta.style.height = 'auto'; const sentFile = file; file = null; $d('#chAtt').value = ''; $d('#chFile').classList.add('hidden');
+    busy($d('#chSend'), true);
+    const r = await api(`/api/inbox/${encodeURIComponent(p.acc)}/send`, { body: fd });
+    busy($d('#chSend'), false);
+    if (!r.ok) { msgs = msgs.filter(m => m !== tmp); render(); ta.value = text; file = sentFile; toast(r.error || 'ما انرسلت', 'err'); return; }
+    if (!jid) { jid = r.jid; history.replaceState({ page: 'chat', params: { acc: p.acc, jid } }, '', location.href); }
+    setTimeout(() => load(false), 900);
+  };
+  if (jid) await load(true); else ta.focus();
+  S.timers.push(setInterval(() => load(false), 4000));
+};
+
+R.ibcast = async (el, p) => {
+  const jids = [...IB.sel];
+  if (!jids.length) return go('inbox', { acc: p.acc });
+  const names = jids.map(j => IB.chats.find(c => c.jid === j)).filter(Boolean);
+  el.innerHTML = head('رسالة جماعية') + `
+    <div class="card"><div class="card-title"><i class="fa-solid fa-users"></i> المستلمين <span class="spacer"></span><span class="pill pill-blue num">${fmt(jids.length)}</span></div>
+      <div class="chips">${names.slice(0, 30).map(c => `<span class="chip" style="cursor:default">${esc(ibName(c))}</span>`).join('')}${names.length > 30 ? `<span class="chip">+${fmt(names.length - 30)}</span>` : ''}</div></div>
+    <div class="card"><div class="card-title"><i class="fa-solid fa-message"></i> الرسالة</div>
+      <textarea class="textarea" id="bcT" placeholder="اكتب رسالتك..." style="min-height:120px"></textarea>
+      <label class="file-drop" style="margin-top:10px"><input type="file" id="bcF"><span class="row-ic ic-purple"><i class="fa-solid fa-paperclip"></i></span><span style="flex:1;min-width:0"><b style="font-size:13px">إرفاق صورة / فيديو / ملف</b><span class="row-sub" id="bcFn">اختياري</span></span></label>
+      <div class="field" style="margin-top:12px"><label>الفاصل بين كل رسالة (أأمن لرقمك من الحظر)</label><div class="seg" id="bcD">${[5, 10, 15, 30].map(s => `<button data-s="${s}" class="${s === 10 ? 'on' : ''}"><b class="num">${s} ث</b></button>`).join('')}</div></div>
+      <div class="hint" id="bcEta"></div></div>
+    <button class="btn btn-primary btn-block shine" id="bcGo"><i class="fa-solid fa-paper-plane"></i> إرسال لـ ${fmt(jids.length)} محادثة</button>`;
+  let delay = 10;
+  const eta = () => { const s = jids.length * delay; $('#bcEta').textContent = `تقريباً ${s < 60 ? s + ' ثانية' : Math.ceil(s / 60) + ' دقيقة'} - تتابع التقدم من صفحة الحملات`; };
+  eta();
+  $('#bcD').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; delay = +b.dataset.s; $$('#bcD button').forEach(x => x.classList.toggle('on', x === b)); eta(); });
+  $('#bcF').onchange = e => { const f = e.target.files[0]; $('#bcFn').textContent = f ? `${f.name} (${(f.size / 1048576).toFixed(1)}MB)` : 'اختياري'; };
+  $('#bcGo').onclick = async e => {
+    const text = $('#bcT').value.trim(), f = $('#bcF').files[0];
+    if (!text && !f) return toast('اكتب رسالة أو أرفق ملف', 'err');
+    if (!await confirmSheet({ title: 'تأكيد الإرسال', text: `راح تنرسل الرسالة لـ ${fmt(jids.length)} محادثة، وحدة كل ${delay} ثانية`, ok: 'إرسال', icon: 'fa-solid fa-paper-plane', danger: false })) return;
+    const fd = new FormData(); fd.append('jids', JSON.stringify(jids)); fd.append('text', text); fd.append('delay', delay); if (f) fd.append('media_file', f);
+    busy(e.target.closest('button'), true);
+    const r = await api(`/api/inbox/${encodeURIComponent(p.acc)}/broadcast`, { body: fd });
+    busy(e.target.closest('button'), false);
+    if (!r.ok) return toast(r.error || 'تعذر الإرسال', 'err');
+    IB.sel.clear(); IB.selMode = false;
+    toast(`بدأ الإرسال لـ ${fmt(r.total || jids.length)} محادثة`, 'ok');
+    go('campaign', { acc: p.acc });
+  };
 };
 
 // ---------------------------------------------------------------- أكواد الخصم (أدمن)
@@ -1003,7 +1235,8 @@ R.acc = async (el, p) => {
   function renderLink() {
     if (connected) {
       link.innerHTML = `<div class="hero" style="background:linear-gradient(135deg,#065f46,#10b981)"><div style="display:flex;align-items:center;gap:12px"><span class="hero-icon"><i class="fa-brands fa-whatsapp"></i></span><div><div style="font-weight:800;font-size:17px">الرقم متصل</div><div class="hero-sub">جاهز لإرسال الحملات والرد الآلي</div></div></div></div>
-        <button class="btn btn-primary btn-block" style="margin-top:12px" onclick="go('campaign',{acc:'${esc(a.id)}'})"><i class="fa-solid fa-paper-plane"></i> إرسال حملة من هذا الرقم</button>`;
+        <div class="input-row" style="margin-top:12px;gap:8px"><button class="btn btn-primary" style="flex:1" onclick="go('inbox',{acc:'${esc(a.id)}'})"><i class="fa-solid fa-comments"></i> المحادثات</button>
+        <button class="btn btn-soft" style="flex:1" onclick="go('campaign',{acc:'${esc(a.id)}'})"><i class="fa-solid fa-paper-plane"></i> حملة</button></div>`;
       return;
     }
     link.innerHTML = `<div class="card">
@@ -1353,6 +1586,7 @@ R.account = async (el) => {
     </div>
     <div class="section-head">حسابي</div>
     <div class="list stagger">
+      ${rowItem({ icon: 'fa-solid fa-comments', ic: 'ic-wa', title: 'المحادثات', sub: 'شوف محادثات رقمك ورد عليها، وراسل مجموعة دفعة وحدة', onclick: "go('inbox')" })}
       ${rowItem({ icon: 'fa-solid fa-chart-pie', ic: 'ic-purple', title: 'تقارير الحملات', sub: 'النجاح، المشاهدة والردود', onclick: "go('reports')" })}
       ${SET.leads_enabled || ADMIN ? rowItem({ icon: 'fa-solid fa-map-location-dot', ic: 'ic-green', title: 'سحب أرقام من الخرائط', sub: 'أرقام المحلات والشركات حسب المدينة والنشاط', onclick: "go('leads')" }) : ''}
       ${rowItem({ icon: 'fa-solid fa-palette', ic: 'ic-pink', title: 'المظهر', sub: 'الستايل، الوضع الداكن، الخط وحجمه', onclick: "go('appearance')" })}

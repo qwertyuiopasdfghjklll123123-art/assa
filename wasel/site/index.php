@@ -18,6 +18,7 @@ require __DIR__ . '/lib/api.php';
 require __DIR__ . '/lib/leads.php';
 require __DIR__ . '/lib/drip.php';
 require __DIR__ . '/lib/coupons.php';
+require __DIR__ . '/lib/inbox.php';
 require __DIR__ . '/lib/security.php';
 
 if (!is_dir(DATA_DIR)) {
@@ -652,7 +653,7 @@ $routes[] = ['POST', '#^/api/admin/notify$#', function () {
     admin_log('notify', "{$title} → {$aud} ({$n})");
     json_out(['ok' => true, 'total' => $n]);
 }];
-$routes = array_merge($routes, api_routes(), leads_routes(), drip_routes(), coupon_routes());
+$routes = array_merge($routes, api_routes(), leads_routes(), drip_routes(), coupon_routes(), inbox_routes());
 
 foreach ($routes as [$m, $re, $fn]) {
     if ($m !== $method || !preg_match($re, $path, $mm)) {

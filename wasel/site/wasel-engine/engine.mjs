@@ -16,6 +16,8 @@ import path from 'node:path';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import makeWASocket, {
+  BufferJSON,
+  downloadMediaMessage,
   Browsers,
   DisconnectReason,
   fetchLatestBaileysVersion,
@@ -60,7 +62,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 11; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 12; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -211,6 +213,7 @@ async function startAccount(id) {
     });
 
     sock.ev.on('messages.upsert', (ev) => {
+      for (const m of ev.messages) { try { inboxAdd(id, m, { unread: ev.type === 'notify' }); } catch (e) { console.error('[محادثات]', e.message); } }
       if (ev.type !== 'notify') return;
       for (const m of ev.messages) {
         try { onIncomingForTracking(id, m); } catch { /* ignore */ }
@@ -218,6 +221,14 @@ async function startAccount(id) {
       }
     });
     sock.ev.on('messages.update', (u) => { try { onStatusUpdate(u); } catch { /* ignore */ } });
+    // سجل المحادثات أول ربط + أسماء جهات الاتصال + تحديثات المحادثات (غير مقروءة...)
+    sock.ev.on('messaging-history.set', ({ chats, contacts, messages }) => {
+      try { inboxNames(id, contacts); inboxChats(id, chats); for (const m of messages || []) inboxAdd(id, m); } catch (e) { console.error('[محادثات] سجل:', e.message); }
+    });
+    sock.ev.on('contacts.upsert', (c) => { try { inboxNames(id, c); } catch { /* ignore */ } });
+    sock.ev.on('contacts.update', (c) => { try { inboxNames(id, c); } catch { /* ignore */ } });
+    sock.ev.on('chats.upsert', (c) => { try { inboxChats(id, c); } catch { /* ignore */ } });
+    sock.ev.on('chats.update', (c) => { try { inboxChats(id, c); } catch { /* ignore */ } });
     sock.ev.on('message-receipt.update', (u) => { try { onReceipts(u); } catch { /* ignore */ } });
   } catch (e) {
     console.error(`[اتصال] فشل تشغيل ${id}:`, e.message);
@@ -264,10 +275,11 @@ function sendTo(id, number, text, media = null, mediaDelay = DEFAULT_MEDIA_DELAY
   const job = r.sendChain.then(async () => {
     const sock = r.sock;
     if (!sock || r.status !== 'connected') throw new Error('الحساب غير متصل بواتساب');
+    const direct = String(number).includes('@') && isPersonalJid(number);
     const phone = digits(number);
-    if (phone.length < 8) throw new Error('رقم غير صالح');
-    const c = waCached(phone);
-    let jid = c?.e ? c.j : null;
+    if (!direct && phone.length < 8) throw new Error('رقم غير صالح');
+    const c = direct ? null : waCached(phone);
+    let jid = direct ? String(number) : (c?.e ? c.j : null);
     if (!jid) {
       const [res] = (await sock.onWhatsApp(phone)) || [];
       waCache.set(phone, { e: Boolean(res?.exists), j: res?.jid || null, t: Date.now() });
@@ -357,6 +369,142 @@ async function handleIncoming(id, m) {
   r.sendChain = job.catch(() => {});
   await job;
   addEvent(acc, 'رد تلقائي', `${chatName}: ${reply.slice(0, 60)}`, 'info');
+}
+
+// ---------------------------------------------------------------- المحادثات (صندوق الوارد لكل حساب)
+// نحفظ آخر المحادثات الفردية (بدون مجموعات/قنوات/حالات) وآخر رسائل كل محادثة، حتى صاحب الحساب
+// يشوفها من الموقع ويرد عليها مباشرة أو يرسل لمجموعة منها دفعة وحدة.
+const INBOX_DIR = path.join(CFG.dataDir, 'inbox');
+fs.mkdirSync(INBOX_DIR, { recursive: true });
+const INBOX_MAX_CHATS = 3000, INBOX_MAX_MSGS = 120;
+const inboxes = new Map(); // id -> {chats:{key:{...}}, msgs:{key:[...]}, alias:{lid:pnJid}, names:{jid:name}}
+const inboxFile = (id) => path.join(INBOX_DIR, `${id.replace(/[^a-zA-Z0-9_-]/g, '')}.json`);
+function inboxOf(id) {
+  if (!inboxes.has(id)) {
+    let d = { chats: {}, msgs: {}, alias: {}, names: {} };
+    try { d = { ...d, ...JSON.parse(fs.readFileSync(inboxFile(id), 'utf8')) }; } catch { /* جديد */ }
+    inboxes.set(id, d);
+  }
+  return inboxes.get(id);
+}
+const inboxDirty = new Set();
+function inboxTouch(id) { inboxDirty.add(id); }
+setInterval(() => {
+  for (const id of inboxDirty) {
+    const d = inboxes.get(id);
+    if (!d || !registry[id]) continue;
+    // نحدد الحجم: أقدم المحادثات تنحذف لو تجاوزنا الحد
+    const keys = Object.keys(d.chats);
+    if (keys.length > INBOX_MAX_CHATS) {
+      keys.sort((a, b) => (d.chats[b].ts || 0) - (d.chats[a].ts || 0)).slice(INBOX_MAX_CHATS).forEach((k) => { delete d.chats[k]; delete d.msgs[k]; });
+    }
+    try { fs.writeFileSync(inboxFile(id) + '.tmp', JSON.stringify(d)); fs.renameSync(inboxFile(id) + '.tmp', inboxFile(id)); } catch (e) { console.error('[محادثات] حفظ:', e.message); }
+  }
+  inboxDirty.clear();
+}, 3000);
+
+const isPersonalJid = (j) => /@(s\.whatsapp\.net|lid)$/.test(String(j || ''));
+const jidUser = (j) => String(j || '').split('@')[0].split(':')[0];
+/** مفتاح المحادثة: نفضّل jid الرقم (@s.whatsapp.net) لو نعرفه، حتى ما تتكرر المحادثة بصيغتين */
+function chatKey(d, jid, alt) {
+  jid = String(jid || '');
+  if (alt && /@s\.whatsapp\.net$/.test(alt) && /@lid$/.test(jid)) d.alias[jid] = alt;
+  if (/@lid$/.test(jid) && d.alias[jid]) return d.alias[jid];
+  return jid;
+}
+/** نص مختصر للرسالة + نوعها (للعرض) */
+function describeMsg(msg) {
+  const inner = msg?.ephemeralMessage?.message || msg?.viewOnceMessage?.message || msg?.viewOnceMessageV2?.message || msg?.documentWithCaptionMessage?.message || msg || {};
+  const cap = (x) => (x?.caption || '').trim();
+  if (inner.conversation || inner.extendedTextMessage) return { type: 'text', text: (inner.conversation || inner.extendedTextMessage?.text || '').trim() };
+  if (inner.imageMessage) return { type: 'image', text: cap(inner.imageMessage), media: 1, thumb: inner.imageMessage.jpegThumbnail };
+  if (inner.videoMessage) return { type: 'video', text: cap(inner.videoMessage), media: 1, thumb: inner.videoMessage.jpegThumbnail };
+  if (inner.audioMessage) return { type: inner.audioMessage.ptt ? 'voice' : 'audio', text: '', media: 1, secs: inner.audioMessage.seconds || 0 };
+  if (inner.documentMessage) return { type: 'document', text: cap(inner.documentMessage), media: 1, file: inner.documentMessage.fileName || 'ملف' };
+  if (inner.stickerMessage) return { type: 'sticker', text: '', media: 1 };
+  if (inner.locationMessage || inner.liveLocationMessage) { const l = inner.locationMessage || inner.liveLocationMessage; return { type: 'location', text: l.name || '', lat: l.degreesLatitude, lng: l.degreesLongitude }; }
+  if (inner.contactMessage || inner.contactsArrayMessage) return { type: 'contact', text: inner.contactMessage?.displayName || 'جهات اتصال' };
+  if (inner.pollCreationMessage || inner.pollCreationMessageV3) return { type: 'poll', text: (inner.pollCreationMessage || inner.pollCreationMessageV3).name || '' };
+  if (inner.buttonsResponseMessage || inner.listResponseMessage || inner.templateButtonReplyMessage) return { type: 'text', text: inner.buttonsResponseMessage?.selectedDisplayText || inner.listResponseMessage?.title || inner.templateButtonReplyMessage?.selectedDisplayText || '' };
+  return null; // بروتوكول/تفاعل/مفاتيح - ما نعرضه
+}
+const toB64 = (u8) => (u8 ? Buffer.from(u8).toString('base64') : undefined);
+const tsOf = (m) => Number(m.messageTimestamp?.low ?? m.messageTimestamp ?? 0) || Math.floor(Date.now() / 1000);
+
+/** يسجل رسالة (واردة أو صادرة) بصندوق الحساب */
+function inboxAdd(id, m, { unread = false } = {}) {
+  const jid = m?.key?.remoteJid;
+  if (!isPersonalJid(jid) || !m.message) return;
+  const info = describeMsg(m.message);
+  if (!info) {
+    // تفاعل (إيموجي) على رسالة: نحفظه على الرسالة نفسها
+    const re = m.message.reactionMessage;
+    if (re?.key?.id) {
+      const d = inboxOf(id), k = chatKey(d, jid, m.key.remoteJidAlt);
+      const t = (d.msgs[k] || []).find((x) => x.id === re.key.id);
+      if (t) { t.react = re.text || ''; inboxTouch(id); }
+    }
+    return;
+  }
+  const d = inboxOf(id);
+  const k = chatKey(d, jid, m.key.remoteJidAlt || m.key.senderPn);
+  const ts = tsOf(m);
+  const list = d.msgs[k] || (d.msgs[k] = []);
+  if (list.some((x) => x.id === m.key.id)) return; // مكررة
+  const e = { id: m.key.id, me: Boolean(m.key.fromMe), ts, type: info.type, text: String(info.text || '').slice(0, 4000) };
+  if (jid !== k) e.rj = jid;
+  if (info.thumb) e.thumb = toB64(info.thumb);
+  if (info.file) e.file = String(info.file).slice(0, 120);
+  if (info.secs) e.secs = info.secs;
+  if (info.lat != null) { e.lat = info.lat; e.lng = info.lng; }
+  if (info.media) { try { e.raw = JSON.stringify({ key: m.key, message: m.message }, BufferJSON.replacer); } catch { /* ignore */ } }
+  list.push(e);
+  list.sort((a, b) => a.ts - b.ts);
+  if (list.length > INBOX_MAX_MSGS) list.splice(0, list.length - INBOX_MAX_MSGS);
+  const c = d.chats[k] || (d.chats[k] = { jid: k, name: '', ts: 0, unread: 0, incoming: false });
+  if (/@s\.whatsapp\.net$/.test(k)) c.phone = jidUser(k);
+  else if (m.key.remoteJidAlt && /@s\.whatsapp\.net$/.test(m.key.remoteJidAlt)) c.phone = jidUser(m.key.remoteJidAlt);
+  if (!e.me && m.pushName) { c.name = String(m.pushName).slice(0, 60); d.names[k] = c.name; }
+  if (!e.me) c.incoming = true;
+  if (ts >= (c.ts || 0)) { c.ts = ts; c.last = { me: e.me, type: e.type, text: e.text.slice(0, 120), file: e.file }; }
+  if (unread && !e.me) c.unread = (c.unread || 0) + 1;
+  if (e.me) c.unread = 0; // رد من الجوال = انقرت
+  inboxTouch(id);
+}
+
+/** أسماء جهات الاتصال (من الجوال) */
+function inboxNames(id, contacts) {
+  const d = inboxOf(id);
+  for (const c of contacts || []) {
+    const name = c.name || c.notify || c.verifiedName;
+    if (!c.id || !name) continue;
+    if (c.lid && /@s\.whatsapp\.net$/.test(c.id)) d.alias[c.lid] = c.id;
+    const k = chatKey(d, c.id);
+    d.names[k] = String(name).slice(0, 60);
+    if (d.chats[k] && (!d.chats[k].name || c.name)) d.chats[k].name = d.names[k];
+  }
+  inboxTouch(id);
+}
+function inboxChats(id, chats) {
+  const d = inboxOf(id);
+  for (const ch of chats || []) {
+    if (!isPersonalJid(ch.id)) continue;
+    const k = chatKey(d, ch.id, ch.pnJid);
+    const c = d.chats[k] || (d.chats[k] = { jid: k, name: '', ts: 0, unread: 0, incoming: false });
+    if (ch.name) c.name = String(ch.name).slice(0, 60);
+    if (typeof ch.unreadCount === 'number') c.unread = Math.max(0, ch.unreadCount);
+    const ts = Number(ch.conversationTimestamp?.low ?? ch.conversationTimestamp ?? 0);
+    if (ts > (c.ts || 0)) c.ts = ts;
+    if (/@s\.whatsapp\.net$/.test(k)) c.phone = jidUser(k);
+  }
+  inboxTouch(id);
+}
+function inboxPublicChat(d, c) {
+  return { jid: c.jid, name: c.name || d.names[c.jid] || '', phone: c.phone || (/@s\.whatsapp\.net$/.test(c.jid) ? jidUser(c.jid) : ''), ts: c.ts || 0, unread: c.unread || 0, incoming: Boolean(c.incoming), last: c.last || null };
+}
+function inboxPublicMsg(e) {
+  const { raw, ...rest } = e;
+  return rest;
 }
 
 // ---------------------------------------------------------------- تتبع الحملات (وصلت / قُرئت / رد)
@@ -534,7 +682,7 @@ async function runCampaign(id) {
   if (st.pre_check && !st.prechecked && st.pending_numbers.length) {
     st.checking = { done: 0, total: st.pending_numbers.length };
     persistCampaign(id);
-    const r = await checkNumbers(id, st.pending_numbers, (d, t) => { st.checking = { done: d, total: t }; }, () => st.stop_requested || !registry[id]);
+    const r = await checkNumbers(id, st.pending_numbers.filter((n) => !String(n).includes('@')), (d, t) => { st.checking = { done: d, total: t }; }, () => st.stop_requested || !registry[id]);
     if (!registry[id]) { st._loop = false; return; }
     const off = new Set(r.off);
     if (off.size) {
@@ -716,6 +864,8 @@ async function deleteAccount(id) {
   if (st.media_path) fs.rm(st.media_path, { force: true }, () => {});
   await fsp.rm(sessionDir(id), { recursive: true, force: true });
   await fsp.rm(campaignFile(id), { force: true });
+  inboxes.delete(id);
+  await fsp.rm(inboxFile(id), { force: true });
 }
 
 const routes = [
@@ -840,6 +990,70 @@ const routes = [
     return [200, job ? { ok: true, ...job } : { ok: true, running: false, done: 0, total: 0, on: [], off: [], unknown: [] }];
   }],
 
+  // ---------------------------------------------------------------- المحادثات
+  ['GET', /^\/accounts\/([\w-]+)\/inbox$/, async (m) => {
+    if (!registry[m[1]]) return [404, { ok: false, error: 'حساب غير موجود' }];
+    const d = inboxOf(m[1]);
+    const chats = Object.values(d.chats).filter((c) => c.ts || c.last).sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 1500).map((c) => inboxPublicChat(d, c));
+    return [200, { ok: true, connected: Boolean(isConnected(m[1])), chats }];
+  }],
+  ['GET', /^\/accounts\/([\w-]+)\/inbox\/chat$/, async (m, _b, q) => {
+    const id = m[1];
+    if (!registry[id]) return [404, { ok: false, error: 'حساب غير موجود' }];
+    const d = inboxOf(id), k = chatKey(d, String(q.get('jid') || ''));
+    const c = d.chats[k];
+    if (!c) return [404, { ok: false, error: 'المحادثة غير موجودة' }];
+    const msgs = d.msgs[k] || [];
+    const since = Number(q.get('since') || 0);
+    // فتح المحادثة = نعلّمها مقروءة (وبالجوال كذلك)
+    if (q.get('read') === '1' && c.unread) {
+      const keys = msgs.filter((x) => !x.me).slice(-Math.min(c.unread, 30)).map((x) => ({ remoteJid: x.rj || k, id: x.id, fromMe: false }));
+      c.unread = 0; inboxTouch(id);
+      if (isConnected(id) && keys.length) rt(id).sock.readMessages(keys).catch(() => {});
+    }
+    return [200, { ok: true, chat: inboxPublicChat(d, c), messages: msgs.filter((x) => x.ts >= since).map(inboxPublicMsg) }];
+  }],
+  // رد/رسالة جديدة: jid محادثة موجودة أو رقم جديد
+  ['POST', /^\/accounts\/([\w-]+)\/inbox\/send$/, async (m, body) => {
+    const id = m[1], acc = registry[id];
+    if (!acc) return [404, { ok: false, error: 'حساب غير موجود' }];
+    if (!isConnected(id)) return [400, { ok: false, error: 'الرقم غير متصل بواتساب' }];
+    const text = String(body.text || '').slice(0, 4000);
+    if (!text.trim() && !body.media?.data) return [400, { ok: false, error: 'اكتب رسالة أو أرفق ملف' }];
+    const d = inboxOf(id);
+    let target = body.jid ? chatKey(d, String(body.jid)) : digits(body.phone);
+    if (body.jid && !isPersonalJid(target)) return [400, { ok: false, error: 'محادثة غير صالحة' }];
+    if (!body.jid && target.length < 8) return [400, { ok: false, error: 'رقم غير صالح' }];
+    const charge = await hook({ type: 'charge', owner: acc.owner, note: `رسالة من المحادثات: ${acc.name}` });
+    if (!charge || !charge.ok) return [402, { ok: false, error: charge?.error || 'تعذر التحقق من الرصيد' }];
+    const media = saveMedia(body.media);
+    try {
+      const res = await sendTo(id, target, text, media);
+      const jid = chatKey(d, res.jid);
+      // نسجلها فوراً (حتى لو حدث الإرسال تأخر)
+      inboxAdd(id, { key: { remoteJid: res.jid, id: res.id || crypto.randomBytes(8).toString('hex'), fromMe: true }, messageTimestamp: Math.floor(Date.now() / 1000), message: media ? { documentMessage: { fileName: media.name, caption: text } } : { conversation: text } });
+      return [200, { ok: true, jid, id: res.id }];
+    } catch (e) {
+      hook({ type: 'refund', owner: acc.owner, amount: charge.charged || 0, failed: 1 });
+      return [400, { ok: false, error: e.message }];
+    } finally {
+      if (media) fs.rm(media.path, { force: true }, () => {});
+    }
+  }],
+  // تحميل صورة/صوت/فيديو/ملف من رسالة (عند الطلب)
+  ['GET', /^\/accounts\/([\w-]+)\/inbox\/media$/, async (m, _b, q) => {
+    const id = m[1];
+    if (!registry[id]) return [404, { ok: false, error: 'حساب غير موجود' }];
+    const d = inboxOf(id), k = chatKey(d, String(q.get('jid') || ''));
+    const e = (d.msgs[k] || []).find((x) => x.id === q.get('mid'));
+    if (!e?.raw) return [404, { ok: false, error: 'غير موجود' }];
+    if (!isConnected(id)) return [400, { ok: false, error: 'الرقم غير متصل' }];
+    const msg = JSON.parse(e.raw, BufferJSON.reviver);
+    const buf = await downloadMediaMessage(msg, 'buffer', {}, { logger, reuploadRequest: rt(id).sock.updateMediaMessage });
+    const inner = msg.message?.ephemeralMessage?.message || msg.message?.viewOnceMessage?.message || msg.message?.viewOnceMessageV2?.message || msg.message?.documentWithCaptionMessage?.message || msg.message || {};
+    const part = inner.imageMessage || inner.videoMessage || inner.audioMessage || inner.documentMessage || inner.stickerMessage || {};
+    return [200, buf, { 'Content-Type': part.mimetype || 'application/octet-stream', 'Cache-Control': 'private, max-age=86400' }];
+  }],
   ['GET', /^\/accounts\/([\w-]+)\/campaign$/, async (m) => {
     if (!registry[m[1]]) return [200, blankCampaign()];
     return [200, publicCampaign(m[1])];
@@ -851,7 +1065,8 @@ const routes = [
     if (!isConnected(id)) return [400, { ok: false, error: 'الرقم غير متصل بواتساب - اربطه من قسم أرقامي أولاً' }];
     const st = getCampaign(id);
     if (st.running) return [400, { ok: false, error: 'فيه حملة شغالة أو مجدولة حالياً على هذا الحساب' }];
-    const numbers = [...new Set((body.numbers || []).map(digits).filter((n) => n.length >= 8))];
+    // أرقام، أو jid محادثة موجودة (من «المحادثات» - للأشخاص اللي ما نعرف رقمهم)
+    const numbers = [...new Set((body.numbers || []).map((n) => (String(n).includes('@') ? String(n) : digits(n))).filter((n) => (n.includes('@') ? isPersonalJid(n) : n.length >= 8)))];
     if (!numbers.length) return [400, { ok: false, error: 'ما لقيت أي رقم صالح' }];
     if (!String(body.text || '').trim() && !body.media?.data) return [400, { ok: false, error: 'اكتب رسالة أو أرفق صورة/ملف' }];
     if (st.media_path) fs.rm(st.media_path, { force: true }, () => {});
@@ -946,7 +1161,7 @@ const server = http.createServer(async (req, res) => {
       const m = pathname.match(re);
       if (!m) continue;
       const body = ['POST', 'PUT'].includes(req.method) ? await readBody(req) : {};
-      const [status, payload, headers] = await fn(m, body);
+      const [status, payload, headers] = await fn(m, body, url.searchParams);
       return send(res, status, payload, headers);
     }
     return send(res, 404, { ok: false, error: 'not found' });
