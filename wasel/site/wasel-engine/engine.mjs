@@ -18,6 +18,8 @@ import { fileURLToPath } from 'node:url';
 import makeWASocket, {
   BufferJSON,
   downloadMediaMessage,
+  decryptPollVote,
+  jidNormalizedUser,
   Browsers,
   DisconnectReason,
   fetchLatestBaileysVersion,
@@ -62,7 +64,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 12; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 13; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -213,14 +215,18 @@ async function startAccount(id) {
     });
 
     sock.ev.on('messages.upsert', (ev) => {
-      for (const m of ev.messages) { try { inboxAdd(id, m, { unread: ev.type === 'notify' }); } catch (e) { console.error('[محادثات]', e.message); } }
+      for (const m of ev.messages) {
+        try { inboxAdd(id, m, { unread: ev.type === 'notify' }); } catch (e) { console.error('[محادثات]', e.message); }
+        if (m.message?.pollUpdateMessage && !m.key?.fromMe) onPollVote(id, m).catch((e) => console.error('[استبيان]', e.message));
+        else if (ev.type === 'notify') { try { activityIncoming(id, m); } catch { /* ignore */ } }
+      }
       if (ev.type !== 'notify') return;
       for (const m of ev.messages) {
         try { onIncomingForTracking(id, m); } catch { /* ignore */ }
         handleIncoming(id, m).catch((e) => console.error('[رد آلي]', e.message));
       }
     });
-    sock.ev.on('messages.update', (u) => { try { onStatusUpdate(u); } catch { /* ignore */ } });
+    sock.ev.on('messages.update', (u) => { try { onStatusUpdate(u); } catch { /* ignore */ } try { inboxStatus(id, u); } catch { /* ignore */ } });
     // سجل المحادثات أول ربط + أسماء جهات الاتصال + تحديثات المحادثات (غير مقروءة...)
     sock.ev.on('messaging-history.set', ({ chats, contacts, messages }) => {
       try { inboxNames(id, contacts); inboxChats(id, chats); for (const m of messages || []) inboxAdd(id, m); } catch (e) { console.error('[محادثات] سجل:', e.message); }
@@ -453,6 +459,7 @@ function inboxAdd(id, m, { unread = false } = {}) {
   if (list.some((x) => x.id === m.key.id)) return; // مكررة
   const e = { id: m.key.id, me: Boolean(m.key.fromMe), ts, type: info.type, text: String(info.text || '').slice(0, 4000) };
   if (jid !== k) e.rj = jid;
+  if (e.me) e.st = Number(m.status) || 1;
   if (info.thumb) e.thumb = toB64(info.thumb);
   if (info.file) e.file = String(info.file).slice(0, 120);
   if (info.secs) e.secs = info.secs;
@@ -466,7 +473,7 @@ function inboxAdd(id, m, { unread = false } = {}) {
   else if (m.key.remoteJidAlt && /@s\.whatsapp\.net$/.test(m.key.remoteJidAlt)) c.phone = jidUser(m.key.remoteJidAlt);
   if (!e.me && m.pushName) { c.name = String(m.pushName).slice(0, 60); d.names[k] = c.name; }
   if (!e.me) c.incoming = true;
-  if (ts >= (c.ts || 0)) { c.ts = ts; c.last = { me: e.me, type: e.type, text: e.text.slice(0, 120), file: e.file }; }
+  if (ts >= (c.ts || 0)) { c.ts = ts; c.last = { id: e.id, me: e.me, st: e.st, type: e.type, text: e.text.slice(0, 120), file: e.file }; }
   if (unread && !e.me) c.unread = (c.unread || 0) + 1;
   if (e.me) c.unread = 0; // رد من الجوال = انقرت
   inboxTouch(id);
@@ -505,6 +512,171 @@ function inboxPublicChat(d, c) {
 function inboxPublicMsg(e) {
   const { raw, ...rest } = e;
   return rest;
+}
+
+// ---------------------------------------------------------------- الصور الشخصية (تنحفظ 3 أيام)
+const AVATAR_DIR = path.join(CFG.dataDir, 'avatars');
+fs.mkdirSync(AVATAR_DIR, { recursive: true });
+const avatarBusy = new Map();
+async function avatarOf(id, jid) {
+  const r = rt(id);
+  if (jid === 'me') jid = r.sock?.user?.id ? jidNormalizedUser(r.sock.user.id) : '';
+  if (!jid) return null;
+  const f = path.join(AVATAR_DIR, crypto.createHash('sha1').update(id + '|' + jid).digest('hex'));
+  try {
+    const st = fs.statSync(f);
+    const age = Date.now() - st.mtimeMs;
+    if (st.size === 0 && age < 86400000) return null; // ما عنده صورة (أو مخفية) - نعيد نسأل بعد يوم
+    if (st.size > 0 && age < 3 * 86400000) return fs.readFileSync(f);
+  } catch { /* مو محفوظة */ }
+  if (!isConnected(id)) { try { const b = fs.readFileSync(f); return b.length ? b : null; } catch { return null; } }
+  if (avatarBusy.has(f)) return avatarBusy.get(f);
+  const job = (async () => {
+    try {
+      const url = await r.sock.profilePictureUrl(jid, 'preview', 8000);
+      if (!url) throw new Error('none');
+      const res = await fetch(url, { signal: AbortSignal.timeout(10000) });
+      if (!res.ok) throw new Error('http ' + res.status);
+      const buf = Buffer.from(await res.arrayBuffer());
+      fs.writeFileSync(f, buf);
+      return buf;
+    } catch {
+      fs.writeFileSync(f, '');
+      return null;
+    } finally { setTimeout(() => avatarBusy.delete(f), 0); }
+  })();
+  avatarBusy.set(f, job);
+  return job;
+}
+
+// ---------------------------------------------------------------- نشاط المحادثات (رد / شاف وما رد) -> إشعار لصاحب الحساب
+const activity = new Map(); // id -> {replies:[], reads:[]}
+function actPush(id, kind, item) {
+  const a = activity.get(id) || { replies: [], reads: [] };
+  if (a[kind].length < 60) a[kind].push(item);
+  activity.set(id, a);
+}
+setInterval(() => {
+  for (const [id, a] of activity) {
+    const acc = registry[id];
+    if (acc && acc.owner != null && (a.replies.length || a.reads.length)) hook({ type: 'activity', owner: acc.owner, account_id: id, account_name: acc.name, replies: a.replies, reads: a.reads });
+  }
+  activity.clear();
+}, 20000);
+/** رسالة واردة بمحادثة فردية: نسجلها كـ«رد» لو إحنا راسلناه آخر 7 أيام */
+function activityIncoming(id, m) {
+  if (m.key?.fromMe || !isPersonalJid(m.key?.remoteJid) || !m.message) return;
+  const info = describeMsg(m.message);
+  if (!info) return;
+  const d = inboxOf(id), k = chatKey(d, m.key.remoteJid, m.key.remoteJidAlt), c = d.chats[k] || {};
+  const since = tsOf(m) - 7 * 86400;
+  const ours = (d.msgs[k] || []).some((x) => x.me && x.ts >= since);
+  actPush(id, 'replies', { jid: k, name: c.name || m.pushName || '', phone: c.phone || '', text: String(info.text || (IB_LABEL[info.type] || '')).slice(0, 120), reply: ours });
+}
+const IB_LABEL = { image: '📷 صورة', video: '🎥 فيديو', voice: '🎤 رسالة صوتية', audio: '🎵 صوت', document: '📄 ملف', sticker: 'ملصق', location: '📍 موقع', contact: '👤 جهة اتصال', poll: '📊 استبيان' };
+/** حالة رسائلنا: 2 وصلت للسيرفر، 3 وصلت للجوال، 4 قرأها، 5 شغّل الصوت */
+function inboxStatus(id, updates) {
+  for (const u of updates) {
+    const st = u.update?.status;
+    if (!u.key?.fromMe || !st || !isPersonalJid(u.key.remoteJid)) continue;
+    const d = inboxOf(id), k = chatKey(d, u.key.remoteJid, u.key.remoteJidAlt);
+    const e = (d.msgs[k] || []).find((x) => x.id === u.key.id);
+    if (!e || (e.st || 0) >= st) continue;
+    e.st = st;
+    const c = d.chats[k];
+    if (c?.last && c.last.id === e.id) c.last.st = st;
+    inboxTouch(id);
+    // «شاف وما رد»: قرأ رسالة حديثة منّا وما كتب بعدها شي (إشعار وحدة لكل محادثة كل 6 ساعات)
+    if (st >= 4 && c && Date.now() / 1000 - e.ts < 3 * 86400 && !(d.msgs[k] || []).some((x) => !x.me && x.ts >= e.ts) && Date.now() - (c.readAt || 0) > 6 * 3600000) {
+      c.readAt = Date.now();
+      actPush(id, 'reads', { jid: k, name: c.name || '', phone: c.phone || '', text: String(e.text || IB_LABEL[e.type] || '').slice(0, 80) });
+    }
+  }
+}
+
+// ---------------------------------------------------------------- الأزرار والاستبيانات (استبيان واتساب = أزرار حقيقية تنضغط)
+// واتساب ما يعرض الأزرار التقليدية للحسابات العادية، فنرسل «استبيان» وخياراته تشتغل كأزرار:
+// لما الشخص يختار خيار، نفك تشفير صوته ونبلّغ الموقع، والموقع يحدد شنو نرسله (رسالة/استبيان ثاني/شكر).
+const POLLS_DIR = path.join(CFG.dataDir, 'polls');
+fs.mkdirSync(POLLS_DIR, { recursive: true });
+const polls = new Map(); // id -> {msgId: {tpl, k, ts, raw, opts:{sha256hex: label}, votes:{voter:[labels]}}}
+const pollFile = (id) => path.join(POLLS_DIR, `${id.replace(/[^a-zA-Z0-9_-]/g, '')}.json`);
+function pollsOf(id) {
+  if (!polls.has(id)) { let d = {}; try { d = JSON.parse(fs.readFileSync(pollFile(id), 'utf8')); } catch { /* جديد */ } polls.set(id, d); }
+  return polls.get(id);
+}
+function pollsSave(id) {
+  const d = pollsOf(id), cut = Date.now() / 1000 - 45 * 86400;
+  for (const [k, v] of Object.entries(d)) if (v.ts < cut) delete d[k];
+  const keys = Object.keys(d);
+  if (keys.length > 8000) keys.sort((a, b) => d[a].ts - d[b].ts).slice(0, keys.length - 8000).forEach((k) => delete d[k]);
+  try { fs.writeFileSync(pollFile(id) + '.tmp', JSON.stringify(d)); fs.renameSync(pollFile(id) + '.tmp', pollFile(id)); } catch { /* ignore */ }
+}
+const sha256hex = (s) => crypto.createHash('sha256').update(Buffer.from(s)).digest('hex');
+/** يرسل استبيان (أزرار) لشخص. poll = {question, options[], multi, tpl} */
+function sendPoll(id, target, poll) {
+  const r = rt(id);
+  const job = r.sendChain.then(async () => {
+    const sock = r.sock;
+    if (!sock || r.status !== 'connected') throw new Error('الحساب غير متصل بواتساب');
+    let jid = String(target);
+    if (!jid.includes('@')) {
+      const [res] = (await sock.onWhatsApp(digits(jid))) || [];
+      if (!res?.exists) throw new Error('الرقم لا يستخدم واتساب');
+      jid = res.jid;
+    }
+    const values = (poll.options || []).map((o) => String(o).slice(0, 100)).filter(Boolean).slice(0, 12);
+    if (values.length < 2) throw new Error('الاستبيان يحتاج خيارين على الأقل');
+    const sent = await sock.sendMessage(jid, { poll: { name: String(poll.question || '').slice(0, 255) || '؟', values, selectableCount: poll.multi ? 0 : 1 } });
+    if (sent?.key?.id) {
+      const d = pollsOf(id);
+      d[sent.key.id] = { tpl: poll.tpl || null, k: chatKey(inboxOf(id), jid), ts: Math.floor(Date.now() / 1000), raw: JSON.stringify(sent.message, BufferJSON.replacer), opts: Object.fromEntries(values.map((v) => [sha256hex(v), v])), votes: {} };
+      pollsSave(id);
+    }
+    return { id: sent?.key?.id || null, jid };
+  });
+  r.sendChain = job.catch(() => {});
+  return job;
+}
+/** صوت على استبيان: نفكه (نجرب صيغ الـ jid: رقم/LID) ونشغّل الإجراء للخيارات الجديدة */
+async function onPollVote(id, m) {
+  const pu = m.message?.pollUpdateMessage;
+  if (!pu?.vote || !pu.pollCreationMessageKey?.id) return;
+  const p = pollsOf(id)[pu.pollCreationMessageKey.id];
+  if (!p) return;
+  const r = rt(id), acc = registry[id];
+  const creation = JSON.parse(p.raw, BufferJSON.reviver);
+  const encKey = creation?.messageContextInfo?.messageSecret;
+  if (!encKey || !r.sock?.user) return;
+  const mePn = jidNormalizedUser(r.sock.user.id), meLid = r.sock.user.lid ? jidNormalizedUser(r.sock.user.lid) : null;
+  const voters = [...new Set([m.key.participantAlt, m.key.remoteJidAlt, m.key.participant, m.key.remoteJid].filter(Boolean).map((j) => jidNormalizedUser(j)))];
+  let vote = null, voter = null;
+  for (const creator of [mePn, meLid].filter(Boolean)) {
+    for (const v of voters) {
+      try { vote = decryptPollVote(pu.vote, { pollEncKey: encKey, pollCreatorJid: creator, pollMsgId: pu.pollCreationMessageKey.id, voterJid: v }); voter = v; break; } catch { /* نجرب غيرها */ }
+    }
+    if (vote) break;
+  }
+  if (!vote) { console.log('[استبيان] تعذر فك الصوت'); return; }
+  const cur = (vote.selectedOptions || []).map((h) => p.opts[Buffer.from(h).toString('hex')]).filter(Boolean);
+  const vk = chatKey(inboxOf(id), voter, m.key.remoteJidAlt);
+  const prev = p.votes[vk] || [];
+  p.votes[vk] = cur;
+  pollsSave(id);
+  const fresh = cur.filter((x) => !prev.includes(x));
+  const d = inboxOf(id), c = d.chats[vk] || {};
+  for (const option of fresh) {
+    const res = await hook({ type: 'poll_vote', owner: acc?.owner, account_id: id, tpl: p.tpl, jid: vk, name: c.name || m.pushName || '', phone: c.phone || (/@s\.whatsapp\.net$/.test(vk) ? jidUser(vk) : ''), option, options: Object.values(p.opts) });
+    // الموقع يرجّع شنو نرسله: رسالة و/أو استبيان ثاني
+    if (res?.reply && (res.reply.text || res.reply.poll)) {
+      const charge = await hook({ type: 'charge', owner: acc.owner, note: `رد على زر «${option}»`, quiet: 1 });
+      if (!charge?.ok) continue;
+      try {
+        if (res.reply.text) await sendTo(id, m.key.remoteJid, res.reply.text);
+        if (res.reply.poll) await sendPoll(id, m.key.remoteJid, res.reply.poll);
+      } catch (e) { console.log('[استبيان] فشل الرد:', e.message); hook({ type: 'refund', owner: acc.owner, amount: charge.charged || 0, failed: 1 }); }
+    }
+  }
 }
 
 // ---------------------------------------------------------------- تتبع الحملات (وصلت / قُرئت / رد)
@@ -718,6 +890,7 @@ async function runCampaign(id) {
       try {
         const res = await sendTo(id, number, st.text, media, st.media_delay);
         st.sent += 1;
+        if (st.poll) { try { await sleep(1200); await sendPoll(id, res.jid, st.poll); } catch (e) { console.log('[حملة] فشل إرسال الأزرار:', e.message); } }
         const t = tracking[st.campaign_id];
         if (t) {
           const d = digits(number); // نخزن كل شي على الرقم الأصلي
@@ -838,7 +1011,7 @@ function accountInfo(id) {
   const me = r.sock?.user?.id ? digits(r.sock.user.id.split(':')[0].split('@')[0]) : null;
   return {
     id, owner: a.owner, name: a.name, otp_sender: Boolean(a.otp_sender),
-    status: r.status, logged_in: r.status === 'connected', phone: me,
+    status: r.status, logged_in: r.status === 'connected', phone: me, wa_name: r.sock?.user?.name || r.sock?.user?.verifiedName || null,
     campaign_running: getCampaign(id).running, campaign_paused: getCampaign(id).paused,
   };
 }
@@ -866,6 +1039,8 @@ async function deleteAccount(id) {
   await fsp.rm(campaignFile(id), { force: true });
   inboxes.delete(id);
   await fsp.rm(inboxFile(id), { force: true });
+  polls.delete(id);
+  await fsp.rm(pollFile(id), { force: true });
 }
 
 const routes = [
@@ -1054,6 +1229,33 @@ const routes = [
     const part = inner.imageMessage || inner.videoMessage || inner.audioMessage || inner.documentMessage || inner.stickerMessage || {};
     return [200, buf, { 'Content-Type': part.mimetype || 'application/octet-stream', 'Cache-Control': 'private, max-age=86400' }];
   }],
+  // الصورة الشخصية لمحادثة (jid) أو للرقم نفسه (jid=me)
+  ['GET', /^\/accounts\/([\w-]+)\/avatar$/, async (m, _b, q) => {
+    if (!registry[m[1]]) return [404, { ok: false, error: 'حساب غير موجود' }];
+    const j = String(q.get('jid') || '');
+    if (j !== 'me' && !isPersonalJid(j)) return [400, { ok: false, error: 'jid' }];
+    const buf = await avatarOf(m[1], j === 'me' ? 'me' : chatKey(inboxOf(m[1]), j));
+    if (!buf) return [404, { ok: false, error: 'لا توجد صورة' }];
+    return [200, buf, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'private, max-age=86400' }];
+  }],
+  // إرسال أزرار/استبيان لشخص (jid محادثة أو رقم)
+  ['POST', /^\/accounts\/([\w-]+)\/poll\/send$/, async (m, body) => {
+    const id = m[1], acc = registry[id];
+    if (!acc) return [404, { ok: false, error: 'حساب غير موجود' }];
+    if (!isConnected(id)) return [400, { ok: false, error: 'الرقم غير متصل بواتساب' }];
+    const target = body.jid ? chatKey(inboxOf(id), String(body.jid)) : digits(body.phone);
+    if (!target || (!body.jid && target.length < 8)) return [400, { ok: false, error: 'رقم غير صالح' }];
+    const charge = await hook({ type: 'charge', owner: acc.owner, note: `أزرار/استبيان: ${acc.name}` });
+    if (!charge || !charge.ok) return [402, { ok: false, error: charge?.error || 'تعذر التحقق من الرصيد' }];
+    try {
+      if (body.text) await sendTo(id, target, String(body.text).slice(0, 4000));
+      const res = await sendPoll(id, target, body.poll || {});
+      return [200, { ok: true, jid: chatKey(inboxOf(id), res.jid), id: res.id }];
+    } catch (e) {
+      hook({ type: 'refund', owner: acc.owner, amount: charge.charged || 0, failed: 1 });
+      return [400, { ok: false, error: e.message }];
+    }
+  }],
   ['GET', /^\/accounts\/([\w-]+)\/campaign$/, async (m) => {
     if (!registry[m[1]]) return [200, blankCampaign()];
     return [200, publicCampaign(m[1])];
@@ -1083,6 +1285,7 @@ const routes = [
       media_name: media?.name || null,
       tag: body.tag ? String(body.tag).slice(0, 40) : null,
       pre_check: Boolean(body.pre_check),
+      poll: body.poll && Array.isArray(body.poll.options) ? { question: String(body.poll.question || ''), options: body.poll.options.map(String), multi: Boolean(body.poll.multi), tpl: body.poll.tpl || null } : null,
     });
     const at = body.send_at ? new Date(String(body.send_at)) : null;
     if (at && !Number.isNaN(at.getTime()) && at.getTime() > Date.now()) st.scheduled_for = fmt(at);

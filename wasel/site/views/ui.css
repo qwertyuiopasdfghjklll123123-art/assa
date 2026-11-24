@@ -623,6 +623,31 @@ body.in-chat main{padding-bottom:0}
 .ch-send{background:var(--btn);color:#fff;box-shadow:0 8px 18px var(--primary-glow)}
 .ch-file{display:flex;align-items:center;gap:8px;font-size:12.5px;padding:6px 10px;margin-bottom:6px;border-radius:12px;background:var(--primary-bg)}
 
+/* ---------------------------------------------------------------- الصور + القراءة + الأزرار */
+.ib-av{position:relative;overflow:hidden}
+.ib-av img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:50%;background:var(--surface)}
+.hero-av{width:52px;height:52px;border:2px solid rgba(255,255,255,.6)}
+.row-ic{position:relative;overflow:hidden}
+.row-ic .ri-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;border-radius:inherit;background:var(--surface)}
+.tick{font-size:11px;color:var(--text3)}
+.tick.read{color:#34b7f1}
+.ch-seen{font-size:11.5px;color:var(--text3)}
+.ch-seen .fa-eye{color:#34b7f1}
+.ch-polls{background:var(--surface);border:1px solid var(--line2);border-radius:18px;padding:8px;margin-bottom:8px;max-height:46vh;overflow:auto;box-shadow:var(--shadow-lg)}
+.ch-polls-h{display:flex;justify-content:space-between;font-size:12.5px;font-weight:800;padding:4px 8px 8px;color:var(--text2)}
+.ch-polls-h a{color:var(--primary);cursor:pointer}
+.ch-poll{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;border-radius:12px;font:inherit;text-align:right;color:var(--text)}
+.ch-poll:hover{background:var(--primary-bg)}
+.ch-poll i{color:var(--primary);width:18px}
+.ch-poll span{flex:1;font-weight:700;font-size:13.5px}
+.ch-poll small{font-size:11px;color:var(--text3)}
+.poll-prev{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.poll-prev span{font-size:12px;padding:6px 10px;border-radius:10px;border:1px solid var(--line2);background:var(--input)}
+.opt-card .opt-n{flex:none;width:30px;height:30px;border-radius:10px;background:var(--primary-bg);color:var(--primary);display:flex;align-items:center;justify-content:center;font-weight:800}
+.pr-row{margin:10px 0}
+.pr-top{display:flex;justify-content:space-between;font-size:13.5px;margin-bottom:5px}
+.poll-attach{margin-top:12px}
+
 /* رابط الفترة المجانية */
 .trial-foot{margin-top:10px;padding:10px 12px;border-radius:14px;border:1px dashed color-mix(in srgb,var(--orange) 55%,transparent);background:var(--orange-bg)}
 .trial-foot .tf-h{font-size:12px;font-weight:700;color:var(--orange)}

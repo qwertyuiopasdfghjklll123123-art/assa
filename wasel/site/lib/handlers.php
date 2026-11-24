@@ -654,6 +654,8 @@ function engine_start_campaign(string $accId, array $numbers, string $text, ?str
         'media' => read_upload_media(),
         // فلترة الأرقام اللي ما عليها واتساب تلقائياً قبل البدء (دائماً)
         'pre_check' => true,
+        // أزرار/استبيان بعد الرسالة (اختياري)
+        'poll' => poll_from_post(uid()),
     ];
     if ($sendAt) {
         $payload['send_at'] = $sendAt;
@@ -752,7 +754,11 @@ function handle_start_campaign($accId): void
         $startTs = $sendAt ? strtotime($sendAt) : time();
         $anchor = preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', (string)($_POST['drip_time'] ?? '')) ? (string)$_POST['drip_time'] : date('H:i', $startTs);
         $dripId = drip_create($id, $accId, (string)($acc['name'] ?? ''), array_slice($numbers, $batch), $text, $media, $delay, $mediaDelay, $batch, $startTs, count($numbers), $sched, $anchor);
-        $r = engine_send_campaign($accId, $first, with_trial_footer($id, $text), $media, $delay, $mediaDelay, $sendAt, 'drip:' . $dripId . ':1');
+        $poll = poll_from_post($id);
+        if ($poll) {
+            store_update('drips', $dripId, fn($x) => array_merge($x, ['poll' => $poll]));
+        }
+        $r = engine_send_campaign($accId, $first, with_trial_footer($id, $text), $media, $delay, $mediaDelay, $sendAt, 'drip:' . $dripId . ':1', true, $poll);
         $status = $r['_status'] ?? 503;
         unset($r['_status']);
         if ($status !== 200 || empty($r['ok'])) {

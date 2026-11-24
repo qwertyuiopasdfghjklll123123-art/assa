@@ -205,6 +205,42 @@ function handle_engine_hook(): void
     }
     $d = request_json();
     switch ($d['type'] ?? '') {
+        case 'activity':
+            // ردود جديدة أو «شاف وما رد» -> إشعار للجوال + جرس التطبيق
+            $owner = (int)($d['owner'] ?? 0);
+            $u = user_by_id($owner);
+            if (!$u) {
+                json_out(['ok' => true]);
+            }
+            $p = notify_prefs($u);
+            $acc = clean_text(mb_substr((string)($d['account_name'] ?? ''), 0, 60));
+            $who = fn($r) => clean_text(mb_substr((string)(($r['name'] ?? '') ?: (!empty($r['phone']) ? '+' . $r['phone'] : 'شخص')), 0, 40));
+            $reps = array_values(array_filter((array)($d['replies'] ?? []), fn($r) => !empty($r['reply']) ? $p['replies'] : $p['all_msgs']));
+            if ($reps) {
+                $real = array_filter($reps, fn($r) => !empty($r['reply']));
+                if (count($reps) === 1) {
+                    $t = (!empty($reps[0]['reply']) ? '💬 ' . $who($reps[0]) . ' رد عليك' : '💬 رسالة من ' . $who($reps[0]));
+                    $b = clean_text(mb_substr((string)($reps[0]['text'] ?? ''), 0, 160));
+                } else {
+                    $t = '💬 ' . count($reps) . ' رسائل جديدة' . ($acc ? ' على ' . $acc : '');
+                    $b = implode('، ', array_slice(array_unique(array_map($who, $reps)), 0, 6));
+                }
+                if ($real) {
+                    add_event($owner, $acc, $t, $b, 'success', 'inbox');
+                }
+                push_user($owner, $t, $b, '/app', 'reply');
+            }
+            $reads = $p['reads'] ? (array)($d['reads'] ?? []) : [];
+            if ($reads) {
+                $t = count($reads) === 1 ? '👁️ ' . $who($reads[0]) . ' شاف رسالتك وما رد' : '👁️ ' . count($reads) . ' أشخاص شافوا رسالتك وما ردوا';
+                $b = count($reads) === 1 ? clean_text(mb_substr((string)($reads[0]['text'] ?? ''), 0, 120)) : implode('، ', array_slice(array_map($who, $reads), 0, 6));
+                push_user($owner, $t, $b, '/app', 'read');
+            }
+            json_out(['ok' => true]);
+            // no break
+        case 'poll_vote':
+            json_out(['ok' => true] + poll_on_vote($d));
+            // no break
         case 'event':
             add_event(isset($d['owner']) ? (int)$d['owner'] : null, $d['account'] ?? null,
                 (string)($d['title'] ?? ''), (string)($d['body'] ?? ''), (string)($d['kind'] ?? 'info'));

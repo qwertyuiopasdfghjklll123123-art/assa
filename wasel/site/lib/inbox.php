@@ -158,7 +158,7 @@ function inbox_routes(): array
             inbox_send_guard($uid, $accId, count($jids));
             $delay = max(3, min(600, (int)($d['delay'] ?? DEFAULT_DELAY)));
             // ما نحتاج فحص واتساب: هذول محادثات موجودة أصلاً
-            $r = engine_send_campaign($accId, $jids, with_trial_footer($uid, $text), $media, $delay, DEFAULT_MEDIA_DELAY, null, 'inbox', false);
+            $r = engine_send_campaign($accId, $jids, with_trial_footer($uid, $text), $media, $delay, DEFAULT_MEDIA_DELAY, null, 'inbox', false, poll_from_post($uid));
             $st = $r['_status'] ?? 503;
             unset($r['_status']);
             json_out($r, $st === 200 ? 200 : ($st === 0 ? 503 : $st));

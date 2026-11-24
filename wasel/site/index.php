@@ -19,6 +19,8 @@ require __DIR__ . '/lib/leads.php';
 require __DIR__ . '/lib/drip.php';
 require __DIR__ . '/lib/coupons.php';
 require __DIR__ . '/lib/inbox.php';
+require __DIR__ . '/lib/push.php';
+require __DIR__ . '/lib/polls.php';
 require __DIR__ . '/lib/security.php';
 
 if (!is_dir(DATA_DIR)) {
@@ -438,6 +440,9 @@ $routes = [
             'id' => $a['id'], 'name' => $a['name'],
             'logged_in' => !empty($live[$a['id']]['logged_in']),
             'otp_sender' => !empty($a['otp_sender']),
+            // اسم الحساب بواتساب ورقمه (الصورة تنجلب من /api/avatar)
+            'wa_name' => isset($live[$a['id']]['wa_name']) ? clean_text(mb_substr((string)$live[$a['id']]['wa_name'], 0, 60)) : null,
+            'phone' => isset($live[$a['id']]['phone']) ? preg_replace('/\D/', '', (string)$live[$a['id']]['phone']) : null,
         ], wa_accounts_of($id)));
     }],
     ['POST', '#^/accounts$#', function () {
@@ -653,7 +658,7 @@ $routes[] = ['POST', '#^/api/admin/notify$#', function () {
     admin_log('notify', "{$title} → {$aud} ({$n})");
     json_out(['ok' => true, 'total' => $n]);
 }];
-$routes = array_merge($routes, api_routes(), leads_routes(), drip_routes(), coupon_routes(), inbox_routes());
+$routes = array_merge($routes, api_routes(), leads_routes(), drip_routes(), coupon_routes(), inbox_routes(), push_routes(), poll_routes());
 
 foreach ($routes as [$m, $re, $fn]) {
     if ($m !== $method || !preg_match($re, $path, $mm)) {

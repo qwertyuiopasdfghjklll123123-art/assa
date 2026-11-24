@@ -133,7 +133,7 @@ function empty(icon, text, btn = '') {
   return `<div class="empty fade-in">${art}<b>${text}</b>${btn ? `<div style="margin-top:12px">${btn}</div>` : ''}</div>`;
 }
 function rowItem({ icon, ic = 'ic-blue', title, sub = '', end = '<span class="chev"><i class="fa-solid fa-chevron-left"></i></span>', onclick = '', img = '' }) {
-  return `<div class="row" role="button" tabindex="0" ${onclick ? `onclick="${onclick}"` : ''}><span class="row-ic ${ic}">${img ? `<img src="${esc(img)}" alt="">` : `<i class="${icon}"></i>`}</span>
+  return `<div class="row" role="button" tabindex="0" ${onclick ? `onclick="${onclick}"` : ''}><span class="row-ic ${ic}">${icon ? `<i class="${icon}"></i>` : ''}${img ? `<img src="${esc(img)}" alt="" class="ri-img" loading="lazy" onerror="this.remove()">` : ''}</span>
     <span class="row-body"><span class="row-title">${title}</span>${sub ? `<span class="row-sub">${sub}</span>` : ''}</span><span class="row-end">${end}</span></div>`;
 }
 function fileToDataUrl(file) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(file); }); }
@@ -160,6 +160,7 @@ const PAGES = {
   leads: { nav: 'account', slug: 'leads' }, report: { nav: 'campaign', slug: 'report' },
   coupons: { nav: 'account', admin: true, slug: 'coupons' }, appearance: { nav: 'account', slug: 'appearance' },
   inbox: { nav: 'accounts', slug: 'inbox' }, chat: { nav: 'accounts', slug: 'chat' }, ibcast: { nav: 'accounts', slug: 'broadcast' },
+  polls: { nav: 'account', slug: 'polls' }, poll: { nav: 'account', slug: 'poll' }, pushset: { nav: 'account', slug: 'pushset' },
 };
 const SLUG2PAGE = Object.fromEntries(Object.entries(PAGES).map(([k, v]) => [v.slug ?? k, k]));
 
@@ -440,6 +441,141 @@ R.appearance = async (el) => {
   draw();
 };
 
+// ---------------------------------------------------------------- الصور الشخصية + علامات القراءة
+const avUrl = (acc, jid) => `/api/avatar/${encodeURIComponent(acc)}?jid=${encodeURIComponent(jid)}`;
+/** دائرة الشخص: صورته من واتساب لو موجودة، وإلا أول حرف من اسمه */
+function avatarHtml(acc, c, cls = 'ib-av') {
+  const h = [...String(c.jid || c.id || '')].reduce((s, x) => s + x.charCodeAt(0), 0) % 360;
+  const init = c.name ? esc([...String(c.name).trim()][0] || '؟') : '<i class="fa-solid fa-user"></i>';
+  return `<span class="${cls}" style="--h:${h}">${init}<img src="${avUrl(acc, c.jid || 'me')}" alt="" loading="lazy" onerror="this.remove()"></span>`;
+}
+/** ✓ انرسلت، ✓✓ وصلت، ✓✓ زرقاء قرأها */
+function ticks(st) {
+  if (!st) return '';
+  if (st >= 4) return '<i class="fa-solid fa-check-double tick read" title="قرأها"></i>';
+  if (st >= 3) return '<i class="fa-solid fa-check-double tick" title="وصلت"></i>';
+  return '<i class="fa-solid fa-check tick" title="انرسلت"></i>';
+}
+
+// ---------------------------------------------------------------- إشعارات الجوال
+const b64u = s => { const p = '='.repeat((4 - s.length % 4) % 4); const r = atob((s + p).replace(/-/g, '+').replace(/_/g, '/')); return Uint8Array.from([...r].map(c => c.charCodeAt(0))); };
+async function pushEnable() {
+  if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+    toast(/iphone|ipad/i.test(navigator.userAgent) ? 'بالآيفون: ثبّت التطبيق على الشاشة الرئيسية أول، وافتحه منها' : 'متصفحك ما يدعم الإشعارات', 'err'); return false;
+  }
+  if (await Notification.requestPermission() !== 'granted') { toast('لازم تسمح بالإشعارات من إعدادات المتصفح', 'err'); return false; }
+  const k = await api('/api/push/key'); if (!k.ok) { toast(k.error, 'err'); return false; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64u(k.key) });
+    const r = await api('/api/push/subscribe', { body: { endpoint: sub.endpoint } });
+    if (!r.ok) throw new Error(r.error);
+    try { localStorage.setItem('wasel_push', '1'); } catch (e) {}
+    toast('تفعّلت إشعارات الجوال ✓', 'ok'); return true;
+  } catch (e) { toast('تعذر التفعيل: ' + (e.message || e), 'err'); return false; }
+}
+const pushOn = () => 'Notification' in window && Notification.permission === 'granted' && (() => { try { return localStorage.getItem('wasel_push') === '1'; } catch (e) { return false; } })();
+R.pushset = async (el) => {
+  el.innerHTML = head('إشعارات الجوال') + '<div class="card"><div class="skel" style="height:160px"></div></div>';
+  const k = await api('/api/push/key');
+  const P = k.prefs || {};
+  const sw = (key, title, sub, ic) => `<div class="row"><span class="row-ic ${ic[1]}"><i class="${ic[0]}"></i></span><span class="row-body"><span class="row-title">${title}</span><span class="row-sub">${sub}</span></span><span class="row-end"><label class="switch"><input type="checkbox" data-p="${key}" ${P[key] ? 'checked' : ''}><span></span></label></span></div>`;
+  el.innerHTML = head('إشعارات الجوال') + `
+    <div class="hero shine"><div style="display:flex;align-items:center;gap:14px"><span class="hero-icon"><i class="fa-solid fa-bell"></i></span>
+      <div><div style="font-weight:800;font-size:17px">${pushOn() ? 'الإشعارات مفعّلة على هذا الجهاز' : 'فعّل الإشعارات على جوالك'}</div><div class="hero-sub">توصلك حتى لو التطبيق مسكّر</div></div></div></div>
+    ${/iphone|ipad/i.test(navigator.userAgent) && !matchMedia('(display-mode: standalone)').matches ? '<div class="note warn" style="margin-top:12px">بالآيفون: ثبّت واصل على الشاشة الرئيسية أول (زر المشاركة ⬆️ ← إضافة إلى الشاشة الرئيسية)، وافتحه منها وفعّل الإشعارات</div>' : ''}
+    <div class="input-row" style="margin-top:12px;gap:8px"><button class="btn btn-primary" style="flex:2" id="psOn"><i class="fa-solid fa-bell"></i> ${pushOn() ? 'إعادة التفعيل' : 'تفعيل الإشعارات'}</button><button class="btn btn-soft" style="flex:1" id="psTest">تجربة</button></div>
+    <div class="section-head">شنو يوصلني؟</div>
+    <div class="list">
+      ${sw('replies', 'شخص رد عليّ', 'لما يرد شخص راسلته (حملة أو محادثة) خلال آخر 7 أيام', ['fa-solid fa-reply', 'ic-green'])}
+      ${sw('reads', 'شخص شاف رسالتي وما رد', 'قرأ رسالتك (✓✓ زرقاء) وما كتب شي - مرة وحدة لكل شخص كل 6 ساعات', ['fa-solid fa-eye', 'ic-blue'])}
+      ${sw('votes', 'شخص ضغط زر أو جاوب استبيان', 'مع اسمه والخيار اللي اختاره', ['fa-solid fa-square-poll-vertical', 'ic-purple'])}
+      ${sw('all_msgs', 'كل رسالة جديدة توصل', 'حتى من ناس ما راسلتهم (ممكن تكون كثيرة)', ['fa-solid fa-comments', 'ic-orange'])}
+    </div>`;
+  el.querySelectorAll('[data-p]').forEach(c => c.onchange = async () => { const r = await api('/api/push/prefs', { body: { [c.dataset.p]: c.checked } }); toast(r.ok ? 'انحفظ' : r.error, r.ok ? 'ok' : 'err'); });
+  el.querySelector('#psOn').onclick = async () => { if (await pushEnable()) go('pushset', {}, false); };
+  el.querySelector('#psTest').onclick = async () => { const r = await api('/api/push/test', { body: {} }); toast(r.sent ? 'انرسل - يوصلك خلال ثواني' : 'ما فيه جهاز مفعّل - اضغط «تفعيل» أول', r.sent ? 'ok' : 'err'); };
+};
+
+// ---------------------------------------------------------------- الأزرار والاستبيانات والتقييم
+const PK = { buttons: ['fa-solid fa-hand-pointer', 'أزرار', 'ic-teal'], survey: ['fa-solid fa-square-poll-vertical', 'استبيان', 'ic-purple'], rating: ['fa-solid fa-star', 'تقييم', 'ic-orange'] };
+async function loadPolls() { const r = await api('/api/polls'); S.polls = r.ok ? r.polls : []; S.ratingOpts = r.rating_options || []; return S.polls; }
+/** قائمة اختيار قالب (للحملة/الرسالة الجماعية/المحادثة) */
+function pollSelect(id, polls) {
+  return `<select class="select" id="${id}"><option value="">بدون</option>${polls.map(p => `<option value="${p.id}">${PK[p.kind][1]}: ${esc(p.name || p.question)}</option>`).join('')}</select>`;
+}
+R.polls = async (el) => {
+  el.innerHTML = head('الأزرار والاستبيانات', true, `<button class="btn btn-primary btn-sm" onclick="go('poll',{})"><i class="fa-solid fa-plus"></i> جديد</button>`) + '<div class="card"><div class="skel" style="height:120px"></div></div>';
+  const polls = await loadPolls();
+  el.innerHTML = head('الأزرار والاستبيانات', true, `<button class="btn btn-primary btn-sm" onclick="go('poll',{})"><i class="fa-solid fa-plus"></i> جديد</button>`) + `
+    <div class="note" style="margin-bottom:12px"><i class="fa-solid fa-circle-info"></i> تنرسل بواتساب كخيارات ينضغط عليها. لما الشخص يضغط زر (مثل «المزيد») ينرسله تلقائياً الرد اللي تحدده: رسالة، استبيان ثاني، أو تقييم - ويوصلك إشعار باسمه واختياره.</div>
+    ${polls.length ? polls.map(p => `<div class="card poll-card" onclick="go('poll',{id:${p.id},view:1})" style="cursor:pointer">
+      <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ${PK[p.kind][2]}"><i class="${PK[p.kind][0]}"></i></span>
+        <div style="flex:1;min-width:0"><b>${esc(p.name || p.question)}</b><div class="row-sub">${PK[p.kind][1]} · ${p.preview.length} خيارات</div></div>
+        <span class="pill ${p.votes ? 'pill-green' : 'pill-gray'} num">${fmt(p.votes)} ضغطة</span></div>
+      <div class="poll-prev">${p.preview.slice(0, 6).map(o => `<span>${esc(o)}</span>`).join('')}</div></div>`).join('')
+    : `<div class="card">${empty('fa-solid fa-hand-pointer', 'ما سويت أزرار أو استبيانات بعد', `<button class="btn btn-primary" onclick="go('poll',{})"><i class="fa-solid fa-plus"></i> سوّي أول واحد</button>`)}</div>`}`;
+};
+R.poll = async (el, p) => {
+  const polls = S.polls || await loadPolls();
+  let t = { kind: 'buttons', name: '', question: '', multi: false, thanks: '', options: [{ label: 'المزيد', action: 'message', text: '' }, { label: 'لا شكراً', action: 'none', text: '' }] }, res = null;
+  if (p.id) { const r = await api('/api/polls/' + p.id); if (!r.ok) return go('polls'); t = r.poll; res = r.results; }
+  if (p.view && res) {
+    // ---- النتائج
+    const max = Math.max(1, ...Object.values(res.counts));
+    el.innerHTML = head(esc(t.name || t.question), true, `<button class="btn btn-soft btn-sm" onclick="go('poll',{id:${t.id}})"><i class="fa-solid fa-pen"></i> تعديل</button>`) + `
+      <div class="stats three"><div class="stat"><span class="stat-v num">${fmt(res.total)}</span><span class="stat-l">ضغطة</span></div><div class="stat"><span class="stat-v num">${fmt(res.people)}</span><span class="stat-l">شخص</span></div>
+        <div class="stat"><span class="stat-v num">${res.avg != null ? res.avg + ' ⭐' : PK[t.kind][1]}</span><span class="stat-l">${res.avg != null ? 'معدل التقييم' : 'النوع'}</span></div></div>
+      <div class="card" style="margin-top:12px"><div class="card-title"><i class="fa-solid fa-chart-simple"></i> ${esc(t.question)}</div>
+        ${Object.entries(res.counts).map(([o, n]) => `<div class="pr-row"><div class="pr-top"><span>${esc(o)}</span><b class="num">${fmt(n)}</b></div><div class="progress"><span style="width:${Math.round(n / max * 100)}%"></span></div></div>`).join('')}</div>
+      <div class="section-head">مين ضغط؟</div>
+      <div class="card">${res.recent.length ? res.recent.map(v => `<div class="kv"><span>${esc(v.name || (v.phone ? '+' + v.phone : 'شخص'))} <small class="num" style="color:var(--text3)">${esc(v.at)}</small></span><b>${esc(v.option)}</b></div>`).join('') : '<div class="hint">لسه ما أحد ضغط - أرسله ويّا حملة أو من المحادثات</div>'}</div>
+      <div class="input-row" style="margin-top:12px;gap:8px"><button class="btn btn-primary" style="flex:1" onclick="go('campaign',{})"><i class="fa-solid fa-paper-plane"></i> أرسله بحملة</button><button class="btn btn-soft" style="flex:1" onclick="go('inbox')"><i class="fa-solid fa-comments"></i> من المحادثات</button></div>`;
+    return;
+  }
+  // ---- المحرر
+  const others = polls.filter(x => x.id !== t.id);
+  const draw = () => {
+    el.innerHTML = head(t.id ? 'تعديل' : 'أزرار / استبيان جديد') + `
+      <div class="seg" id="pKind" style="margin-bottom:12px">${Object.entries(PK).map(([k, v]) => `<button data-k="${k}" class="${t.kind === k ? 'on' : ''}"><i class="${v[0]}"></i><b>${v[1]}</b></button>`).join('')}</div>
+      <div class="card">
+        <div class="field"><label>اسم داخلي (لك بس)</label><input class="input" id="pName" value="${esc(t.name)}" placeholder="مثلاً: أزرار عرض الشتاء"></div>
+        <div class="field"><label>${t.kind === 'rating' ? 'سؤال التقييم' : t.kind === 'survey' ? 'سؤال الاستبيان' : 'النص فوق الأزرار'}</label><input class="input" id="pQ" maxlength="255" value="${esc(t.question)}" placeholder="${t.kind === 'rating' ? 'شلون تقيّم خدمتنا؟' : t.kind === 'survey' ? 'شنو أكثر شي يهمك؟' : 'تحب تعرف أكثر؟'}"></div>
+        ${t.kind === 'survey' ? `<label style="display:flex;align-items:center;gap:10px;margin:4px 0 10px"><span class="switch"><input type="checkbox" id="pMulti" ${t.multi ? 'checked' : ''}><span></span></span> يكدر يختار أكثر من خيار</label>` : ''}
+      </div>
+      ${t.kind === 'rating' ? `<div class="card"><div class="card-title"><i class="fa-solid fa-star"></i> الخيارات (ثابتة)</div><div class="poll-prev">${(S.ratingOpts || []).map(o => `<span>${esc(o)}</span>`).join('')}</div></div>`
+      : `<div class="section-head">${t.kind === 'survey' ? 'الخيارات' : 'الأزرار'} <a id="pAdd">+ إضافة</a></div>
+        ${t.options.map((o, i) => `<div class="card opt-card">
+          <div style="display:flex;gap:8px;align-items:center"><span class="opt-n num">${i + 1}</span><input class="input" data-l="${i}" value="${esc(o.label)}" maxlength="100" placeholder="اسم الزر - مثلاً: المزيد"><button class="icon-btn red" data-x="${i}" ${t.options.length <= 2 ? 'disabled' : ''}><i class="fa-solid fa-trash"></i></button></div>
+          <div class="field" style="margin:10px 0 0"><label>لما يضغطه:</label><select class="select" data-a="${i}"><option value="none" ${o.action === 'none' ? 'selected' : ''}>بس يتسجل (بدون رد)</option><option value="message" ${o.action === 'message' ? 'selected' : ''}>يرسله رسالة محددة</option><option value="poll" ${o.action === 'poll' ? 'selected' : ''} ${others.length ? '' : 'disabled'}>يرسله استبيان أو تقييم${others.length ? '' : ' (سوّي واحد ثاني أول)'}</option></select></div>
+          ${o.action === 'message' ? `<textarea class="textarea" data-t="${i}" style="margin-top:8px;min-height:80px" placeholder="الرسالة اللي توصله...">${esc(o.text)}</textarea>` : ''}
+          ${o.action === 'poll' ? `<select class="select" data-n="${i}" style="margin-top:8px">${others.map(x => `<option value="${x.id}" ${+o.next === x.id ? 'selected' : ''}>${PK[x.kind][1]}: ${esc(x.name || x.question)}</option>`).join('')}</select>` : ''}
+        </div>`).join('')}`}
+      <div class="card"><div class="field" style="margin:0"><label>رسالة شكر (اختياري) - تنرسل لما يختار خيار ما إله رد</label><textarea class="textarea" id="pThanks" style="min-height:70px" placeholder="شكراً لرأيك 🌹">${esc(t.thanks)}</textarea></div></div>
+      <button class="btn btn-primary btn-block" id="pSave"><i class="fa-solid fa-check"></i> حفظ</button>
+      ${t.id ? '<button class="btn btn-red btn-block" style="margin-top:10px" id="pDel"><i class="fa-solid fa-trash"></i> حذف</button>' : ''}`;
+    const sync = () => {
+      t.name = $('#pName').value; t.question = $('#pQ').value; t.thanks = $('#pThanks').value; t.multi = !!$('#pMulti')?.checked;
+      el.querySelectorAll('[data-l]').forEach(i => { t.options[+i.dataset.l].label = i.value; });
+      el.querySelectorAll('[data-t]').forEach(i => { t.options[+i.dataset.t].text = i.value; });
+      el.querySelectorAll('[data-n]').forEach(i => { t.options[+i.dataset.n].next = +i.value; });
+    };
+    el.querySelectorAll('#pKind [data-k]').forEach(b => b.onclick = () => { sync(); t.kind = b.dataset.k; draw(); });
+    el.querySelectorAll('[data-a]').forEach(s => s.onchange = () => { sync(); const o = t.options[+s.dataset.a]; o.action = s.value; if (s.value === 'poll' && !o.next && others[0]) o.next = others[0].id; draw(); });
+    el.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { sync(); t.options.splice(+b.dataset.x, 1); draw(); });
+    const add = $('#pAdd'); if (add) add.onclick = () => { sync(); if (t.options.length >= 12) return toast('الحد 12 خيار', 'err'); t.options.push({ label: '', action: 'none', text: '' }); draw(); };
+    $('#pSave').onclick = async e => {
+      sync(); busy(e.target.closest('button'), true);
+      const r = await api('/api/polls', { body: t }); busy(e.target.closest('button'), false);
+      if (!r.ok) return toast(r.error, 'err');
+      toast('انحفظ ✓', 'ok'); S.polls = null; go('poll', { id: r.id, view: 1 }, false);
+    };
+    const del = $('#pDel'); if (del) del.onclick = e => confirmTap(e.target.closest('button'), async () => { await api(`/api/polls/${t.id}/delete`, { body: {} }); S.polls = null; go('polls'); });
+  };
+  draw();
+};
+
 // ---------------------------------------------------------------- المحادثات (صندوق واتساب)
 const $d = s => document.querySelector(s); // للعناصر الثابتة المضافة للـ body
 const IB = { sel: new Set(), selMode: false, filter: 'all', q: '', acc: null, chats: [] };
@@ -456,7 +592,7 @@ const IB_TYPE = { image: ['fa-solid fa-image', 'صورة'], video: ['fa-solid fa
 function ibPreview(l) {
   if (!l) return '';
   const t = IB_TYPE[l.type];
-  return (l.me ? '<i class="fa-solid fa-check-double" style="color:var(--primary)"></i> ' : '') + (t ? `<i class="${t[0]}"></i> ` : '') + esc(l.text || l.file || (t ? t[1] : ''));
+  return (l.me ? ticks(l.st || 1) + ' ' : '') + (t ? `<i class="${t[0]}"></i> ` : '') + esc(l.text || l.file || (t ? t[1] : ''));
 }
 
 R.inbox = async (el, p) => {
@@ -471,7 +607,7 @@ R.inbox = async (el, p) => {
     <div id="ibNewBox"></div>
     <div class="ib-search"><i class="fa-solid fa-magnifying-glass"></i><input class="input" id="ibQ" placeholder="ابحث بالاسم أو الرقم أو الرسالة..." value="${esc(IB.q)}"></div>
     <div class="ib-bar">
-      <div class="chips" id="ibF">${[['all', 'الكل'], ['unread', 'غير مقروءة'], ['incoming', 'راسلوني'], ['mine', 'راسلتهم أنا بس']].map(([k, v]) => `<button class="chip ${IB.filter === k ? 'on' : ''}" data-f="${k}">${v}<b class="num ib-cnt" data-c="${k}"></b></button>`).join('')}</div>
+      <div class="chips" id="ibF">${[['all', 'الكل'], ['unread', 'غير مقروءة'], ['seen', 'شافوا وما ردوا'], ['unseen', 'ما شافوا'], ['incoming', 'راسلوني'], ['mine', 'راسلتهم أنا بس']].map(([k, v]) => `<button class="chip ${IB.filter === k ? 'on' : ''}" data-f="${k}">${v}<b class="num ib-cnt" data-c="${k}"></b></button>`).join('')}</div>
     </div>
     <div class="ib-sel ${IB.selMode ? 'on' : ''}" id="ibSelBar">
       <button class="btn btn-soft btn-sm" id="ibSelMode"><i class="fa-regular fa-square-check"></i> <span>${IB.selMode ? 'إلغاء التحديد' : 'تحديد'}</span></button>
@@ -482,7 +618,8 @@ R.inbox = async (el, p) => {
   document.body.insertAdjacentHTML('beforeend', `<div class="ib-send-bar portal hidden" id="ibSendBar"><button class="btn btn-primary btn-block shine" id="ibSend"><i class="fa-solid fa-paper-plane"></i> <span>إرسال رسالة للمحددين</span></button></div>`);
   const filtered = () => {
     const q = IB.q.toLowerCase();
-    return IB.chats.filter(c => (IB.filter === 'all' || (IB.filter === 'unread' && c.unread) || (IB.filter === 'incoming' && c.incoming) || (IB.filter === 'mine' && !c.incoming))
+    return IB.chats.filter(c => (IB.filter === 'all' || (IB.filter === 'unread' && c.unread) || (IB.filter === 'incoming' && c.incoming) || (IB.filter === 'mine' && !c.incoming)
+        || (IB.filter === 'seen' && c.last?.me && c.last.st >= 4) || (IB.filter === 'unseen' && c.last?.me && (c.last.st || 0) < 4))
       && (!q || ibName(c).toLowerCase().includes(q) || (c.phone || '').includes(q.replace(/\D/g, '') || '§') || (c.last?.text || '').toLowerCase().includes(q)));
   };
   const drawSel = () => {
@@ -494,7 +631,8 @@ R.inbox = async (el, p) => {
   };
   const draw = () => {
     const list = filtered(), box = $('#ibList'); if (!box) return;
-    const counts = { all: IB.chats.length, unread: IB.chats.filter(c => c.unread).length, incoming: IB.chats.filter(c => c.incoming).length, mine: IB.chats.filter(c => !c.incoming).length };
+    const counts = { all: IB.chats.length, unread: IB.chats.filter(c => c.unread).length, incoming: IB.chats.filter(c => c.incoming).length, mine: IB.chats.filter(c => !c.incoming).length,
+      seen: IB.chats.filter(c => c.last?.me && c.last.st >= 4).length, unseen: IB.chats.filter(c => c.last?.me && (c.last.st || 0) < 4).length };
     $$('.ib-cnt').forEach(b => { b.textContent = counts[b.dataset.c] ? ' ' + fmt(counts[b.dataset.c]) : ''; });
     if (!IB.chats.length) {
       box.innerHTML = `<div class="card">${empty('fa-regular fa-comments', 'ما فيه محادثات لحد الآن')}<div class="hint" style="text-align:center;line-height:1.9">المحادثات تنضاف تلقائياً من لحظة تحديث المحرك: كل رسالة توصلك أو ترسلها (حتى من جوالك).<br>إذا ربطت الرقم من جديد ينسحب آخر سجل محادثاتك.</div></div>`;
@@ -502,7 +640,7 @@ R.inbox = async (el, p) => {
     }
     box.innerHTML = `<div class="list ib-list">${list.slice(0, 400).map(c => `<div class="row ib-row ${IB.sel.has(c.jid) ? 'picked' : ''}" data-j="${esc(c.jid)}">
         ${IB.selMode ? `<span class="ib-check"><i class="fa-solid fa-check"></i></span>` : ''}
-        <span class="ib-av" style="--h:${[...c.jid].reduce((s, x) => s + x.charCodeAt(0), 0) % 360}">${c.name ? esc([...c.name.trim()][0] || '؟') : '<i class="fa-solid fa-user"></i>'}</span>
+        ${avatarHtml(IB.acc, c)}
         <span class="row-body"><span class="row-title">${esc(ibName(c))}</span><span class="row-sub ib-prev">${ibPreview(c.last)}</span></span>
         <span class="ib-end"><small class="${c.unread ? 'un' : ''}">${ibTime(c.ts)}</small>${c.unread ? `<b class="ib-badge num">${c.unread}</b>` : ''}</span></div>`).join('') || '<div class="hint" style="padding:16px;text-align:center">ما فيه نتائج</div>'}</div>
       ${list.length > 400 ? `<div class="hint" style="text-align:center">يظهر أول 400 - استخدم البحث</div>` : ''}`;
@@ -511,7 +649,9 @@ R.inbox = async (el, p) => {
   async function load() {
     const r = await api(`/api/inbox/${IB.acc}`);
     if (!r.ok) { if (!IB.chats.length) $('#ibList').innerHTML = `<div class="card">${empty('fa-solid fa-plug-circle-xmark', r.error || 'تعذر جلب المحادثات')}</div>`; return; }
-    IB.chats = r.chats || [];
+    const sig = JSON.stringify(r.chats || []);
+    if (sig === IB.sig && $('#ibList .ib-list')) return; // ما تغير شي: ما نعيد الرسم (حتى الصور ما ترمش)
+    IB.sig = sig; IB.chats = r.chats || [];
     draw();
   }
   $('#ibList').addEventListener('click', e => {
@@ -541,16 +681,18 @@ R.inbox = async (el, p) => {
 };
 
 R.chat = async (el, p) => {
+  if (!p.acc || (!p.jid && !p.phone)) return go('inbox', {}, false);
   document.body.classList.add('in-chat');
   let jid = p.jid || null, lastTs = 0, chat = null, msgs = [];
   const seen = new Set();
   el.innerHTML = `<div class="ch-head"><button class="back" onclick="goBack()"><i class="fa-solid fa-arrow-right"></i></button>
-      <span class="ib-av" id="chAv"><i class="fa-solid fa-user"></i></span><div style="flex:1;min-width:0"><b id="chName">${p.phone ? '+' + esc(p.phone) : '...'}</b><div class="row-sub num" id="chPhone" dir="ltr" style="text-align:right"></div></div>
+      <span id="chAv">${avatarHtml(p.acc, { jid: p.jid || 'none@s.whatsapp.net', name: '' })}</span><div style="flex:1;min-width:0"><b id="chName">${p.phone ? '+' + esc(p.phone) : '...'}</b><div class="row-sub"><span class="num" id="chPhone" dir="ltr"></span> <span id="chSeen" class="ch-seen"></span></div></div>
       <a class="icon-btn" id="chWa" target="_blank" rel="noopener" title="فتح بواتساب" style="display:none"><i class="fa-brands fa-whatsapp"></i></a></div>
     <div class="ch-msgs" id="chMsgs">${jid ? '<div class="skel" style="height:120px;border-radius:18px"></div>' : '<div class="hint" style="text-align:center;padding:30px">اكتب أول رسالة لهذا الرقم 👇</div>'}</div>
 `;
   document.body.insertAdjacentHTML('beforeend', `<div class="ch-compose portal"><div id="chFile" class="ch-file hidden"></div>
-      <div class="ch-row"><label class="ch-btn"><input type="file" id="chAtt" hidden><i class="fa-solid fa-paperclip"></i></label>
+      <div id="chPolls" class="ch-polls hidden"></div>
+      <div class="ch-row"><button class="ch-btn" id="chPollBtn" title="أزرار / استبيان"><i class="fa-solid fa-hand-pointer"></i></button><label class="ch-btn"><input type="file" id="chAtt" hidden><i class="fa-solid fa-paperclip"></i></label>
         <textarea id="chTxt" rows="1" placeholder="اكتب رسالة..."></textarea>
         <button class="ch-send" id="chSend" aria-label="إرسال"><i class="fa-solid fa-paper-plane"></i></button></div></div>`);
   const box = $('#chMsgs');
@@ -568,7 +710,7 @@ R.chat = async (el, p) => {
     } else if (t && m.type !== 'text') body = `<span class="hint"><i class="${t[0]}"></i> ${t[1]}</span>`;
     const txt = m.text && !(m.type === 'location') ? `<div class="ch-text">${esc(m.text)}</div>` : '';
     const d = new Date(m.ts * 1000);
-    return `<div class="ch-b ${m.me ? 'me' : 'them'}">${body}${txt}<span class="ch-t num">${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}${m.me ? ' <i class="fa-solid fa-check"></i>' : ''}</span>${m.react ? `<span class="ch-react">${esc(m.react)}</span>` : ''}</div>`;
+    return `<div class="ch-b ${m.me ? 'me' : 'them'}">${body}${txt}<span class="ch-t num">${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}${m.me ? ' ' + ticks(m._tmp ? 0 : (m.st || 1)) + (m._tmp ? ' <i class="fa-regular fa-clock"></i>' : '') : ''}</span>${m.react ? `<span class="ch-react">${esc(m.react)}</span>` : ''}</div>`;
   };
   const dayLbl = ts => { const d = new Date(ts * 1000), n = new Date(); if (d.toDateString() === n.toDateString()) return 'اليوم'; const y = new Date(n); y.setDate(n.getDate() - 1); if (d.toDateString() === y.toDateString()) return 'أمس'; return d.toLocaleDateString('ar-IQ', { day: 'numeric', month: 'long', year: 'numeric' }); };
   const render = () => {
@@ -583,16 +725,18 @@ R.chat = async (el, p) => {
     if (!chat) return;
     $('#chName').textContent = ibName(chat);
     $('#chPhone').textContent = chat.phone ? '+' + chat.phone : '';
-    $('#chAv').innerHTML = chat.name ? esc([...chat.name.trim()][0] || '؟') : '<i class="fa-solid fa-user"></i>';
+    if (!$('#chAv').dataset.done) { $('#chAv').innerHTML = avatarHtml(p.acc, chat); $('#chAv').dataset.done = 1; }
+    $('#chSeen').innerHTML = chat.last?.me ? (chat.last.st >= 4 ? '<i class="fa-solid fa-eye"></i> شاف آخر رسالة' + (chat.incoming && !chat.unread ? '' : '') : '<i class="fa-regular fa-eye-slash"></i> لسه ما شاف آخر رسالة') : '';
     if (chat.phone) { const a = $('#chWa'); a.href = 'https://wa.me/' + chat.phone; a.style.display = ''; }
   };
   async function load(first) {
     if (!jid || S.page !== 'chat') return;
-    const r = await api(`/api/inbox/${encodeURIComponent(p.acc)}/chat?jid=${encodeURIComponent(jid)}&since=${lastTs}${first ? '&read=1' : ''}`);
+    // نجيب آخر يوم كامل حتى تتحدث علامات القراءة للرسائل القريبة
+    const r = await api(`/api/inbox/${encodeURIComponent(p.acc)}/chat?jid=${encodeURIComponent(jid)}&since=${first ? 0 : Math.max(0, lastTs - 86400)}${first ? '&read=1' : ''}`);
     if (!r.ok) { if (first) box.innerHTML = `<div class="hint" style="text-align:center;padding:30px">${esc(r.error || 'تعذر التحميل')}</div>`; return; }
     chat = r.chat; head2();
     let added = false;
-    for (const m of r.messages || []) { if (seen.has(m.id)) continue; seen.add(m.id); msgs.push(m); added = true; }
+    for (const m of r.messages || []) { if (seen.has(m.id)) { const o = msgs.find(x => x.id === m.id); if (o && (m.st || 0) > (o.st || 0)) { o.st = m.st; added = true; } continue; } seen.add(m.id); msgs.push(m); added = true; }
     msgs = msgs.filter(m => !m._tmp || !msgs.some(x => !x._tmp && x.me && x.text === m.text && Math.abs(x.ts - m.ts) < 120));
     msgs.sort((a, b) => a.ts - b.ts);
     if (msgs.length) lastTs = Math.max(lastTs, msgs[msgs.length - 1].ts - 1);
@@ -632,6 +776,27 @@ R.chat = async (el, p) => {
     if (!jid) { jid = r.jid; history.replaceState({ page: 'chat', params: { acc: p.acc, jid } }, '', location.href); }
     setTimeout(() => load(false), 900);
   };
+  // زر الأزرار/الاستبيان: نختار قالب وينرسل
+  $d('#chPollBtn').onclick = async () => {
+    const box = $d('#chPolls');
+    if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
+    const polls = S.polls || await loadPolls();
+    box.innerHTML = polls.length ? `<div class="ch-polls-h">أرسل أزرار أو استبيان <a onclick="go('polls')">إدارة</a></div>` + polls.map(x => `<button class="ch-poll" data-t="${x.id}"><i class="${PK[x.kind][0]}"></i> <span>${esc(x.name || x.question)}</span><small>${PK[x.kind][1]}</small></button>`).join('')
+      : `<div class="hint" style="padding:8px">ما عندك قوالب. <a onclick="go('poll',{})" style="font-weight:800;color:var(--primary)">سوّي أزرار أو استبيان</a></div>`;
+    box.classList.remove('hidden');
+    box.querySelectorAll('[data-t]').forEach(b => b.onclick = async () => {
+      box.classList.add('hidden');
+      const body = { tpl: +b.dataset.t, text: ta.value.trim() };
+      if (jid) body.jid = jid; else { body.phone = p.phone; body.country_code = p.cc || ''; }
+      busy($d('#chPollBtn'), true);
+      const r = await api(`/api/inbox/${encodeURIComponent(p.acc)}/poll`, { body });
+      busy($d('#chPollBtn'), false);
+      if (!r.ok) return toast(r.error || 'ما انرسل', 'err');
+      ta.value = ''; toast('انرسل ✓ - لما يضغط زر يوصلك إشعار', 'ok');
+      if (!jid) { jid = r.jid; history.replaceState({ page: 'chat', params: { acc: p.acc, jid } }, '', location.href); }
+      setTimeout(() => load(false), 900);
+    });
+  };
   if (jid) await load(true); else ta.focus();
   S.timers.push(setInterval(() => load(false), 4000));
 };
@@ -646,10 +811,12 @@ R.ibcast = async (el, p) => {
     <div class="card"><div class="card-title"><i class="fa-solid fa-message"></i> الرسالة</div>
       <textarea class="textarea" id="bcT" placeholder="اكتب رسالتك..." style="min-height:120px"></textarea>
       <label class="file-drop" style="margin-top:10px"><input type="file" id="bcF"><span class="row-ic ic-purple"><i class="fa-solid fa-paperclip"></i></span><span style="flex:1;min-width:0"><b style="font-size:13px">إرفاق صورة / فيديو / ملف</b><span class="row-sub" id="bcFn">اختياري</span></span></label>
+      <div class="field" style="margin-top:12px"><label><i class="fa-solid fa-hand-pointer"></i> أزرار أو استبيان بعد الرسالة (اختياري)</label><span id="bcPollWrap"><div class="skel" style="height:44px"></div></span></div>
       <div class="field" style="margin-top:12px"><label>الفاصل بين كل رسالة (أأمن لرقمك من الحظر)</label><div class="seg" id="bcD">${[5, 10, 15, 30].map(s => `<button data-s="${s}" class="${s === 10 ? 'on' : ''}"><b class="num">${s} ث</b></button>`).join('')}</div></div>
       <div class="hint" id="bcEta"></div></div>
     <button class="btn btn-primary btn-block shine" id="bcGo"><i class="fa-solid fa-paper-plane"></i> إرسال لـ ${fmt(jids.length)} محادثة</button>`;
   let delay = 10;
+  loadPolls().then(ps => { const w = $('#bcPollWrap'); if (w) w.innerHTML = pollSelect('bcPoll', ps) + (ps.length ? '' : `<div class="hint"><a onclick="go('poll',{})" style="font-weight:800;color:var(--primary);cursor:pointer">سوّي أزرار أو استبيان</a> - مثلاً زر «المزيد» يرسل تفاصيل تلقائياً</div>`); });
   const eta = () => { const s = jids.length * delay; $('#bcEta').textContent = `تقريباً ${s < 60 ? s + ' ثانية' : Math.ceil(s / 60) + ' دقيقة'} - تتابع التقدم من صفحة الحملات`; };
   eta();
   $('#bcD').addEventListener('click', e => { const b = e.target.closest('[data-s]'); if (!b) return; delay = +b.dataset.s; $$('#bcD button').forEach(x => x.classList.toggle('on', x === b)); eta(); });
@@ -659,6 +826,7 @@ R.ibcast = async (el, p) => {
     if (!text && !f) return toast('اكتب رسالة أو أرفق ملف', 'err');
     if (!await confirmSheet({ title: 'تأكيد الإرسال', text: `راح تنرسل الرسالة لـ ${fmt(jids.length)} محادثة، وحدة كل ${delay} ثانية`, ok: 'إرسال', icon: 'fa-solid fa-paper-plane', danger: false })) return;
     const fd = new FormData(); fd.append('jids', JSON.stringify(jids)); fd.append('text', text); fd.append('delay', delay); if (f) fd.append('media_file', f);
+    if ($('#bcPoll')?.value) fd.append('poll_tpl', $('#bcPoll').value);
     busy(e.target.closest('button'), true);
     const r = await api(`/api/inbox/${encodeURIComponent(p.acc)}/broadcast`, { body: fd });
     busy(e.target.closest('button'), false);
@@ -796,6 +964,8 @@ R.campaign = async (el, p) => {
           </div>
         </div>
       </div>
+      <div class="card poll-attach"><div class="card-title"><i class="fa-solid fa-hand-pointer"></i> أزرار أو استبيان بعد الرسالة <span class="spacer"></span><a onclick="go('polls')" style="font-size:12px;cursor:pointer">إدارة</a></div><span id="cPollWrap"></span>
+        <div class="hint">مثلاً زر «المزيد»: لما يضغطه ينرسله شرح تلقائياً، ويوصلك إشعار باسمه</div></div>
       <div class="note warn hidden" id="costNote"></div>
       <div id="dailyNote"></div>
       <button class="btn btn-primary btn-block" id="sendBtn" style="margin-top:12px"><i class="fa-solid fa-paper-plane"></i> إرسال الحملة</button>
@@ -805,6 +975,7 @@ R.campaign = async (el, p) => {
     <div id="hist"></div>`;
 
   let accId = sel.id;
+  loadPolls().then(ps => { const w = $('#cPollWrap'); if (w) w.innerHTML = ps.length ? pollSelect('cPoll', ps) : `<div class="hint"><a onclick="go('poll',{})" style="font-weight:800;color:var(--primary);cursor:pointer">+ سوّي أول أزرار أو استبيان</a></div>`; });
   const numbersEl = $('#numbers');
   const count = () => {
     const a = analyzeNumbers(numbersEl.value, $('#cc').dataset.cc);
@@ -978,6 +1149,7 @@ R.campaign = async (el, p) => {
       if (dripMode === 'custom' && sched.length) fd.append('drip_schedule', JSON.stringify(sched));
     }
     if ($('#sendAt').value) fd.append('send_at', $('#sendAt').value);
+    if ($('#cPoll')?.value) fd.append('poll_tpl', $('#cPoll').value);
     if ($('#media').files[0]) fd.append('media_file', $('#media').files[0]);
     busy($('#sendBtn'), true);
     const r = await api(`/accounts/${accId}/campaign`, { body: fd });
@@ -1194,8 +1366,8 @@ R.accounts = async (el) => {
   const limPill = L.numbers > 0 ? `<span class="pill ${full ? 'pill-orange' : 'pill-blue'} num">${fmt(accs.length)}/${fmt(L.numbers)} أرقام</span>` : `<span class="pill pill-green">${accs.filter(a => a.logged_in).length} متصل</span>`;
   el.innerHTML = head('أرقام واتساب', false, limPill) + `
     <div class="list stagger">${accs.length ? accs.map(a => rowItem({
-      icon: 'fa-brands fa-whatsapp', ic: a.logged_in ? 'ic-wa' : 'ic-red', title: `${esc(a.name)} ${a.otp_sender ? '<span class="pill pill-blue">مرسل الرموز</span>' : ''}`,
-      sub: `<span class="status-dot ${a.logged_in ? 'on' : ''}"></span> ${a.logged_in ? 'متصل وجاهز للإرسال' : 'غير متصل - اضغط للربط'}`, onclick: `go('acc',{id:'${esc(a.id)}'})`,
+      icon: 'fa-brands fa-whatsapp', ic: a.logged_in ? 'ic-wa' : 'ic-red', img: a.logged_in ? avUrl(a.id, 'me') : '', title: `${esc(a.name)} ${a.otp_sender ? '<span class="pill pill-blue">مرسل الرموز</span>' : ''}`,
+      sub: `<span class="status-dot ${a.logged_in ? 'on' : ''}"></span> ${a.logged_in ? (a.wa_name ? esc(a.wa_name) + ' · ' : '') + (a.phone ? '<span class="num" dir="ltr">+' + esc(a.phone) + '</span>' : 'متصل وجاهز للإرسال') : 'غير متصل - اضغط للربط'}`, onclick: `go('acc',{id:'${esc(a.id)}'})`,
     })).join('') : empty('fa-brands fa-whatsapp', 'ما ربطت أي رقم بعد')}</div>
     <div class="section-head">ربط رقم جديد</div>
     ${full ? `<div class="card limit-card"><span class="row-ic ic-orange"><i class="fa-solid fa-lock"></i></span>
@@ -1234,7 +1406,7 @@ R.acc = async (el, p) => {
   const link = el.querySelector('#link');
   function renderLink() {
     if (connected) {
-      link.innerHTML = `<div class="hero" style="background:linear-gradient(135deg,#065f46,#10b981)"><div style="display:flex;align-items:center;gap:12px"><span class="hero-icon"><i class="fa-brands fa-whatsapp"></i></span><div><div style="font-weight:800;font-size:17px">الرقم متصل</div><div class="hero-sub">جاهز لإرسال الحملات والرد الآلي</div></div></div></div>
+      link.innerHTML = `<div class="hero" style="background:linear-gradient(135deg,#065f46,#10b981)"><div style="display:flex;align-items:center;gap:12px">${avatarHtml(a.id, { jid: 'me', name: a.wa_name || a.name }, 'ib-av hero-av')}<div><div style="font-weight:800;font-size:17px">${esc(a.wa_name || 'الرقم متصل')}</div><div class="hero-sub">${a.phone ? '<span class="num" dir="ltr">+' + esc(a.phone) + '</span> · ' : ''}متصل وجاهز للإرسال والرد</div></div></div></div>
         <div class="input-row" style="margin-top:12px;gap:8px"><button class="btn btn-primary" style="flex:1" onclick="go('inbox',{acc:'${esc(a.id)}'})"><i class="fa-solid fa-comments"></i> المحادثات</button>
         <button class="btn btn-soft" style="flex:1" onclick="go('campaign',{acc:'${esc(a.id)}'})"><i class="fa-solid fa-paper-plane"></i> حملة</button></div>`;
       return;
@@ -1587,6 +1759,8 @@ R.account = async (el) => {
     <div class="section-head">حسابي</div>
     <div class="list stagger">
       ${rowItem({ icon: 'fa-solid fa-comments', ic: 'ic-wa', title: 'المحادثات', sub: 'شوف محادثات رقمك ورد عليها، وراسل مجموعة دفعة وحدة', onclick: "go('inbox')" })}
+      ${rowItem({ icon: 'fa-solid fa-hand-pointer', ic: 'ic-teal', title: 'الأزرار والاستبيانات', sub: 'أزرار تنضغط بواتساب، استبيانات وتقييم، ونتائجها', onclick: "go('polls')" })}
+      ${rowItem({ icon: 'fa-solid fa-bell', ic: 'ic-orange', title: 'إشعارات الجوال', sub: 'لما أحد يرد أو يشوف رسالتك أو يضغط زر', onclick: "go('pushset')" })}
       ${rowItem({ icon: 'fa-solid fa-chart-pie', ic: 'ic-purple', title: 'تقارير الحملات', sub: 'النجاح، المشاهدة والردود', onclick: "go('reports')" })}
       ${SET.leads_enabled || ADMIN ? rowItem({ icon: 'fa-solid fa-map-location-dot', ic: 'ic-green', title: 'سحب أرقام من الخرائط', sub: 'أرقام المحلات والشركات حسب المدينة والنشاط', onclick: "go('leads')" }) : ''}
       ${rowItem({ icon: 'fa-solid fa-palette', ic: 'ic-pink', title: 'المظهر', sub: 'الستايل، الوضع الداكن، الخط وحجمه', onclick: "go('appearance')" })}
@@ -1641,7 +1815,7 @@ R.profile = async (el) => {
 R.notifications = async (el) => {
   el.innerHTML = head('الإشعارات', true, `<button class="btn btn-ghost btn-sm" id="bulkBtn"></button>`) + `<div class="swipe-hint"><i class="fa-solid fa-hand-pointer"></i> اسحب الإشعار يمين أو يسار لحذفه</div><div id="nl"><div class="card"><div class="skel" style="height:70px"></div></div></div>`;
   const KIND = { success: ['fa-solid fa-circle-check', 'ic-green'], warning: ['fa-solid fa-triangle-exclamation', 'ic-orange'], info: ['fa-solid fa-bell', 'ic-blue'], announce: ['fa-solid fa-bullhorn', 'ic-pink'] };
-  const LINKS = { wallet: 'الباقات', campaign: 'حملة جديدة', leads: 'سحب الأرقام', accounts: 'أرقامي', reports: 'التقارير', apikeys: 'ربط API' };
+  const LINKS = { inbox: 'المحادثات', polls: 'الأزرار والاستبيانات', wallet: 'الباقات', campaign: 'حملة جديدة', leads: 'سحب الأرقام', accounts: 'أرقامي', reports: 'التقارير', apikeys: 'ربط API' };
   let list = [];
   const bulk = el.querySelector('#bulkBtn');
   function setBulk() {

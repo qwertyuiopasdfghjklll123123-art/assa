@@ -43,4 +43,21 @@ self.addEventListener('fetch', e => {
   }));
 });
 
-self.addEventListener('notificationclick', e => { e.notification.close(); e.waitUntil(clients.openWindow('/app')); });
+// إشعارات الجوال: السيرفر يرسل تنبيه فارغ، وإحنا ناخذ النص من صندوق الإشعارات
+self.addEventListener('push', e => {
+  e.waitUntil((async () => {
+    let msgs = [];
+    try {
+      const sub = await self.registration.pushManager.getSubscription();
+      const r = await fetch('/api/push/inbox', { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'wasel' }, body: JSON.stringify({ endpoint: sub ? sub.endpoint : '' }) });
+      msgs = (await r.json()).messages || [];
+    } catch (err) {}
+    if (!msgs.length) msgs = [{ title: 'واصل', body: 'عندك تنبيه جديد', tag: 'wasel', url: '/app' }];
+    for (const m of msgs) await self.registration.showNotification(m.title, { body: m.body, tag: m.tag + '-' + (m.t || Date.now()), icon: '/pwa-192.png', badge: '/pwa-192.png', vibrate: [200, 100, 200], dir: 'rtl', lang: 'ar', data: { url: m.url || '/app' } });
+  })());
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || '/app';
+  e.waitUntil(clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => { for (const c of cs) if ('focus' in c) return c.focus(); return clients.openWindow(url); }));
+});
