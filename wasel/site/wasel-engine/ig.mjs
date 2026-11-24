@@ -163,7 +163,9 @@ export function setupInstagram({ CFG, hook, routes, sleep }) {
       hook({ type: 'event', owner: a.owner, account: '@' + a.username, title: 'إنستغرام طلب تهدئة @' + a.username, body: 'وقفنا الفحص 30 دقيقة تلقائياً حتى نحمي الحساب', kind: 'warning' });
     }
     a.error = msg.slice(0, 200); saveAccounts();
-    return { ok: false, error: a.error };
+    const le = loginError(e);
+    logError(a.owner, a.username, 'run', { code: le.code, error: le.code === 'unknown' ? 'خطأ من إنستغرام: ' + msg.slice(0, 150) : le.error, detail: le.detail });
+    return { ok: false, error: le.code === 'unknown' ? msg.slice(0, 200) : le.error };
   }
   function schedule(id) {
     stopPolling(id);
@@ -188,18 +190,35 @@ export function setupInstagram({ CFG, hook, routes, sleep }) {
     schedule(id);
     return { ok: true, id, status: 'connected', account: pub(accounts[id]) };
   }
-  function loginError(e) {
-    const n = e?.name || '';
-    if (n === 'IgLoginBadPasswordError') return 'كلمة السر غلط';
-    if (n === 'IgLoginInvalidUserError') return 'اسم المستخدم غير موجود';
-    if (n === 'IgChallengeWrongCodeError') return 'الرمز غلط - تأكد منه وجرب مرة ثانية';
-    if (/Spam|429|wait/i.test(n + e?.message)) return 'إنستغرام طلب الانتظار - جرب بعد شوية (لا تكرر المحاولة كثير)';
-    return 'تعذر تسجيل الدخول: ' + String(e?.message || e).slice(0, 150);
+  /** خطأ الدخول: رسالة واضحة + نوع (للحد ولسجل الأخطاء) + تفاصيل تقنية (بدون كلمة السر) */
+  function loginError(e, password = '') {
+    const n = e?.name || '', m = String(e?.message || e || ''), all = n + ' ' + m;
+    const detail = (n ? n + ': ' : '') + m.split(password || '\u0000').join('***').slice(0, 400);
+    const R = (code, error) => ({ ok: false, code, error, detail });
+    if (n === 'IgLoginBadPasswordError') return R('bad_password', 'كلمة السر غلط. إذا متأكد منها: افتح تطبيق إنستغرام بجوالك، وإذا طلع «هل هذا أنت؟» اضغط «هذا أنا» وجرب مرة ثانية');
+    if (n === 'IgLoginInvalidUserError') return R('invalid_user', 'اسم المستخدم (أو الإيميل/الرقم) غير موجود بإنستغرام');
+    if (n === 'IgChallengeWrongCodeError') return R('wrong_code', 'الرمز غلط - تأكد منه وجرب مرة ثانية');
+    if (n === 'IgCheckpointError' || /checkpoint|challenge/i.test(all)) return R('checkpoint', 'إنستغرام يريد تأكيد من التطبيق: افتح إنستغرام بجوالك ووافق على تسجيل الدخول، وبعدها جرب');
+    if (/Spam|429|Too Many|please wait|few minutes/i.test(all)) return R('wait', 'إنستغرام طلب الانتظار شوية - جرب بعد 10-15 دقيقة (لا تكرر المحاولة هسه)');
+    if (/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ECONNRESET|EAI_AGAIN|socket hang up|tunneling|proxy/i.test(all)) return R('network', 'السيرفر ما كدر يوصل لإنستغرام' + (/proxy|tunneling/i.test(all) ? ' - تأكد من البروكسي' : ' - ممكن الاستضافة تمنع الاتصال، جرب ببروكسي'));
+    if (/Cannot find (package|module)/i.test(all)) return R('setup', 'مكتبة إنستغرام مو منصّبة بالمحرك - من Setup Node.js App اضغط Run NPM Install ثم Restart');
+    return R('unknown', 'تعذر تسجيل الدخول: ' + m.slice(0, 150));
+  }
+  /** نسجل كل خطأ بسجل الموقع (حتى تنفهم المشكلة) */
+  function logError(owner, username, stage, r) {
+    if (owner == null) return;
+    hook({ type: 'ig_error', owner, username, stage, code: r.code || 'unknown', error: r.error, detail: r.detail || '' });
   }
   /** نوع الخطأ: بالكلاس لو موجود، وإلا بالاسم */
   const isErr = (L, e, name) => (typeof L?.[name] === 'function' && e instanceof L[name]) || e?.name === name || e?.constructor?.name === name;
-  async function login({ id, owner, username, password, proxy }) {
-    const L = await loadLib();
+  async function login(args) {
+    let L;
+    try { L = await loadLib(); } catch (e) { const r = loginError(e); logError(args.owner, args.username, 'login', r); return r; }
+    const r = await loginInner(L, args);
+    if (!r.ok && !r.need) logError(args.owner, args.username, 'login', r);
+    return r;
+  }
+  async function loginInner(L, { id, owner, username, password, proxy }) {
     const ig = await newClient();
     ig.state.generateDevice(username);
     if (proxy) ig.state.proxyUrl = proxy;
@@ -214,12 +233,12 @@ export function setupInstagram({ CFG, hook, routes, sleep }) {
         return { ok: false, need: '2fa', id, via: info.totp_two_factor_on ? 'app' : 'sms', hint: info.obfuscated_phone_number || '' };
       }
       if (isErr(L, e, 'IgCheckpointError')) {
-        try { await ig.challenge.auto(true); } catch (e2) { return { ok: false, error: loginError(e2) }; }
+        try { await ig.challenge.auto(true); } catch (e2) { return loginError(e2, password); }
         pending.set(id, { ig, kind: 'challenge', owner, username, proxy, exp: Date.now() + PENDING_TTL });
         const cp = ig.state.challenge?.step_data?.contact_point || '';
         return { ok: false, need: 'challenge', id, via: /@/.test(cp) ? 'email' : 'sms', hint: cp };
       }
-      return { ok: false, error: loginError(e) };
+      return loginError(e, password);
     }
   }
   async function verify(id, code) {
@@ -232,7 +251,7 @@ export function setupInstagram({ CFG, hook, routes, sleep }) {
         await p.ig.challenge.sendSecurityCode(String(code).replace(/\D/g, ''));
       }
       return await finishLogin(id, p.ig, p);
-    } catch (e) { return { ok: false, error: loginError(e) }; }
+    } catch (e) { const r = loginError(e); logError(p.owner, p.username, 'verify', r); return r; }
   }
   // تنظيف تسجيلات الدخول المعلقة
   setInterval(() => { for (const [id, p] of pending) if (p.exp < Date.now()) pending.delete(id); }, 60000);
@@ -262,7 +281,7 @@ export function setupInstagram({ CFG, hook, routes, sleep }) {
     ['POST', /^\/ig\/login$/, async (_m, b) => {
       const id = /^[a-f0-9]{8,32}$/.test(b.id || '') ? b.id : crypto.randomBytes(6).toString('hex');
       const username = String(b.username || '').trim().replace(/^@/, '').toLowerCase();
-      if (!/^[a-z0-9._]{1,30}$/.test(username) || !b.password) return [400, { ok: false, error: 'اكتب اسم المستخدم وكلمة السر' }];
+      if (!/^[a-z0-9._@+-]{1,80}$/.test(username) || !b.password) return [400, { ok: false, code: 'input', error: 'اكتب اسم المستخدم (أو الإيميل/الرقم) وكلمة السر' }];
       const proxy = /^(https?|socks5h?):\/\/[^\s]+$/i.test(b.proxy || '') ? b.proxy : null;
       return [200, await login({ id, owner: b.owner, username, password: String(b.password), proxy })];
     }],

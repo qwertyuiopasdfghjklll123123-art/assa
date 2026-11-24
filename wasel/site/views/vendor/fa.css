@@ -107,6 +107,7 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-stack-2x{font-size:2em}
 .fa-inverse{color:var(--fa-inverse,#fff)}
 .fa-trash-can:before{content:"\f2ed"}
+.fa-user-xmark:before{content:"\f235"}
 .fa-message:before{content:"\f27a"}
 .fa-right-from-bracket:before{content:"\f2f5"}
 .fa-magnifying-glass-location:before{content:"\f689"}
@@ -163,7 +164,6 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-file-contract:before{content:"\f56c"}
 .fa-chart-line:before{content:"\f201"}
 .fa-arrow-right:before{content:"\f061"}
-.fa-screwdriver-wrench:before{content:"\f7d9"}
 .fa-circle-pause:before{content:"\f28b"}
 .fa-money-bill-transfer:before{content:"\e528"}
 .fa-satellite-dish:before{content:"\f7c0"}
@@ -184,7 +184,6 @@ to{-webkit-transform:rotate(1turn);transform:rotate(1turn)}
 .fa-circle-info:before{content:"\f05a"}
 .fa-camera:before{content:"\f030"}
 .fa-check-double:before{content:"\f560"}
-.fa-gear:before{content:"\f013"}
 .fa-clock:before{content:"\f017"}
 .fa-mobile-screen:before{content:"\f3cf"}
 .fa-coins:before{content:"\f51e"}

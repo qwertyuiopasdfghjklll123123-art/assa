@@ -593,27 +593,40 @@ function igAvatar(pic, name, key) {
   const h = [...String(key || name || '')].reduce((s, x) => s + x.charCodeAt(0), 0) % 360;
   return `<span class="ib-av ig-av" style="--h:${h}">${esc([...String(name || '؟').replace('@', '').trim()][0] || '؟')}${pic ? `<img src="${esc(pic)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
 }
+/** خطأ الدخول: صندوق واضح تحت الزر (مع شنو تسوي) */
+const IG_ERR_IC = { bad_password: 'fa-solid fa-key', invalid_user: 'fa-solid fa-user-xmark', locked: 'fa-solid fa-hourglass-half', wait: 'fa-solid fa-hourglass-half', checkpoint: 'fa-solid fa-mobile-screen', network: 'fa-solid fa-wifi', engine: 'fa-solid fa-server', setup: 'fa-solid fa-server', wrong_code: 'fa-solid fa-key' };
+function igShowErr(r, sel = '#igErr') {
+  const box = $(sel); if (!box) return toast(r.error || 'خطأ', 'err');
+  const extra = r.attempts_left != null ? `<div class="ig-err-sub">باقي لك ${r.attempts_left} ${r.attempts_left === 1 ? 'محاولة' : 'محاولات'} قبل الانتظار نص ساعة</div>` : '';
+  box.innerHTML = `<div class="ig-err fade-in"><i class="${IG_ERR_IC[r.code] || 'fa-solid fa-circle-exclamation'}"></i><div><b>${esc(r.error || 'تعذر تسجيل الدخول')}</b>${extra}${r.code === 'engine' || r.code === 'setup' ? '<div class="ig-err-sub">انحفظ بسجل الأخطاء حتى الأدمن يشوفه</div>' : ''}</div></div>`;
+  if (navigator.vibrate) navigator.vibrate(80);
+}
 /** نموذج تسجيل الدخول (+ رمز التحقق لو إنستغرام طلبه) */
 function igLoginForm(box, onDone, preset = '') {
   let step = 'creds', pend = null;
   const draw = () => {
     if (step === 'creds') {
       box.innerHTML = `<div class="card fade-in ig-login">
-        <div class="field"><label>اسم المستخدم</label><input class="input" id="igU" dir="ltr" autocomplete="off" autocapitalize="off" placeholder="username" value="${esc(preset)}"></div>
-        <div class="field"><label>كلمة السر</label><input class="input" id="igP" type="password" dir="ltr" autocomplete="new-password"></div>
+        <div class="field"><label>اسم المستخدم أو الإيميل أو رقم الجوال</label><input class="input" id="igU" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="username" value="${esc(preset || (() => { try { return localStorage.getItem('wasel_ig_user') || ''; } catch (e) { return ''; } })())}"></div>
+        <div class="field"><label>كلمة السر</label><div class="pw-wrap"><input class="input" id="igP" type="password" dir="ltr" autocomplete="new-password"><button type="button" class="pw-eye" id="igEye" aria-label="إظهار"><i class="fa-regular fa-eye"></i></button></div></div>
         <details style="margin-bottom:10px"><summary style="cursor:pointer;font-size:13px;color:var(--text2)"><i class="fa-solid fa-shield-halved"></i> بروكسي (اختياري - يقلل خطر الحظر)</summary>
           <input class="input" id="igX" dir="ltr" style="margin-top:8px" placeholder="http://user:pass@host:port">
           <div class="hint">يفضّل بروكسي سكني من نفس بلد الحساب. بدونه الدخول يكون من سيرفر الاستضافة.</div></details>
         <button class="btn btn-ig btn-block" id="igGo"><i class="fa-brands fa-instagram"></i> تسجيل الدخول</button>
+        <div id="igErr"></div>
         <div class="ig-safe"><i class="fa-solid fa-lock"></i> كلمة السر تنستخدم للدخول بس وما تنحفظ. تنحفظ الجلسة مشفّرة مثل جوال مسجّل دخول.</div></div>`;
+      $('#igEye').onclick = () => { const i = $('#igP'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; $('#igEye').innerHTML = `<i class="fa-regular fa-eye${show ? '-slash' : ''}"></i>`; };
       const go2 = async e => {
         const body = { username: $('#igU').value.trim(), password: $('#igP').value, proxy: $('#igX').value.trim() };
-        if (!body.username || !body.password) return toast('اكتب اسم المستخدم وكلمة السر', 'err');
+        if (!body.username || !body.password) return igShowErr({ error: 'اكتب اسم المستخدم (أو الإيميل/الرقم) وكلمة السر', code: 'input' });
+        try { localStorage.setItem('wasel_ig_user', body.username); } catch (x) {}
+        $('#igErr').innerHTML = '';
         busy(e.target.closest('button'), true);
         const r = await api('/api/ig/login', { body }); busy(e.target.closest('button'), false);
         if (r.ok) { toast('انربط @' + r.account.username + ' ✓', 'ok'); return onDone(r.account.id); }
         if (r.need) { pend = r; step = 'code'; return draw(); }
-        toast(r.error || 'تعذر الدخول', 'err');
+        igShowErr(r);
+        if (r.code === 'bad_password') { $('#igP').value = ''; $('#igP').focus(); }
       };
       $('#igGo').onclick = go2; $('#igP').onkeydown = e => { if (e.key === 'Enter') $('#igGo').click(); };
     } else {
@@ -622,17 +635,22 @@ function igLoginForm(box, onDone, preset = '') {
         <p style="font-size:13.5px;color:var(--text2);margin-bottom:10px">اكتب الرمز اللي وصلك ${esc(via)}</p>
         <input class="input big num" id="igC" inputmode="numeric" maxlength="8" placeholder="••••••" dir="ltr">
         <button class="btn btn-ig btn-block" id="igV" style="margin-top:10px"><i class="fa-solid fa-check"></i> تأكيد</button>
-        <div class="hint" style="text-align:center">الرمز صالح 10 دقايق</div></div>`;
+        <div id="igErr2"></div><div class="hint" style="text-align:center">الرمز صالح 10 دقايق</div></div>`;
       $('#igC').focus();
       $('#igV').onclick = async e => {
         busy(e.target.closest('button'), true);
         const r = await api(`/api/ig/${pend.id}/verify`, { body: { code: $('#igC').value } }); busy(e.target.closest('button'), false);
         if (r.ok) { toast('انربط @' + r.account.username + ' ✓', 'ok'); return onDone(r.account.id); }
-        toast(r.error || 'الرمز غلط', 'err');
+        igShowErr(r, '#igErr2');
       };
     }
   };
   draw();
+}
+function igErrRow(e, stages) {
+  return `<div class="ig-err-row"><div class="ig-err-top"><b>${esc(e.error)}</b><span class="num">${esc(e.at)}</span></div>
+    <div class="ig-err-meta">${e.user ? esc(e.user) + ' · ' : ''}${e.ig ? '@' + esc(e.ig) + ' · ' : ''}${esc(stages[e.stage] || e.stage)} · <span class="num" dir="ltr">${esc(e.code)}</span></div>
+    ${e.detail ? `<code class="ig-err-detail" dir="ltr">${esc(e.detail)}</code>` : ''}</div>`;
 }
 R.ig = async (el, p) => {
   if (chatsLocked(el, 'إنستغرام')) return;
@@ -657,6 +675,12 @@ R.ig = async (el, p) => {
       <div class="ib-search"><i class="fa-solid fa-magnifying-glass"></i><input class="input" id="igQ" placeholder="ابحث باسم المستخدم أو الرسالة..." value="${esc(IG.q)}"></div>
       <div class="ib-bar"><div class="chips" id="igF">${[['all', 'الكل'], ['unread', 'غير مقروءة'], ['request', 'الطلبات'], ['incoming', 'راسلوني'], ['seen', 'شافوا']].map(([k, v]) => `<button class="chip ${IG.filter === k ? 'on' : ''}" data-f="${k}">${v}<b class="num ib-cnt" data-c="${k}"></b></button>`).join('')}</div></div>
       <div id="igList" style="margin-top:10px"><div class="card"><div class="skel" style="height:200px"></div></div></div>`}`;
+  el.insertAdjacentHTML('beforeend', `<details class="card ig-log" id="igLog"><summary><i class="fa-solid fa-bug"></i> سجل الأخطاء <span class="pill pill-gray num" id="igLogN">…</span></summary><div id="igLogBody" class="hint">جاري التحميل...</div></details>`);
+  api('/api/ig/errors').then(r => {
+    if (!r.ok || !$('#igLogN')) return;
+    $('#igLogN').textContent = r.errors.length;
+    $('#igLogBody').innerHTML = (r.fails ? `<div class="note warn" style="margin-bottom:8px">محاولات كلمة سر غلط: ${r.fails}/${r.fail_max} (آخر نص ساعة)</div>` : '') + (r.errors.length ? r.errors.map(e => igErrRow(e, r.stages)).join('') : 'ما فيه أخطاء 👌');
+  });
   if (!accs.length) { igLoginForm($('#igLoginBox'), done); return; }
   $('#igAdd').onclick = () => { const b = $('#igLoginBox'); if (b.innerHTML) { b.innerHTML = ''; return; } igLoginForm(b, done); };
   const re = $('#igRe'); if (re) re.onclick = () => igLoginForm($('#igLoginBox'), done, cur.username);
@@ -2369,6 +2393,8 @@ R.settings = async (el) => {
       <div class="input-row">${f('trial_max_numbers', 'أرقام واتساب بالفترة المجانية', s.trial_max_numbers, 'number', '0 = بدون حد')}${f('trial_daily_messages', 'رسائل يومياً بالفترة المجانية', s.trial_daily_messages, 'number', '0 = بدون حد')}</div>
       ${f('usd_rate', 'سعر الدولار بالدينار (لـ Binance)', s.usd_rate, 'number', 'مثال: 1500 يعني 1$ = 1500 د.ع')}
     </div>
+    <div class="section-head"><i class="fa-brands fa-instagram"></i> سجل أخطاء إنستغرام <a id="igErrClr" style="cursor:pointer">مسح + فك قفل المحاولات</a></div>
+    <div class="card ig-log-admin" id="igErrAdmin"><div class="skel" style="height:60px"></div></div>
     <div class="section-head">رابط الموقع برسائل الفترة المجانية</div>
     <div class="card">
       <div class="note" style="margin-bottom:12px">كل رسالة يرسلها مستخدم بالفترة المجانية (حملات، دفعات يومية، API، رسائل المشتركين) ينضاف بآخرها هذا النص <b>إجبارياً</b>. المشتركين بباقة ما ينضافلهم.</div>
@@ -2420,6 +2446,9 @@ R.settings = async (el) => {
       <div class="field"><label>معلومات المتجر/الخدمة للرد الذكي</label><textarea class="textarea" data-k="ai_knowledge_base">${esc(s.ai_knowledge_base)}</textarea></div>
     </div>
     <button class="btn btn-primary btn-block" id="saveSet" style="margin-top:14px"><i class="fa-solid fa-check"></i> حفظ كل الإعدادات</button>`;
+  const loadIgErr = () => api('/api/admin/ig_errors').then(r => { const b = el.querySelector('#igErrAdmin'); if (b && r.ok) b.innerHTML = r.errors.length ? r.errors.slice(0, 60).map(e => igErrRow(e, r.stages)).join('') : '<div class="hint">ما فيه أخطاء 👌</div>'; });
+  loadIgErr();
+  el.querySelector('#igErrClr').onclick = async () => { const r = await api('/api/admin/ig_errors/clear', { body: {} }); toast(r.ok ? 'انمسح السجل وانفك قفل المحاولات' : r.error, r.ok ? 'ok' : 'err'); loadIgErr(); };
   let logo, devPhoto;
   el.querySelector('#devIn').onchange = async e => { const fl = e.target.files[0]; if (!fl) return; devPhoto = await fileToDataUrl(fl); el.querySelector('#devPrev').innerHTML = `<img src="${devPhoto}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`; };
   el.querySelector('#logoIn').onchange = async e => { const fl = e.target.files[0]; if (!fl) return; logo = await fileToDataUrl(fl); el.querySelector('#logoPrev').innerHTML = `<img src="${logo}">`; };

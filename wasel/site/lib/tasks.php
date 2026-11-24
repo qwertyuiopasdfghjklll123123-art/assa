@@ -238,6 +238,10 @@ function handle_engine_hook(): void
             }
             json_out(['ok' => true]);
             // no break
+        case 'ig_error':
+            ig_log_error((int)($d['owner'] ?? 0), (string)($d['username'] ?? ''), (string)($d['stage'] ?? 'run'), (string)($d['code'] ?? 'unknown'), (string)($d['error'] ?? ''), (string)($d['detail'] ?? ''));
+            json_out(['ok' => true]);
+            // no break
         case 'ig_msg':
             ig_on_messages($d);
             json_out(['ok' => true]);
