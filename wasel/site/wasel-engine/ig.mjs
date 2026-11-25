@@ -200,8 +200,9 @@ export function setupInstagram({ CFG, hook, routes, sleep }) {
     if (n === 'IgChallengeWrongCodeError') return R('wrong_code', 'الرمز غلط - تأكد منه وجرب مرة ثانية');
     if (n === 'IgCheckpointError' || /checkpoint|challenge/i.test(all)) return R('checkpoint', 'إنستغرام يريد تأكيد من التطبيق: افتح إنستغرام بجوالك ووافق على تسجيل الدخول، وبعدها جرب');
     if (/Spam|429|Too Many|please wait|few minutes/i.test(all)) return R('wait', 'إنستغرام طلب الانتظار شوية - جرب بعد 10-15 دقيقة (لا تكرر المحاولة هسه)');
+    if (/qe\/sync|IgNetworkWarmupError/i.test(all)) return R('network', 'إنستغرام ما رد على طلب التجهيز - غالباً الاستضافة تمنع الاتصال بإنستغرام. جرب ببروكسي سكني من نفس البلد');
     if (/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ECONNRESET|EAI_AGAIN|socket hang up|tunneling|proxy/i.test(all)) return R('network', 'السيرفر ما كدر يوصل لإنستغرام' + (/proxy|tunneling/i.test(all) ? ' - تأكد من البروكسي' : ' - ممكن الاستضافة تمنع الاتصال، جرب ببروكسي'));
-    if (/Cannot find (package|module)/i.test(all)) return R('setup', 'مكتبة إنستغرام مو منصّبة بالمحرك - من Setup Node.js App اضغط Run NPM Install ثم Restart');
+    if (/Cannot find (package|module)|ERR_MODULE_NOT_FOUND/i.test(all)) return R('setup', 'مكتبة إنستغرام مو منصّبة بالمحرك. أسهل حل: فك ضغط wasel-ig-libs.zip داخل مجلد wasel-engine (يندمج مع node_modules) ثم Restart. أو من Setup Node.js App اضغط Run NPM Install ثم Restart');
     return R('unknown', 'تعذر تسجيل الدخول: ' + m.slice(0, 150));
   }
   /** نسجل كل خطأ بسجل الموقع (حتى تنفهم المشكلة) */
@@ -223,7 +224,16 @@ export function setupInstagram({ CFG, hook, routes, sleep }) {
     ig.state.generateDevice(username);
     if (proxy) ig.state.proxyUrl = proxy;
     try {
-      await ig.simulate?.preLoginFlow?.().catch(() => {});
+      // warmup: نجيب مفتاح تشفير كلمة السر من إنستغرام (من ترويسات الرد) حتى login ما يستدعي
+      // endpoint qe/sync المهجور اللي يعطي 404. نجرب أكثر من endpoint بهدوء.
+      const warm = [() => ig.launcher.preLoginSync(), () => ig.zr.tokenResult(), () => ig.account.getPrefillCandidates?.()];
+      for (let i = 0; i < warm.length && !ig.state.passwordEncryptionPubKey; i++) {
+        try { await warm[i](); } catch { /* نكمّل للي بعده */ }
+      }
+      if (!ig.state.passwordEncryptionPubKey) {
+        // ما كدرنا نجيب المفتاح: غالباً الاستضافة تمنع إنستغرام أو منطقة محظورة
+        throw Object.assign(new Error('could not reach instagram to warm up (ECONNREFUSED/blocked) - try a proxy'), { name: 'IgNetworkWarmupError' });
+      }
       await ig.account.login(username, password);
       return await finishLogin(id, ig, { owner, username, proxy });
     } catch (e) {
