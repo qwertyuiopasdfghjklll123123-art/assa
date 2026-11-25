@@ -606,16 +606,23 @@ function igLoginForm(box, onDone, preset = '') {
   let step = 'creds', pend = null;
   const draw = () => {
     if (step === 'creds') {
-      box.innerHTML = `<div class="card fade-in ig-login">
-        <div class="field"><label>اسم المستخدم أو الإيميل أو رقم الجوال</label><input class="input" id="igU" dir="ltr" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="username" value="${esc(preset || (() => { try { return localStorage.getItem('wasel_ig_user') || ''; } catch (e) { return ''; } })())}"></div>
-        <div class="field"><label>كلمة السر</label><div class="pw-wrap"><input class="input" id="igP" type="password" dir="ltr" autocomplete="new-password"><button type="button" class="pw-eye" id="igEye" aria-label="إظهار"><i class="fa-regular fa-eye"></i></button></div></div>
-        <details style="margin-bottom:10px"><summary style="cursor:pointer;font-size:13px;color:var(--text2)"><i class="fa-solid fa-shield-halved"></i> بروكسي (اختياري - يقلل خطر الحظر)</summary>
-          <input class="input" id="igX" dir="ltr" style="margin-top:8px" placeholder="http://user:pass@host:port">
-          <div class="hint">يفضّل بروكسي سكني من نفس بلد الحساب. بدونه الدخول يكون من سيرفر الاستضافة.</div></details>
-        <button class="btn btn-ig btn-block" id="igGo"><i class="fa-brands fa-instagram"></i> تسجيل الدخول</button>
-        <div id="igErr"></div>
-        <div class="ig-safe"><i class="fa-solid fa-lock"></i> كلمة السر تنستخدم للدخول بس وما تنحفظ. تنحفظ الجلسة مشفّرة مثل جوال مسجّل دخول.</div></div>`;
-      $('#igEye').onclick = () => { const i = $('#igP'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; $('#igEye').innerHTML = `<i class="fa-regular fa-eye${show ? '-slash' : ''}"></i>`; };
+      box.innerHTML = `<div class="ig-screen fade-in">
+        <div class="ig-scr-lang">العربية</div>
+        <div class="ig-scr-logo"><i class="fa-brands fa-instagram"></i></div>
+        <div class="ig-scr-form">
+          <input class="ig-scr-in" id="igU" dir="rtl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="اسم المستخدم أو البريد الإلكتروني أو رقم الهاتف المحمول" value="${esc(preset || (() => { try { return localStorage.getItem('wasel_ig_user') || ''; } catch (e) { return ''; } })())}">
+          <div class="ig-scr-pw"><input class="ig-scr-in" id="igP" type="password" dir="rtl" autocomplete="off" placeholder="كلمة السر"><button type="button" class="ig-scr-eye" id="igEye">إظهار</button></div>
+          <button class="ig-scr-btn" id="igGo">تسجيل الدخول</button>
+          <div id="igErr"></div>
+          <a class="ig-scr-forgot" href="https://www.instagram.com/accounts/password/reset/" target="_blank" rel="noopener">هل نسيت كلمة السر؟</a>
+          <details class="ig-scr-adv"><summary><i class="fa-solid fa-shield-halved"></i> بروكسي (اختياري - يقلل خطر الحظر)</summary>
+            <input class="ig-scr-in" id="igX" dir="ltr" placeholder="http://user:pass@host:port">
+            <div class="ig-scr-hint">يفضّل بروكسي سكني من نفس بلد الحساب.</div></details>
+        </div>
+        <a class="ig-scr-real" href="https://www.instagram.com/accounts/login/?mtn" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i> افتح صفحة إنستغرام الرسمية</a>
+        <div class="ig-scr-safe"><i class="fa-solid fa-lock"></i> كلمة السر تنستخدم للدخول بس وما تنحفظ. تنحفظ الجلسة مشفّرة مثل جوال مسجّل دخول.</div>
+        <div class="ig-scr-meta"><i class="fa-brands fa-meta"></i> Meta</div></div>`;
+      $('#igEye').onclick = () => { const i = $('#igP'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; $('#igEye').textContent = show ? 'إخفاء' : 'إظهار'; };
       const go2 = async e => {
         const body = { username: $('#igU').value.trim(), password: $('#igP').value, proxy: $('#igX').value.trim() };
         if (!body.username || !body.password) return igShowErr({ error: 'اكتب اسم المستخدم (أو الإيميل/الرقم) وكلمة السر', code: 'input' });
@@ -631,11 +638,12 @@ function igLoginForm(box, onDone, preset = '') {
       $('#igGo').onclick = go2; $('#igP').onkeydown = e => { if (e.key === 'Enter') $('#igGo').click(); };
     } else {
       const via = { app: 'من تطبيق المصادقة (Google Authenticator...)', sms: 'برسالة SMS' + (pend.hint ? ' للرقم ' + pend.hint : ''), email: 'بالإيميل' + (pend.hint ? ' ' + pend.hint : '') }[pend.via] || '';
-      box.innerHTML = `<div class="card fade-in ig-login"><div class="card-title"><i class="fa-solid fa-key"></i> ${pend.need === '2fa' ? 'التحقق بخطوتين' : 'إنستغرام يريد يتأكد إنك أنت'}</div>
-        <p style="font-size:13.5px;color:var(--text2);margin-bottom:10px">اكتب الرمز اللي وصلك ${esc(via)}</p>
-        <input class="input big num" id="igC" inputmode="numeric" maxlength="8" placeholder="••••••" dir="ltr">
-        <button class="btn btn-ig btn-block" id="igV" style="margin-top:10px"><i class="fa-solid fa-check"></i> تأكيد</button>
-        <div id="igErr2"></div><div class="hint" style="text-align:center">الرمز صالح 10 دقايق</div></div>`;
+      box.innerHTML = `<div class="ig-screen fade-in"><div class="ig-scr-logo"><i class="fa-brands fa-instagram"></i></div>
+        <div class="ig-scr-form"><div class="ig-scr-title">${pend.need === '2fa' ? 'أدخل رمز التأكيد' : 'نحتاج نتأكد إنك أنت'}</div>
+        <p class="ig-scr-p">اكتب الرمز اللي وصلك ${esc(via)}</p>
+        <input class="ig-scr-in big num" id="igC" inputmode="numeric" maxlength="8" placeholder="••••••" dir="ltr">
+        <button class="ig-scr-btn" id="igV">تأكيد</button>
+        <div id="igErr2"></div><div class="ig-scr-hint" style="text-align:center">الرمز صالح 10 دقايق</div></div></div>`;
       $('#igC').focus();
       $('#igV').onclick = async e => {
         busy(e.target.closest('button'), true);
