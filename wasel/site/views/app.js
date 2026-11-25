@@ -160,7 +160,6 @@ const PAGES = {
   leads: { nav: 'account', slug: 'leads' }, report: { nav: 'campaign', slug: 'report' },
   coupons: { nav: 'account', admin: true, slug: 'coupons' }, appearance: { nav: 'account', slug: 'appearance' },
   inbox: { nav: 'accounts', slug: 'inbox' }, chat: { nav: 'accounts', slug: 'chat' }, ibcast: { nav: 'accounts', slug: 'broadcast' },
-  ig: { nav: 'account', slug: 'ig' }, igchat: { nav: 'account', slug: 'igchat' },
   polls: { nav: 'account', slug: 'polls' }, poll: { nav: 'account', slug: 'poll' }, pushset: { nav: 'account', slug: 'pushset' },
 };
 const SLUG2PAGE = Object.fromEntries(Object.entries(PAGES).map(([k, v]) => [v.slug ?? k, k]));
@@ -585,205 +584,6 @@ function chatsLocked(el, title) {
     <button class="btn btn-primary btn-block" onclick="go('wallet')"><i class="fa-solid fa-gem"></i> الباقات</button></div>`;
   return true;
 }
-
-// ---------------------------------------------------------------- إنستغرام: الحسابات والمحادثات (تسجيل دخول بالحساب)
-const IG = { acc: null, filter: 'all', q: '', convs: [], sig: '' };
-const igName = c => c.username ? '@' + c.username : (c.name || 'مستخدم إنستغرام');
-function igAvatar(pic, name, key) {
-  const h = [...String(key || name || '')].reduce((s, x) => s + x.charCodeAt(0), 0) % 360;
-  return `<span class="ib-av ig-av" style="--h:${h}">${esc([...String(name || '؟').replace('@', '').trim()][0] || '؟')}${pic ? `<img src="${esc(pic)}" alt="" loading="lazy" onerror="this.remove()">` : ''}</span>`;
-}
-/** خطأ الدخول: صندوق واضح تحت الزر (مع شنو تسوي) */
-const IG_ERR_IC = { bad_password: 'fa-solid fa-key', invalid_user: 'fa-solid fa-user-xmark', locked: 'fa-solid fa-hourglass-half', wait: 'fa-solid fa-hourglass-half', checkpoint: 'fa-solid fa-mobile-screen', network: 'fa-solid fa-wifi', engine: 'fa-solid fa-server', setup: 'fa-solid fa-server', wrong_code: 'fa-solid fa-key' };
-function igShowErr(r, sel = '#igErr') {
-  const box = $(sel); if (!box) return toast(r.error || 'خطأ', 'err');
-  const extra = r.attempts_left != null ? `<div class="ig-err-sub">باقي لك ${r.attempts_left} ${r.attempts_left === 1 ? 'محاولة' : 'محاولات'} قبل الانتظار نص ساعة</div>` : '';
-  box.innerHTML = `<div class="ig-err fade-in"><i class="${IG_ERR_IC[r.code] || 'fa-solid fa-circle-exclamation'}"></i><div><b>${esc(r.error || 'تعذر تسجيل الدخول')}</b>${extra}${r.code === 'engine' || r.code === 'setup' ? '<div class="ig-err-sub">انحفظ بسجل الأخطاء حتى الأدمن يشوفه</div>' : ''}</div></div>`;
-  if (navigator.vibrate) navigator.vibrate(80);
-}
-/** نموذج تسجيل الدخول (+ رمز التحقق لو إنستغرام طلبه) */
-function igLoginForm(box, onDone, preset = '') {
-  let step = 'creds', pend = null;
-  const draw = () => {
-    if (step === 'creds') {
-      box.innerHTML = `<div class="ig-screen fade-in">
-        <div class="ig-scr-lang">العربية</div>
-        <div class="ig-scr-logo"><i class="fa-brands fa-instagram"></i></div>
-        <div class="ig-scr-form">
-          <input class="ig-scr-in" id="igU" dir="rtl" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="اسم المستخدم أو البريد الإلكتروني أو رقم الهاتف المحمول" value="${esc(preset || (() => { try { return localStorage.getItem('wasel_ig_user') || ''; } catch (e) { return ''; } })())}">
-          <div class="ig-scr-pw"><input class="ig-scr-in" id="igP" type="password" dir="rtl" autocomplete="off" placeholder="كلمة السر"><button type="button" class="ig-scr-eye" id="igEye">إظهار</button></div>
-          <button class="ig-scr-btn" id="igGo">تسجيل الدخول</button>
-          <div id="igErr"></div>
-          <a class="ig-scr-forgot" href="https://www.instagram.com/accounts/password/reset/" target="_blank" rel="noopener">هل نسيت كلمة السر؟</a>
-          <details class="ig-scr-adv"><summary><i class="fa-solid fa-shield-halved"></i> بروكسي (اختياري - يقلل خطر الحظر)</summary>
-            <input class="ig-scr-in" id="igX" dir="ltr" placeholder="http://user:pass@host:port">
-            <div class="ig-scr-hint">يفضّل بروكسي سكني من نفس بلد الحساب.</div></details>
-        </div>
-        <a class="ig-scr-real" href="https://www.instagram.com/accounts/login/?mtn" target="_blank" rel="noopener"><i class="fa-brands fa-instagram"></i> افتح صفحة إنستغرام الرسمية</a>
-        <div class="ig-scr-safe"><i class="fa-solid fa-lock"></i> كلمة السر تنستخدم للدخول بس وما تنحفظ. تنحفظ الجلسة مشفّرة مثل جوال مسجّل دخول.</div>
-        <div class="ig-scr-meta"><i class="fa-brands fa-meta"></i> Meta</div></div>`;
-      $('#igEye').onclick = () => { const i = $('#igP'), show = i.type === 'password'; i.type = show ? 'text' : 'password'; $('#igEye').textContent = show ? 'إخفاء' : 'إظهار'; };
-      const go2 = async e => {
-        const body = { username: $('#igU').value.trim(), password: $('#igP').value, proxy: $('#igX').value.trim() };
-        if (!body.username || !body.password) return igShowErr({ error: 'اكتب اسم المستخدم (أو الإيميل/الرقم) وكلمة السر', code: 'input' });
-        try { localStorage.setItem('wasel_ig_user', body.username); } catch (x) {}
-        $('#igErr').innerHTML = '';
-        busy(e.target.closest('button'), true);
-        const r = await api('/api/ig/login', { body }); busy(e.target.closest('button'), false);
-        if (r.ok) { toast('انربط @' + r.account.username + ' ✓', 'ok'); return onDone(r.account.id); }
-        if (r.need) { pend = r; step = 'code'; return draw(); }
-        igShowErr(r);
-        if (r.code === 'bad_password') { $('#igP').value = ''; $('#igP').focus(); }
-      };
-      $('#igGo').onclick = go2; $('#igP').onkeydown = e => { if (e.key === 'Enter') $('#igGo').click(); };
-    } else {
-      const via = { app: 'من تطبيق المصادقة (Google Authenticator...)', sms: 'برسالة SMS' + (pend.hint ? ' للرقم ' + pend.hint : ''), email: 'بالإيميل' + (pend.hint ? ' ' + pend.hint : '') }[pend.via] || '';
-      box.innerHTML = `<div class="ig-screen fade-in"><div class="ig-scr-logo"><i class="fa-brands fa-instagram"></i></div>
-        <div class="ig-scr-form"><div class="ig-scr-title">${pend.need === '2fa' ? 'أدخل رمز التأكيد' : 'نحتاج نتأكد إنك أنت'}</div>
-        <p class="ig-scr-p">اكتب الرمز اللي وصلك ${esc(via)}</p>
-        <input class="ig-scr-in big num" id="igC" inputmode="numeric" maxlength="8" placeholder="••••••" dir="ltr">
-        <button class="ig-scr-btn" id="igV">تأكيد</button>
-        <div id="igErr2"></div><div class="ig-scr-hint" style="text-align:center">الرمز صالح 10 دقايق</div></div></div>`;
-      $('#igC').focus();
-      $('#igV').onclick = async e => {
-        busy(e.target.closest('button'), true);
-        const r = await api(`/api/ig/${pend.id}/verify`, { body: { code: $('#igC').value } }); busy(e.target.closest('button'), false);
-        if (r.ok) { toast('انربط @' + r.account.username + ' ✓', 'ok'); return onDone(r.account.id); }
-        igShowErr(r, '#igErr2');
-      };
-    }
-  };
-  draw();
-}
-function igErrRow(e, stages) {
-  return `<div class="ig-err-row"><div class="ig-err-top"><b>${esc(e.error)}</b><span class="num">${esc(e.at)}</span></div>
-    <div class="ig-err-meta">${e.user ? esc(e.user) + ' · ' : ''}${e.ig ? '@' + esc(e.ig) + ' · ' : ''}${esc(stages[e.stage] || e.stage)} · <span class="num" dir="ltr">${esc(e.code)}</span></div>
-    ${e.detail ? `<code class="ig-err-detail" dir="ltr">${esc(e.detail)}</code>` : ''}</div>`;
-}
-R.ig = async (el, p) => {
-  if (chatsLocked(el, 'إنستغرام')) return;
-  el.innerHTML = head('إنستغرام') + '<div class="card"><div class="skel" style="height:180px"></div></div>';
-  const st = await api('/api/ig');
-  if (!st.ok) { el.innerHTML = head('إنستغرام') + `<div class="card">${empty('fa-solid fa-plug-circle-xmark', st.error || 'تعذر التحميل')}</div>`; return; }
-  const accs = st.accounts;
-  if (p.acc) IG.acc = p.acc;
-  if (!accs.some(a => a.id === IG.acc)) IG.acc = accs[0]?.id || null;
-  const cur = accs.find(a => a.id === IG.acc);
-  const done = id => { IG.acc = id; IG.sig = ''; go('ig', { acc: id }, false); };
-  el.innerHTML = head('إنستغرام', true, accs.length ? `<button class="btn btn-ig btn-sm" id="igAdd"><i class="fa-solid fa-plus"></i> حساب</button>` : '') + `
-    ${st.engine_error ? `<div class="note warn" style="margin-bottom:12px">${esc(st.engine_error)}</div>` : ''}
-    <div id="igLoginBox"></div>
-    ${!accs.length ? `<div class="card ig-empty"><div class="ig-logo"><i class="fa-brands fa-instagram"></i></div><h3>سجّل دخول حساب إنستغرام</h3>
-        <p>شوف كل الرسائل والطلبات من كل حساباتك بمكان واحد، ورد عليها مباشرة. باسم المستخدم وكلمة السر - بدون أي إعداد.</p></div>
-      <div class="note warn ig-risk"><b><i class="fa-solid fa-triangle-exclamation"></i> انتبه:</b> هالطريقة مو رسمية من إنستغرام. ممكن يطلب رمز تحقق أو يقفل الحساب مؤقتاً. قللنا الخطر: فحص هادي كل دقيقة ونص، توقف تلقائي عند أي تحذير، وحد يومي للإرسال. لا تسجّل دخول وتطلع كثير.</div>`
-    : `<div class="ig-accs" id="igAccs">${accs.map(a => `<button class="ig-acc ${a.id === IG.acc ? 'on' : ''} ${a.status !== 'connected' ? 'off' : ''}" data-id="${a.id}">${igAvatar(a.pic, a.username, a.pk)}<span><b>@${esc(a.username)}</b><small>${a.status !== 'connected' ? '⚠️ يحتاج تسجيل دخول' : (a.full_name ? esc(a.full_name) : '') + (a.followers != null ? ' · ' + fmt(a.followers) + ' متابع' : '')}</small></span>${a.unread ? `<b class="ib-badge num">${a.unread}</b>` : ''}</button>`).join('')}</div>
-      ${cur && cur.status !== 'connected' ? `<div class="note warn" style="margin-bottom:10px"><i class="fa-solid fa-right-to-bracket"></i> إنستغرام سجّل خروج @${esc(cur.username)} - <a id="igRe" style="font-weight:800;cursor:pointer">سجّل دخول من جديد</a> (المحادثات المحفوظة باقية)</div>` : ''}
-      ${cur && cur.paused_until > Date.now() ? `<div class="note warn" style="margin-bottom:10px"><i class="fa-solid fa-hourglass-half"></i> الحساب بفترة تهدئة لحمايته - يرجع تلقائياً بعد ${Math.ceil((cur.paused_until - Date.now()) / 60000)} دقيقة</div>` : ''}
-      <div class="ig-tools"><button class="btn btn-soft btn-sm" id="igSync"><i class="fa-solid fa-rotate"></i> تحديث</button><span class="hint" style="margin:0">${cur?.last_poll ? 'آخر فحص ' + ibTime(Math.floor(cur.last_poll / 1000)) : ''}${cur?.proxy ? ' · <i class="fa-solid fa-shield-halved"></i> بروكسي' : ''}</span><span class="spacer"></span><button class="btn btn-ghost btn-sm" id="igDel"><i class="fa-solid fa-link-slash"></i> فصل</button></div>
-      <div class="ib-search"><i class="fa-solid fa-magnifying-glass"></i><input class="input" id="igQ" placeholder="ابحث باسم المستخدم أو الرسالة..." value="${esc(IG.q)}"></div>
-      <div class="ib-bar"><div class="chips" id="igF">${[['all', 'الكل'], ['unread', 'غير مقروءة'], ['request', 'الطلبات'], ['incoming', 'راسلوني'], ['seen', 'شافوا']].map(([k, v]) => `<button class="chip ${IG.filter === k ? 'on' : ''}" data-f="${k}">${v}<b class="num ib-cnt" data-c="${k}"></b></button>`).join('')}</div></div>
-      <div id="igList" style="margin-top:10px"><div class="card"><div class="skel" style="height:200px"></div></div></div>`}`;
-  el.insertAdjacentHTML('beforeend', `<details class="card ig-log" id="igLog"><summary><i class="fa-solid fa-bug"></i> سجل الأخطاء <span class="pill pill-gray num" id="igLogN">…</span></summary><div id="igLogBody" class="hint">جاري التحميل...</div></details>`);
-  api('/api/ig/errors').then(r => {
-    if (!r.ok || !$('#igLogN')) return;
-    $('#igLogN').textContent = r.errors.length;
-    $('#igLogBody').innerHTML = (r.fails ? `<div class="note warn" style="margin-bottom:8px">محاولات كلمة سر غلط: ${r.fails}/${r.fail_max} (آخر نص ساعة)</div>` : '') + (r.errors.length ? r.errors.map(e => igErrRow(e, r.stages)).join('') : 'ما فيه أخطاء 👌');
-  });
-  if (!accs.length) { igLoginForm($('#igLoginBox'), done); return; }
-  $('#igAdd').onclick = () => { const b = $('#igLoginBox'); if (b.innerHTML) { b.innerHTML = ''; return; } igLoginForm(b, done); };
-  const re = $('#igRe'); if (re) re.onclick = () => igLoginForm($('#igLoginBox'), done, cur.username);
-  const filtered = () => { const q = IG.q.toLowerCase(); return IG.convs.filter(c => (IG.filter === 'all' || (IG.filter === 'unread' && c.unread) || (IG.filter === 'request' && c.request) || (IG.filter === 'incoming' && c.incoming) || (IG.filter === 'seen' && c.seen))
-    && (!q || (c.username || '').toLowerCase().includes(q.replace('@', '')) || (c.name || '').toLowerCase().includes(q) || (c.last?.text || '').toLowerCase().includes(q))); };
-  const draw = () => {
-    const box = $('#igList'); if (!box) return;
-    const cnt = { all: IG.convs.length, unread: IG.convs.filter(c => c.unread).length, request: IG.convs.filter(c => c.request).length, incoming: IG.convs.filter(c => c.incoming).length, seen: IG.convs.filter(c => c.seen).length };
-    $$('#igF .ib-cnt').forEach(b => { b.textContent = cnt[b.dataset.c] ? ' ' + fmt(cnt[b.dataset.c]) : ''; });
-    const list = filtered();
-    if (!IG.convs.length) { box.innerHTML = `<div class="card">${empty('fa-regular fa-comments', 'ما فيه محادثات بعد')}<div class="hint" style="text-align:center">الرسائل تنفحص تلقائياً كل دقيقة ونص وتنحفظ هنا</div></div>`; return; }
-    box.innerHTML = `<div class="list ib-list">${list.slice(0, 400).map(c => `<div class="row ib-row" data-t="${esc(c.tid)}">${igAvatar(c.pic, c.username || c.name, c.pk)}
-      <span class="row-body"><span class="row-title">${esc(igName(c))} ${c.request ? '<span class="pill pill-orange">طلب</span>' : ''}</span><span class="row-sub ib-prev">${c.last ? (c.last.me ? (c.seen ? '<i class="fa-solid fa-check-double tick read"></i> ' : '<i class="fa-solid fa-check tick"></i> ') : '') + esc(c.last.text || ({ image: '📷 صورة', video: '🎥 فيديو', audio: '🎤 صوت', story: '📖 ستوري', post: '📌 منشور' })[c.last.type] || '') : ''}</span></span>
-      <span class="ib-end"><small class="${c.unread ? 'un' : ''}">${ibTime(c.ts)}</small>${c.unread ? `<b class="ib-badge num">${c.unread}</b>` : ''}</span></div>`).join('') || '<div class="hint" style="padding:16px;text-align:center">ما فيه نتائج</div>'}</div>`;
-  };
-  async function load() {
-    const r = await api(`/api/ig/${IG.acc}/convs`);
-    if (!r.ok) { $('#igList').innerHTML = `<div class="card">${empty('fa-solid fa-triangle-exclamation', r.error)}</div>`; return; }
-    const sig = JSON.stringify(r.convs);
-    if (sig === IG.sig && $('#igList .ib-list')) return;
-    IG.sig = sig; IG.convs = r.convs; draw();
-  }
-  $('#igAccs').addEventListener('click', e => { const b = e.target.closest('[data-id]'); if (!b) return; IG.acc = b.dataset.id; IG.sig = ''; IG.convs = []; go('ig', { acc: IG.acc }, false); });
-  $('#igList').addEventListener('click', e => { const r = e.target.closest('[data-t]'); if (r) go('igchat', { acc: IG.acc, tid: r.dataset.t }); });
-  $('#igQ').addEventListener('input', e => { IG.q = e.target.value.trim(); draw(); });
-  $('#igF').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; IG.filter = b.dataset.f; $$('#igF .chip').forEach(x => x.classList.toggle('on', x === b)); draw(); });
-  $('#igSync').onclick = async e => { busy(e.target.closest('button'), true); const r = await api(`/api/ig/${IG.acc}/sync`, { body: {} }); busy(e.target.closest('button'), false); toast(r.ok ? 'تحدّث ✓' : r.error, r.ok ? 'ok' : 'err'); IG.sig = ''; load(); };
-  $('#igDel').onclick = e => confirmTap(e.target.closest('button'), async () => { await api(`/api/ig/${IG.acc}/delete`, { body: {} }); IG.acc = null; toast('انفصل الحساب وانحذفت جلسته', 'ok'); go('ig', {}, false); }, 'فصل الحساب وحذف جلسته ومحادثاته المحفوظة؟');
-  await load();
-  S.timers.push(setInterval(load, 10000));
-};
-
-R.igchat = async (el, p) => {
-  if (chatsLocked(el, 'إنستغرام')) return;
-  if (!p.acc || !p.tid) return go('ig', {}, false);
-  document.body.classList.add('in-chat');
-  let last = 0, msgs = [], th = null;
-  const seenIds = new Set();
-  el.innerHTML = `<div class="ch-head"><button class="back" onclick="goBack()"><i class="fa-solid fa-arrow-right"></i></button>
-      <span id="igAv">${igAvatar(null, '؟', p.tid)}</span><div style="flex:1;min-width:0"><b id="igN">...</b><div class="row-sub" id="igSub"></div></div>
-      <span class="ig-badge"><i class="fa-brands fa-instagram"></i></span></div>
-    <div id="igReq"></div>
-    <div class="ch-msgs" id="igMsgs"><div class="skel" style="height:120px;border-radius:18px"></div></div>`;
-  document.body.insertAdjacentHTML('beforeend', `<div class="ch-compose portal"><div class="ch-row"><textarea id="igTxt" rows="1" maxlength="1000" placeholder="اكتب رسالة..."></textarea><button class="ch-send ig" id="igSend" aria-label="إرسال"><i class="fa-solid fa-paper-plane"></i></button></div></div>`);
-  const box = $('#igMsgs');
-  const bubble = m => {
-    const d = new Date(m.ts * 1000);
-    let body = '';
-    if (m.type === 'image' && m.url) body = `<a href="${esc(m.url)}" target="_blank" rel="noopener"><img class="ig-img" src="${esc(m.url)}" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode('📷 صورة'))"></a>`;
-    else if (m.type === 'video') body = m.url ? `<a class="ch-doc" href="${esc(m.url)}" target="_blank" rel="noopener"><i class="fa-solid fa-video"></i> فيديو</a>` : '<span class="hint">🎥 فيديو</span>';
-    else if (m.type === 'audio') body = m.url ? `<audio src="${esc(m.url)}" controls></audio>` : '<span class="hint">🎤 رسالة صوتية</span>';
-    else if (m.type === 'story') body = '<span class="hint"><i class="fa-solid fa-circle-play"></i> رد على ستوري</span>';
-    else if (m.type === 'post') body = m.url ? `<img class="ig-img" src="${esc(m.url)}" alt="" loading="lazy" onerror="this.remove()">` : '';
-    return `<div class="ch-b ${m.me ? 'me ig' : 'them'}">${body}${m.text ? `<div class="ch-text">${esc(m.text)}</div>` : ''}<span class="ch-t num">${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}</span></div>`;
-  };
-  const render = () => {
-    const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 80 || !box.dataset.r;
-    let out = '', lastDay = '';
-    for (const m of msgs) { const dl = new Date(m.ts * 1000).toDateString(); if (dl !== lastDay) { out += `<div class="ch-day"><span>${new Date(m.ts * 1000).toLocaleDateString('ar-IQ', { day: 'numeric', month: 'long' })}</span></div>`; lastDay = dl; } out += bubble(m); }
-    const lastMe = [...msgs].reverse().find(m => m.me);
-    if (th && lastMe && th.seen_ts >= lastMe.ts && !lastMe._tmp) out += '<div class="ig-seen">شاف <i class="fa-solid fa-eye"></i></div>';
-    box.innerHTML = out || '<div class="hint" style="text-align:center;padding:30px">ما فيه رسائل محفوظة</div>';
-    box.dataset.r = 1; if (atBottom) box.scrollTop = box.scrollHeight;
-  };
-  async function load(first) {
-    if (S.page !== 'igchat') return;
-    const r = await api(`/api/ig/${p.acc}/conv/${encodeURIComponent(p.tid)}?since=${first ? 0 : Math.max(0, last - 120)}&fresh=1`);
-    if (!r.ok) { if (first) box.innerHTML = `<div class="hint" style="text-align:center;padding:30px">${esc(r.error)}</div>`; return; }
-    th = r.thread;
-    $('#igN').textContent = igName(th); $('#igSub').textContent = th.username && th.name ? th.name : '';
-    if (first) $('#igAv').innerHTML = igAvatar(th.pic, th.username || th.name, th.pk);
-    $('#igReq').innerHTML = th.request ? `<div class="note warn ig-reqbar"><span><i class="fa-solid fa-inbox"></i> هذا طلب مراسلة - الشخص ما يعرف إنك شفته لحد ما تقبله أو ترد</span><button class="btn btn-ig btn-sm" id="igAcc">قبول</button></div>` : '';
-    const ab = $('#igAcc'); if (ab) ab.onclick = async e => { busy(e.target, true); const x = await api(`/api/ig/${p.acc}/approve`, { body: { tid: p.tid } }); busy(e.target, false); toast(x.ok ? 'انقبل الطلب ✓' : x.error, x.ok ? 'ok' : 'err'); if (x.ok) load(false); };
-    let added = first;
-    for (const m of r.messages) { if (seenIds.has(m.id)) continue; seenIds.add(m.id); msgs = msgs.filter(x => !(x._tmp && m.me && x.text === m.text)); msgs.push(m); added = true; }
-    msgs.sort((a, b) => a.ts - b.ts);
-    if (msgs.length) last = msgs[msgs.length - 1].ts;
-    if (added) render();
-  }
-  const ta = $d('#igTxt');
-  ta.addEventListener('input', () => { ta.style.height = 'auto'; ta.style.height = Math.min(140, ta.scrollHeight) + 'px'; });
-  ta.addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !('ontouchstart' in window)) { e.preventDefault(); $d('#igSend').click(); } });
-  $d('#igSend').onclick = async () => {
-    const text = ta.value.trim(); if (!text) return;
-    const tmp = { id: 'tmp' + Date.now(), _tmp: 1, me: true, ts: Math.floor(Date.now() / 1000), type: 'text', text };
-    msgs.push(tmp); render(); ta.value = ''; ta.style.height = 'auto';
-    busy($d('#igSend'), true);
-    const r = await api(`/api/ig/${p.acc}/send`, { body: { tid: p.tid, text } });
-    busy($d('#igSend'), false);
-    if (!r.ok) { msgs = msgs.filter(m => m !== tmp); render(); ta.value = text; return toast(r.error, 'err'); }
-    setTimeout(() => load(false), 800);
-  };
-  await load(true);
-  S.timers.push(setInterval(() => load(false), 25000)); // هادي (المحرك ما يسأل إنستغرام أكثر من مرة كل 20 ثانية)
-};
 
 // ---------------------------------------------------------------- المحادثات (صندوق واتساب)
 const $d = s => document.querySelector(s); // للعناصر الثابتة المضافة للـ body
@@ -1971,7 +1771,6 @@ R.account = async (el) => {
     <div class="section-head">حسابي</div>
     <div class="list stagger">
       ${rowItem({ icon: 'fa-solid fa-comments', ic: 'ic-wa', title: 'محادثات واتساب' + (ME.chats_allowed ? '' : ' <i class="fa-solid fa-lock" style="font-size:11px;color:var(--text3)"></i>'), sub: 'شوف محادثات رقمك ورد عليها، وراسل مجموعة دفعة وحدة', onclick: "go('inbox')" })}
-      ${rowItem({ icon: 'fa-brands fa-instagram', ic: 'ic-ig', title: 'إنستغرام' + (ME.chats_allowed ? '' : ' <i class="fa-solid fa-lock" style="font-size:11px;color:var(--text3)"></i>'), sub: 'اربط حساباتك وشوف كل الرسائل والطلبات ورد عليها', onclick: "go('ig')" })}
       ${rowItem({ icon: 'fa-solid fa-hand-pointer', ic: 'ic-teal', title: 'الأزرار والاستبيانات', sub: 'أزرار تنضغط بواتساب، استبيانات وتقييم، ونتائجها', onclick: "go('polls')" })}
       ${rowItem({ icon: 'fa-solid fa-bell', ic: 'ic-orange', title: 'إشعارات الجوال', sub: 'لما أحد يرد أو يشوف رسالتك أو يضغط زر', onclick: "go('pushset')" })}
       ${rowItem({ icon: 'fa-solid fa-chart-pie', ic: 'ic-purple', title: 'تقارير الحملات', sub: 'النجاح، المشاهدة والردود', onclick: "go('reports')" })}
@@ -2028,7 +1827,7 @@ R.profile = async (el) => {
 R.notifications = async (el) => {
   el.innerHTML = head('الإشعارات', true, `<button class="btn btn-ghost btn-sm" id="bulkBtn"></button>`) + `<div class="swipe-hint"><i class="fa-solid fa-hand-pointer"></i> اسحب الإشعار يمين أو يسار لحذفه</div><div id="nl"><div class="card"><div class="skel" style="height:70px"></div></div></div>`;
   const KIND = { success: ['fa-solid fa-circle-check', 'ic-green'], warning: ['fa-solid fa-triangle-exclamation', 'ic-orange'], info: ['fa-solid fa-bell', 'ic-blue'], announce: ['fa-solid fa-bullhorn', 'ic-pink'] };
-  const LINKS = { ig: 'إنستغرام', inbox: 'المحادثات', polls: 'الأزرار والاستبيانات', wallet: 'الباقات', campaign: 'حملة جديدة', leads: 'سحب الأرقام', accounts: 'أرقامي', reports: 'التقارير', apikeys: 'ربط API' };
+  const LINKS = { inbox: 'المحادثات', polls: 'الأزرار والاستبيانات', wallet: 'الباقات', campaign: 'حملة جديدة', leads: 'سحب الأرقام', accounts: 'أرقامي', reports: 'التقارير', apikeys: 'ربط API' };
   let list = [];
   const bulk = el.querySelector('#bulkBtn');
   function setBulk() {
@@ -2401,8 +2200,6 @@ R.settings = async (el) => {
       <div class="input-row">${f('trial_max_numbers', 'أرقام واتساب بالفترة المجانية', s.trial_max_numbers, 'number', '0 = بدون حد')}${f('trial_daily_messages', 'رسائل يومياً بالفترة المجانية', s.trial_daily_messages, 'number', '0 = بدون حد')}</div>
       ${f('usd_rate', 'سعر الدولار بالدينار (لـ Binance)', s.usd_rate, 'number', 'مثال: 1500 يعني 1$ = 1500 د.ع')}
     </div>
-    <div class="section-head"><i class="fa-brands fa-instagram"></i> سجل أخطاء إنستغرام <a id="igErrClr" style="cursor:pointer">مسح + فك قفل المحاولات</a></div>
-    <div class="card ig-log-admin" id="igErrAdmin"><div class="skel" style="height:60px"></div></div>
     <div class="section-head">رابط الموقع برسائل الفترة المجانية</div>
     <div class="card">
       <div class="note" style="margin-bottom:12px">كل رسالة يرسلها مستخدم بالفترة المجانية (حملات، دفعات يومية، API، رسائل المشتركين) ينضاف بآخرها هذا النص <b>إجبارياً</b>. المشتركين بباقة ما ينضافلهم.</div>
@@ -2454,9 +2251,6 @@ R.settings = async (el) => {
       <div class="field"><label>معلومات المتجر/الخدمة للرد الذكي</label><textarea class="textarea" data-k="ai_knowledge_base">${esc(s.ai_knowledge_base)}</textarea></div>
     </div>
     <button class="btn btn-primary btn-block" id="saveSet" style="margin-top:14px"><i class="fa-solid fa-check"></i> حفظ كل الإعدادات</button>`;
-  const loadIgErr = () => api('/api/admin/ig_errors').then(r => { const b = el.querySelector('#igErrAdmin'); if (b && r.ok) b.innerHTML = r.errors.length ? r.errors.slice(0, 60).map(e => igErrRow(e, r.stages)).join('') : '<div class="hint">ما فيه أخطاء 👌</div>'; });
-  loadIgErr();
-  el.querySelector('#igErrClr').onclick = async () => { const r = await api('/api/admin/ig_errors/clear', { body: {} }); toast(r.ok ? 'انمسح السجل وانفك قفل المحاولات' : r.error, r.ok ? 'ok' : 'err'); loadIgErr(); };
   let logo, devPhoto;
   el.querySelector('#devIn').onchange = async e => { const fl = e.target.files[0]; if (!fl) return; devPhoto = await fileToDataUrl(fl); el.querySelector('#devPrev').innerHTML = `<img src="${devPhoto}" style="width:100%;height:100%;border-radius:50%;object-fit:cover">`; };
   el.querySelector('#logoIn').onchange = async e => { const fl = e.target.files[0]; if (!fl) return; logo = await fileToDataUrl(fl); el.querySelector('#logoPrev').innerHTML = `<img src="${logo}">`; };

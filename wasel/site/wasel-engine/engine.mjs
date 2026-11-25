@@ -27,7 +27,6 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import pino from 'pino';
 import QRCode from 'qrcode';
-import { setupInstagram } from './ig.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -1348,9 +1347,6 @@ const routes = [
     return [200, { ok: true }];
   }],
 ];
-
-// إنستغرام (تسجيل دخول بالحساب) - يضيف مساراته /ig/...
-setupInstagram({ CFG, hook, routes, sleep });
 
 const server = http.createServer(async (req, res) => {
   try {
