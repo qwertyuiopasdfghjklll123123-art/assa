@@ -672,3 +672,9 @@ body.in-chat main{padding-bottom:0}
 [data-font=el-messiri]{--font:'W-el-messiri','IBM Plex Sans Arabic',system-ui,sans-serif}
 [data-font=marhey]{--font:'W-marhey','IBM Plex Sans Arabic',system-ui,sans-serif}
 [data-font=rakkas]{--font:'W-rakkas','IBM Plex Sans Arabic',system-ui,sans-serif}
+
+/* الخدمات (تصدير/استيراد) */
+.svc-row{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px dashed var(--line2)}
+.svc-row:last-of-type{border-bottom:0}
+.svc-acts{display:flex;gap:6px;flex:none}
+.svc-acts .icon-btn{width:36px;height:36px}

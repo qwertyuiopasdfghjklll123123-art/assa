@@ -2312,6 +2312,8 @@ R.backup = async (el) => {
       ${rowItem({ icon: 'fa-solid fa-download', ic: 'ic-blue', title: 'تنزيل نسخة JSON', sub: 'كل المستخدمين والأرصدة والإعدادات', onclick: "location.href='/api/admin/backup/download'" })}
       <label class="row"><input type="file" accept=".json,application/json" id="imp" hidden><span class="row-ic ic-orange"><i class="fa-solid fa-upload"></i></span><span class="row-body"><span class="row-title">استيراد نسخة JSON</span><span class="row-sub">يستبدل البيانات الحالية (تنحفظ نسخة قبلها)</span></span><span class="row-end"><span class="chev"><i class="fa-solid fa-chevron-left"></i></span></span></label>
     </div>
+    <div class="section-head">الخدمات (كل خدمة بملف منفصل)</div>
+    <div class="card" id="svcBox"><div class="skel" style="height:120px"></div></div>
     <div class="section-head">بوت تيليجرام</div>
     <div class="card">
       <div class="numbered"><b>1</b><span>أنشئ بوت من <b>@BotFather</b> وانسخ التوكن</span></div>
@@ -2321,7 +2323,7 @@ R.backup = async (el) => {
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px"><span class="row-ic ic-cyan"><i class="fa-solid fa-clock"></i></span><div style="flex:1"><b>نسخة تلقائية يومية</b><div class="row-sub">آخر نسخة: ${esc(s.tg_last_backup || '—')}</div></div><label class="switch"><input type="checkbox" id="tga" ${s.tg_auto_backup ? 'checked' : ''}><span></span></label></div>
       <button class="btn btn-primary btn-block" id="tgs">حفظ</button>
       <div class="input-row" style="margin-top:8px"><button class="btn btn-soft btn-sm" style="flex:1" id="tgn"><i class="fa-brands fa-telegram"></i> إرسال نسخة الآن</button><button class="btn btn-ghost btn-sm" style="flex:1" id="tgw"><i class="fa-solid fa-link"></i> تفعيل الاستيراد</button></div>
-      <div class="note" style="margin-top:12px">بعد «تفعيل الاستيراد»: أرسل <b>/backup</b> للبوت لتستلم نسخة، أو أرسل له ملف JSON حتى يستورده للموقع مباشرة (من محادثتك فقط).</div>
+      <div class="note" style="margin-top:12px">بعد «تفعيل الاستيراد»: أرسل <b>/services</b> للبوت تطلعلك أزرار الخدمات (تنزّل كل خدمة بملف)، أو <b>/backup</b> لنسخة كاملة. وأي ملف JSON ترسله للبوت يستورده تلقائياً - خدمة كانت أو نسخة كاملة (من محادثتك فقط).</div>
     </div>`;
   el.querySelector('#imp').onchange = async e => {
     const fl = e.target.files[0]; if (!fl) return;
@@ -2329,6 +2331,28 @@ R.backup = async (el) => {
     const r = await api('/api/admin/backup/import', { body: fd });
     toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err');
   };
+  // ---- الخدمات: تصدير/استيراد كل خدمة بملف (تنزيل، استيراد، إرسال للبوت)
+  const SVC_IC = { plans: 'fa-solid fa-gem', payments: 'fa-solid fa-credit-card', coupons: 'fa-solid fa-ticket', polls: 'fa-solid fa-hand-pointer' };
+  async function loadSvc() {
+    const r = await api('/api/admin/services'); const box = el.querySelector('#svcBox'); if (!box || !r.ok) return;
+    box.innerHTML = `<div class="note" style="margin-bottom:10px"><i class="fa-solid fa-circle-info"></i> كل خدمة تنزّل كملف JSON لحالها. الاستيراد يدمج بالمعرف (يحدّث الموجود ويضيف الجديد) بدون ما يمسح الباقي.</div>
+      ${r.services.map(sv => `<div class="svc-row"><span class="row-ic ic-teal"><i class="${SVC_IC[sv.key] || 'fa-solid fa-cube'}"></i></span>
+        <div style="flex:1;min-width:0"><b>${esc(sv.label)}</b><div class="row-sub num">${fmt(sv.count)} عنصر</div></div>
+        <div class="svc-acts"><a class="icon-btn" href="/api/admin/service/${sv.key}/download" title="تنزيل"><i class="fa-solid fa-download"></i></a>
+          <label class="icon-btn" title="استيراد"><input type="file" accept=".json,application/json" data-impsvc hidden><i class="fa-solid fa-upload"></i></label>
+          <button class="icon-btn" data-tgsvc="${sv.key}" title="إرسال للبوت"><i class="fa-brands fa-telegram"></i></button></div></div>`).join('')}
+      <div class="input-row" style="margin-top:12px;gap:8px"><a class="btn btn-soft btn-sm" style="flex:1" href="/api/admin/service/plans/download" onclick="['payments','coupons','polls'].forEach((k,i)=>setTimeout(()=>{const a=document.createElement('a');a.href='/api/admin/service/'+k+'/download';a.click();},400*(i+1)))"><i class="fa-solid fa-download"></i> تنزيل الكل</a>
+        <button class="btn btn-soft btn-sm" style="flex:1" id="svcTgAll"><i class="fa-brands fa-telegram"></i> إرسال الكل للبوت</button></div>`;
+    box.querySelectorAll('[data-impsvc]').forEach(inp => inp.onchange = async e => {
+      const fl = e.target.files[0]; if (!fl) return;
+      const fd = new FormData(); fd.append('file', fl);
+      const rr = await api('/api/admin/service/import', { body: fd });
+      toast(rr.ok ? rr.msg : rr.error, rr.ok ? 'ok' : 'err'); e.target.value = ''; if (rr.ok) loadSvc();
+    });
+    box.querySelectorAll('[data-tgsvc]').forEach(b => b.onclick = async () => { busy(b, true); const rr = await api(`/api/admin/service/${b.dataset.tgsvc}/telegram`, { body: {} }); busy(b, false); toast(rr.ok ? 'انرسلت للبوت ✓' : rr.error, rr.ok ? 'ok' : 'err'); });
+    const all = el.querySelector('#svcTgAll'); if (all) all.onclick = async () => { busy(all, true); const rr = await api('/api/admin/service/all/telegram', { body: {} }); busy(all, false); toast(rr.ok ? rr.msg : rr.error, rr.ok ? 'ok' : 'err'); };
+  }
+  loadSvc();
   el.querySelector('#tgs').onclick = async e => { busy(e.target.closest('button'), true); const r = await api('/api/admin/settings', { body: { tg_token: el.querySelector('#tgt').value, tg_chat_id: el.querySelector('#tgc').value, tg_auto_backup: el.querySelector('#tga').checked } }); busy(e.target.closest('button'), false); toast(r.ok ? 'تم الحفظ' : r.error, r.ok ? 'ok' : 'err'); };
   el.querySelector('#tgn').onclick = async e => { busy(e.target.closest('button'), true); const r = await api('/api/admin/backup/telegram', { body: {} }); busy(e.target.closest('button'), false); toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err'); };
   el.querySelector('#tgw').onclick = async e => { busy(e.target.closest('button'), true); const r = await api('/api/admin/telegram/webhook', { body: {} }); busy(e.target.closest('button'), false); toast(r.ok ? r.msg : r.error, r.ok ? 'ok' : 'err'); };

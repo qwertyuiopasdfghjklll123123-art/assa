@@ -641,6 +641,43 @@ function api_routes(): array
             [$ok, $m] = tg_send_backup();
             $ok ? json_out(['ok' => true, 'msg' => $m]) : json_err($m);
         }],
+        // ------------------------------------------------ الخدمات (تصدير/استيراد كل خدمة بملف)
+        ['GET', '#^/api/admin/services$#', function () {
+            require_admin();
+            json_out(['ok' => true, 'services' => svc_list()]);
+        }],
+        ['GET', '#^/api/admin/service/([a-z]+)/download$#', function ($key) {
+            require_admin();
+            if (!isset(SERVICE_DEFS[$key])) {
+                json_err('خدمة غير معروفة', 404);
+            }
+            header('Content-Type: application/json; charset=utf-8');
+            header('Content-Disposition: attachment; filename="wasel-' . $key . '-' . date('Ymd-His') . '.json"');
+            echo svc_export_json($key);
+        }],
+        ['POST', '#^/api/admin/service/import$#', function () {
+            require_admin();
+            $f = $_FILES['file'] ?? null;
+            if (!$f || $f['error'] !== UPLOAD_ERR_OK) {
+                json_err('اختر ملف JSON');
+            }
+            if ($f['size'] > 20 * 1024 * 1024) {
+                json_err('الملف كبير جداً');
+            }
+            $content = (string)file_get_contents($f['tmp_name']);
+            if (!svc_detect($content)) {
+                json_err('الملف مو خدمة صالحة من واصل (للنسخة الكاملة استخدم زر استيراد النسخة)');
+            }
+            $mode = (($_POST['mode'] ?? '') === 'replace') ? 'replace' : 'merge';
+            admin_log('service_import', $f['name']);
+            [$ok, $m] = svc_import($content, $mode);
+            $ok ? json_out(['ok' => true, 'msg' => $m]) : json_err($m);
+        }],
+        ['POST', '#^/api/admin/service/([a-z]+)/telegram$#', function ($key) {
+            require_admin();
+            [$ok, $m] = $key === 'all' ? tg_send_all_services() : tg_send_service($key);
+            $ok ? json_out(['ok' => true, 'msg' => $m]) : json_err($m);
+        }],
         ['POST', '#^/api/admin/telegram/webhook$#', function () {
             require_admin();
             $url = tg_webhook_url(site_base_url());

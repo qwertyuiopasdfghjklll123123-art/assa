@@ -74,7 +74,8 @@ function tg_api(string $method, array $params = [], bool $multipart = false): ?a
     if ($token === '') {
         return null;
     }
-    $ch = curl_init("https://api.telegram.org/bot{$token}/{$method}");
+    $base = defined('TG_API_BASE') ? TG_API_BASE : 'https://api.telegram.org';
+    $ch = curl_init("{$base}/bot{$token}/{$method}");
     curl_setopt_array($ch, [CURLOPT_POST => true, CURLOPT_RETURNTRANSFER => true, CURLOPT_TIMEOUT => 60,
         CURLOPT_POSTFIELDS => $multipart ? $params : http_build_query($params)]);
     $resp = curl_exec($ch);
@@ -129,10 +130,26 @@ function tg_handle_update(array $u): void
     }
     $chat = $s['tg_chat_id'];
     $text = trim((string)($msg['text'] ?? ''));
-    if (in_array($text, ['/backup', '/export', 'نسخة'], true)) {
+    // القائمة الرئيسية + أوامر الخدمات
+    if (in_array($text, ['/start', '/services', '/خدمات', 'خدمات', '/help'], true)) {
+        $lines = array_map(fn($x) => "{$x['emoji']} {$x['label']}: {$x['count']}", svc_list());
+        tg_api('sendMessage', ['chat_id' => $chat, 'text' => "📋 خدمات واصل - اختر من الأزرار:\n" . implode("\n", $lines) . "\n\nأو أرسل أي ملف JSON لاستيراده.", 'reply_markup' => json_encode(tg_services_keyboard())]);
+        return;
+    }
+    if (in_array($text, ['🗄️ نسخة كاملة', '/backup', '/export', 'نسخة'], true)) {
         [$ok, $m] = tg_send_backup();
+        tg_api('sendMessage', ['chat_id' => $chat, 'text' => ($ok ? '✅ ' : '❌ ') . $m]);
+        return;
+    }
+    if (in_array($text, ['📦 كل الخدمات', '/export_all'], true)) {
+        [$ok, $m] = tg_send_all_services();
+        tg_api('sendMessage', ['chat_id' => $chat, 'text' => ($ok ? '✅ ' : '❌ ') . $m]);
+        return;
+    }
+    if ($text !== '' && ($svc = tg_match_service($text))) {
+        [$ok, $m] = tg_send_service($svc);
         if (!$ok) {
-            tg_api('sendMessage', ['chat_id' => $chat, 'text' => $m]);
+            tg_api('sendMessage', ['chat_id' => $chat, 'text' => '❌ ' . $m]);
         }
         return;
     }
@@ -144,14 +161,14 @@ function tg_handle_update(array $u): void
         }
         $f = tg_api('getFile', ['file_id' => $doc['file_id']]);
         $path = $f['result']['file_path'] ?? null;
-        $content = $path ? @file_get_contents('https://api.telegram.org/file/bot' . $s['tg_token'] . '/' . $path) : false;
+        $content = $path ? @file_get_contents((defined('TG_FILE_BASE') ? TG_FILE_BASE : 'https://api.telegram.org/file') . '/bot' . $s['tg_token'] . '/' . $path) : false;
         if ($content === false) {
             tg_api('sendMessage', ['chat_id' => $chat, 'text' => 'تعذر تنزيل الملف']);
             return;
         }
-        [$ok, $m] = backup_import($content);
+        [$ok, $m] = svc_detect($content) ? svc_import($content) : backup_import($content);
         tg_api('sendMessage', ['chat_id' => $chat, 'text' => ($ok ? '✅ ' : '❌ ') . $m]);
         return;
     }
-    tg_api('sendMessage', ['chat_id' => $chat, 'text' => "أوامر البوت:\n/backup - إرسال نسخة احتياطية الآن\nأو أرسل ملف JSON لاستيراده"]);
+    tg_api('sendMessage', ['chat_id' => $chat, 'text' => '📋 خدمات واصل - اختر من الأزرار، أو أرسل ملف JSON لاستيراده.', 'reply_markup' => json_encode(tg_services_keyboard())]);
 }

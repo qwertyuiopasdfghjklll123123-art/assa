@@ -14,6 +14,7 @@ require __DIR__ . '/lib/xlsx.php';
 require __DIR__ . '/lib/tasks.php';
 require __DIR__ . '/lib/wallet.php';
 require __DIR__ . '/lib/backup.php';
+require __DIR__ . '/lib/services.php';
 require __DIR__ . '/lib/api.php';
 require __DIR__ . '/lib/leads.php';
 require __DIR__ . '/lib/drip.php';
