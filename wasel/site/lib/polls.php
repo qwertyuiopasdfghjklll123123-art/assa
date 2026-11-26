@@ -1,9 +1,9 @@
 <?php
 /**
  * الأزرار والاستبيانات والتقييم.
- * واتساب ما يعرض الأزرار التقليدية للحسابات العادية، فنرسلها كـ«استبيان واتساب» وخياراته تنضغط مثل الأزرار.
- * لكل خيار إجراء: ما يسوي شي / يرسل رسالة محددة / يرسل استبيان أو تقييم ثاني.
- * المحرك يبلّغنا بكل ضغطة (poll_vote) فنسجلها ونرجّع شنو يرسل.
+ * - «أزرار»: أزرار واتساب حقيقية قابلة للضغط. كل زر إمّا يفتح رابط (cta_url) أو عند الضغط
+ *   يرسل رسالة/استبيان ثاني (quick_reply). المحرك يبلّغنا بالضغطة (poll_vote) فنرجّع شنو يرسل.
+ * - «استبيان/تقييم»: تصويت واتساب (عدّة خيارات) لأنها فعلاً تصويت نجمع نتائجه.
  */
 
 const POLL_KINDS = ['buttons' => 'أزرار', 'survey' => 'استبيان', 'rating' => 'تقييم'];
@@ -18,8 +18,19 @@ function poll_tpl_of(int $owner, $id): ?array
 /** الحمولة اللي تنرسل للمحرك */
 function poll_payload(array $t): array
 {
-    $opts = $t['kind'] === 'rating' ? RATING_OPTIONS : array_column($t['options'], 'label');
-    return ['question' => $t['question'], 'options' => array_values($opts), 'multi' => $t['kind'] === 'survey' && !empty($t['multi']), 'tpl' => (int)$t['id']];
+    $kind = $t['kind'] ?? 'buttons';
+    if ($kind === 'buttons') {
+        $buttons = array_map(fn($o) => [
+            'text' => $o['label'],
+            'action' => $o['action'] ?? 'none',
+            'url' => ($o['action'] ?? '') === 'url' ? ($o['url'] ?? '') : '',
+        ], $t['options']);
+        return ['kind' => 'buttons', 'question' => $t['question'], 'footer' => '',
+            'buttons' => array_values($buttons), 'options' => array_column($t['options'], 'label'), 'tpl' => (int)$t['id']];
+    }
+    $opts = $kind === 'rating' ? RATING_OPTIONS : array_column($t['options'], 'label');
+    return ['kind' => $kind, 'question' => $t['question'], 'options' => array_values($opts),
+        'multi' => $kind === 'survey' && !empty($t['multi']), 'tpl' => (int)$t['id']];
 }
 
 /** يقرأ قالب من الطلب ويتحقق منه */
@@ -32,26 +43,40 @@ function poll_clean(array $d, int $owner): array
     }
     $opts = [];
     if ($kind !== 'rating') {
+        // واتساب يعرض حتى 3 أزرار حقيقية، أما التصويت (استبيان) فحتى 12 خيار
+        $max = $kind === 'buttons' ? 3 : 12;
         $seen = [];
-        foreach (array_slice((array)($d['options'] ?? []), 0, 12) as $o) {
-            $label = trim(clean_text(mb_substr((string)($o['label'] ?? ''), 0, 100)));
+        foreach (array_slice((array)($d['options'] ?? []), 0, $max) as $o) {
+            $label = trim(clean_text(mb_substr((string)($o['label'] ?? ''), 0, $kind === 'buttons' ? 25 : 100)));
             if ($label === '' || isset($seen[$label])) {
                 continue;
             }
             $seen[$label] = 1;
-            $action = in_array($o['action'] ?? '', ['none', 'message', 'poll'], true) ? $o['action'] : 'none';
+            // زر الرابط (url) متاح للأزرار الحقيقية بس؛ الاستبيان تصويت فقط
+            $allowed = $kind === 'buttons' ? ['none', 'message', 'poll', 'url'] : ['none', 'message', 'poll'];
+            $action = in_array($o['action'] ?? '', $allowed, true) ? $o['action'] : 'none';
             $text = mb_substr(trim((string)($o['text'] ?? '')), 0, 2000);
             $next = (int)($o['next'] ?? 0);
+            $url = trim((string)($o['url'] ?? ''));
+            if ($action === 'url') {
+                if (!preg_match('~^https?://\S+~i', $url)) {
+                    json_err("حط رابط صحيح (يبدأ بـ http) للزر «{$label}»");
+                }
+                $url = mb_substr($url, 0, 2048);
+            }
             if ($action === 'message' && $text === '') {
                 json_err("اكتب الرسالة اللي تنرسل لما يضغط «{$label}»");
             }
             if ($action === 'poll' && (!$next || !poll_tpl_of($owner, $next) || $next === (int)($d['id'] ?? 0))) {
                 json_err("اختار الاستبيان اللي ينرسل لما يضغط «{$label}»");
             }
-            $opts[] = ['label' => $label, 'action' => $action, 'text' => $action === 'message' ? $text : '', 'next' => $action === 'poll' ? $next : 0];
+            $opts[] = ['label' => $label, 'action' => $action, 'text' => $action === 'message' ? $text : '',
+                'next' => $action === 'poll' ? $next : 0, 'url' => $action === 'url' ? $url : ''];
         }
-        if (count($opts) < 2) {
-            json_err('لازم خيارين على الأقل (واتساب يطلب هيج)');
+        // الأزرار الحقيقية تكفي بزر واحد (مثل زر «المزيد»)؛ التصويت يحتاج خيارين
+        $min = $kind === 'buttons' ? 1 : 2;
+        if (count($opts) < $min) {
+            json_err($kind === 'buttons' ? 'حط زر واحد على الأقل' : 'لازم خيارين على الأقل (واتساب يطلب هيج)');
         }
     }
     return ['kind' => $kind, 'question' => $q, 'options' => $opts, 'multi' => $kind === 'survey' && !empty($d['multi']),

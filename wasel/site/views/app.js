@@ -546,9 +546,11 @@ R.poll = async (el, p) => {
       </div>
       ${t.kind === 'rating' ? `<div class="card"><div class="card-title"><i class="fa-solid fa-star"></i> الخيارات (ثابتة)</div><div class="poll-prev">${(S.ratingOpts || []).map(o => `<span>${esc(o)}</span>`).join('')}</div></div>`
       : `<div class="section-head">${t.kind === 'survey' ? 'الخيارات' : 'الأزرار'} <a id="pAdd">+ إضافة</a></div>
+        ${t.kind === 'buttons' ? '<div class="hint" style="margin:-4px 2px 10px">أزرار حقيقية تنضغط - كل زر إمّا يفتح رابط أو يرسل رسالة/استبيان ثاني. (واتساب يسمح لحد 3 أزرار)</div>' : ''}
         ${t.options.map((o, i) => `<div class="card opt-card">
-          <div style="display:flex;gap:8px;align-items:center"><span class="opt-n num">${i + 1}</span><input class="input" data-l="${i}" value="${esc(o.label)}" maxlength="100" placeholder="اسم الزر - مثلاً: المزيد"><button class="icon-btn red" data-x="${i}" ${t.options.length <= 2 ? 'disabled' : ''}><i class="fa-solid fa-trash"></i></button></div>
-          <div class="field" style="margin:10px 0 0"><label>لما يضغطه:</label><select class="select" data-a="${i}"><option value="none" ${o.action === 'none' ? 'selected' : ''}>بس يتسجل (بدون رد)</option><option value="message" ${o.action === 'message' ? 'selected' : ''}>يرسله رسالة محددة</option><option value="poll" ${o.action === 'poll' ? 'selected' : ''} ${others.length ? '' : 'disabled'}>يرسله استبيان أو تقييم${others.length ? '' : ' (سوّي واحد ثاني أول)'}</option></select></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="opt-n num">${i + 1}</span><input class="input" data-l="${i}" value="${esc(o.label)}" maxlength="${t.kind === 'buttons' ? 25 : 100}" placeholder="اسم الزر - مثلاً: المزيد"><button class="icon-btn red" data-x="${i}" ${t.options.length <= (t.kind === 'buttons' ? 1 : 2) ? 'disabled' : ''}><i class="fa-solid fa-trash"></i></button></div>
+          <div class="field" style="margin:10px 0 0"><label>لما يضغطه:</label><select class="select" data-a="${i}">${t.kind === 'buttons' ? `<option value="url" ${o.action === 'url' ? 'selected' : ''}>🔗 يفتح رابط (لينك)</option>` : ''}<option value="message" ${o.action === 'message' ? 'selected' : ''}>💬 يرسله رسالة محددة</option><option value="poll" ${o.action === 'poll' ? 'selected' : ''} ${others.length ? '' : 'disabled'}>🗳️ يرسله استبيان أو تقييم${others.length ? '' : ' (سوّي واحد ثاني أول)'}</option><option value="none" ${o.action === 'none' ? 'selected' : ''}>بس يتسجل (بدون رد)</option></select></div>
+          ${o.action === 'url' ? `<input class="input" data-u="${i}" dir="ltr" style="margin-top:8px;text-align:left" value="${esc(o.url || '')}" placeholder="https://example.com">` : ''}
           ${o.action === 'message' ? `<textarea class="textarea" data-t="${i}" style="margin-top:8px;min-height:80px" placeholder="الرسالة اللي توصله...">${esc(o.text)}</textarea>` : ''}
           ${o.action === 'poll' ? `<select class="select" data-n="${i}" style="margin-top:8px">${others.map(x => `<option value="${x.id}" ${+o.next === x.id ? 'selected' : ''}>${PK[x.kind][1]}: ${esc(x.name || x.question)}</option>`).join('')}</select>` : ''}
         </div>`).join('')}`}
@@ -559,12 +561,13 @@ R.poll = async (el, p) => {
       t.name = $('#pName').value; t.question = $('#pQ').value; t.thanks = $('#pThanks').value; t.multi = !!$('#pMulti')?.checked;
       el.querySelectorAll('[data-l]').forEach(i => { t.options[+i.dataset.l].label = i.value; });
       el.querySelectorAll('[data-t]').forEach(i => { t.options[+i.dataset.t].text = i.value; });
+      el.querySelectorAll('[data-u]').forEach(i => { t.options[+i.dataset.u].url = i.value; });
       el.querySelectorAll('[data-n]').forEach(i => { t.options[+i.dataset.n].next = +i.value; });
     };
-    el.querySelectorAll('#pKind [data-k]').forEach(b => b.onclick = () => { sync(); t.kind = b.dataset.k; draw(); });
+    el.querySelectorAll('#pKind [data-k]').forEach(b => b.onclick = () => { sync(); t.kind = b.dataset.k; if (t.kind !== 'buttons') t.options.forEach(o => { if (o.action === 'url') o.action = 'none'; }); draw(); });
     el.querySelectorAll('[data-a]').forEach(s => s.onchange = () => { sync(); const o = t.options[+s.dataset.a]; o.action = s.value; if (s.value === 'poll' && !o.next && others[0]) o.next = others[0].id; draw(); });
     el.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { sync(); t.options.splice(+b.dataset.x, 1); draw(); });
-    const add = $('#pAdd'); if (add) add.onclick = () => { sync(); if (t.options.length >= 12) return toast('الحد 12 خيار', 'err'); t.options.push({ label: '', action: 'none', text: '' }); draw(); };
+    const add = $('#pAdd'); if (add) add.onclick = () => { sync(); const max = t.kind === 'buttons' ? 3 : 12; if (t.options.length >= max) return toast(t.kind === 'buttons' ? 'واتساب يسمح لحد 3 أزرار' : 'الحد 12 خيار', 'err'); t.options.push({ label: '', action: t.kind === 'buttons' ? 'url' : 'none', text: '', url: '' }); draw(); };
     $('#pSave').onclick = async e => {
       sync(); busy(e.target.closest('button'), true);
       const r = await api('/api/polls', { body: t }); busy(e.target.closest('button'), false);

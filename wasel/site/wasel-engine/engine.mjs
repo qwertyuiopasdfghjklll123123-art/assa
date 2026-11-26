@@ -19,6 +19,8 @@ import makeWASocket, {
   BufferJSON,
   downloadMediaMessage,
   decryptPollVote,
+  generateWAMessageFromContent,
+  proto,
   jidNormalizedUser,
   Browsers,
   DisconnectReason,
@@ -64,7 +66,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 16; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 17; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -223,7 +225,13 @@ async function startAccount(id) {
       if (ev.type !== 'notify') return;
       for (const m of ev.messages) {
         try { onIncomingForTracking(id, m); } catch { /* ignore */ }
-        handleIncoming(id, m).catch((e) => console.error('[رد آلي]', e.message));
+        // زر حقيقي انضغط؟ نشغّل إجراءه وما ندخله بالرد الآلي (حتى ما يرد مرتين)
+        if (!m.key?.fromMe && tappedButtonId(m.message)) {
+          onButtonReply(id, m).then((handled) => { if (!handled) handleIncoming(id, m).catch((e) => console.error('[رد آلي]', e.message)); })
+            .catch((e) => { console.error('[أزرار]', e.message); handleIncoming(id, m).catch(() => {}); });
+        } else {
+          handleIncoming(id, m).catch((e) => console.error('[رد آلي]', e.message));
+        }
       }
     });
     sock.ev.on('messages.update', (u) => { try { onStatusUpdate(u); } catch { /* ignore */ } try { inboxStatus(id, u); } catch { /* ignore */ } });
@@ -431,7 +439,12 @@ function describeMsg(msg) {
   if (inner.locationMessage || inner.liveLocationMessage) { const l = inner.locationMessage || inner.liveLocationMessage; return { type: 'location', text: l.name || '', lat: l.degreesLatitude, lng: l.degreesLongitude }; }
   if (inner.contactMessage || inner.contactsArrayMessage) return { type: 'contact', text: inner.contactMessage?.displayName || 'جهات اتصال' };
   if (inner.pollCreationMessage || inner.pollCreationMessageV3) return { type: 'poll', text: (inner.pollCreationMessage || inner.pollCreationMessageV3).name || '' };
-  if (inner.buttonsResponseMessage || inner.listResponseMessage || inner.templateButtonReplyMessage) return { type: 'text', text: inner.buttonsResponseMessage?.selectedDisplayText || inner.listResponseMessage?.title || inner.templateButtonReplyMessage?.selectedDisplayText || '' };
+  if (inner.buttonsResponseMessage || inner.listResponseMessage || inner.templateButtonReplyMessage || inner.interactiveResponseMessage) {
+    let it = inner.buttonsResponseMessage?.selectedDisplayText || inner.listResponseMessage?.title || inner.templateButtonReplyMessage?.selectedDisplayText || '';
+    if (!it && inner.interactiveResponseMessage?.body?.text) it = inner.interactiveResponseMessage.body.text;
+    return { type: 'text', text: it };
+  }
+  if (inner.interactiveMessage || inner.buttonsMessage) return { type: 'text', text: (inner.interactiveMessage?.body?.text || inner.buttonsMessage?.contentText || '').trim() };
   return null; // بروتوكول/تفاعل/مفاتيح - ما نعرضه
 }
 const toB64 = (u8) => (u8 ? Buffer.from(u8).toString('base64') : undefined);
@@ -638,6 +651,101 @@ function sendPoll(id, target, poll) {
   r.sendChain = job.catch(() => {});
   return job;
 }
+
+// ---------------------------------------------------------------- أزرار واتساب الحقيقية (قابلة للضغط)
+// بدل «استبيان/تصويت»: زر يفتح رابط (cta_url) أو زر يرسل رد/رسالة ثانية عند الضغط (quick_reply).
+// نخزن لكل مجموعة أزرار رمز قصير bset، ومعرف كل زر = wsl.<bset>.<idx> حتى نعرف أي زر انضغط.
+const btns = new Map(); // id -> { bset: {tpl, k, ts, labels:{idx:label}} }
+const btnsFile = (id) => path.join(POLLS_DIR, `${id.replace(/[^a-zA-Z0-9_-]/g, '')}.btns.json`);
+function btnsOf(id) {
+  if (!btns.has(id)) { let d = {}; try { d = JSON.parse(fs.readFileSync(btnsFile(id), 'utf8')); } catch { /* جديد */ } btns.set(id, d); }
+  return btns.get(id);
+}
+function btnsSave(id) {
+  const d = btnsOf(id), cut = Date.now() / 1000 - 45 * 86400;
+  for (const [k, v] of Object.entries(d)) if (v.ts < cut) delete d[k];
+  const keys = Object.keys(d);
+  if (keys.length > 8000) keys.sort((a, b) => d[a].ts - d[b].ts).slice(0, keys.length - 8000).forEach((k) => delete d[k]);
+  try { fs.writeFileSync(btnsFile(id) + '.tmp', JSON.stringify(d)); fs.renameSync(btnsFile(id) + '.tmp', btnsFile(id)); } catch { /* ignore */ }
+}
+/** يرسل أزرار تفاعلية حقيقية. p = {question, footer, buttons:[{text, action, url}], tpl} */
+function sendButtons(id, target, p) {
+  const r = rt(id);
+  const job = r.sendChain.then(async () => {
+    const sock = r.sock;
+    if (!sock || r.status !== 'connected') throw new Error('الحساب غير متصل بواتساب');
+    let jid = String(target);
+    if (!jid.includes('@')) {
+      const [res] = (await sock.onWhatsApp(digits(jid))) || [];
+      if (!res?.exists) throw new Error('الرقم لا يستخدم واتساب');
+      jid = res.jid;
+    }
+    const src = (p.buttons || []).slice(0, 3); // واتساب يعرض حتى 3 أزرار
+    if (!src.length) throw new Error('ما فيه أزرار');
+    const bset = crypto.randomBytes(5).toString('hex');
+    const labels = {};
+    const flow = src.map((b, idx) => {
+      const txt = String(b.text || '').slice(0, 25) || '؟';
+      labels[idx] = txt;
+      if (b.action === 'url' && b.url) {
+        return { name: 'cta_url', buttonParamsJson: JSON.stringify({ display_text: txt, url: String(b.url).slice(0, 2048), merchant_url: String(b.url).slice(0, 2048) }) };
+      }
+      return { name: 'quick_reply', buttonParamsJson: JSON.stringify({ display_text: txt, id: `wsl.${bset}.${idx}` }) };
+    });
+    const content = { viewOnceMessage: { message: { interactiveMessage: proto.Message.InteractiveMessage.create({
+      body: proto.Message.InteractiveMessage.Body.create({ text: String(p.question || '').slice(0, 1024) || '؟' }),
+      footer: p.footer ? proto.Message.InteractiveMessage.Footer.create({ text: String(p.footer).slice(0, 60) }) : undefined,
+      nativeFlowMessage: proto.Message.InteractiveMessage.NativeFlowMessage.create({ buttons: flow }),
+    }) } } };
+    const wa = generateWAMessageFromContent(jid, content, { userJid: sock.user.id });
+    await sock.relayMessage(jid, wa.message, { messageId: wa.key.id });
+    const hasReply = src.some((b) => b.action !== 'url');
+    if (hasReply) { const d = btnsOf(id); d[bset] = { tpl: p.tpl || null, k: chatKey(inboxOf(id), jid), ts: Math.floor(Date.now() / 1000), labels }; btnsSave(id); }
+    // نسجّل بصندوق المحادثة حتى يبين بالواجهة مثل أي رسالة صادرة
+    try { inboxAdd(id, { key: wa.key, message: wa.message, messageTimestamp: Math.floor(Date.now() / 1000) }); } catch { /* ignore */ }
+    return { id: wa.key.id, jid };
+  });
+  r.sendChain = job.catch(() => {});
+  return job;
+}
+/** موزّع: أزرار حقيقية لو kind=buttons وفيه buttons، وإلا استبيان واتساب */
+function sendInteractive(id, target, payload) {
+  if (payload && payload.kind === 'buttons' && Array.isArray(payload.buttons) && payload.buttons.length) {
+    return sendButtons(id, target, payload);
+  }
+  return sendPoll(id, target, payload || {});
+}
+/** يلتقط معرف الزر المضغوط من رسالة واردة (أزرارنا الحقيقية) */
+function tappedButtonId(msg) {
+  const inner = msg?.ephemeralMessage?.message || msg?.viewOnceMessage?.message || msg || {};
+  const ir = inner.interactiveResponseMessage?.nativeFlowResponseMessage?.paramsJson;
+  if (ir) { try { const o = JSON.parse(ir); if (typeof o.id === 'string') return o.id; } catch { /* ignore */ } }
+  return inner.buttonsResponseMessage?.selectedButtonId || inner.templateButtonReplyMessage?.selectedId || '';
+}
+/** شخص ضغط زر حقيقي: نفكّ معرفه ونشغّل إجراء الخيار (نفس مسار poll_vote) */
+async function onButtonReply(id, m) {
+  const bid = tappedButtonId(m.message);
+  const mm = /^wsl\.([0-9a-f]+)\.(\d+)$/.exec(bid || '');
+  if (!mm) return false;
+  const set = btnsOf(id)[mm[1]];
+  if (!set) return true; // زر لنا بس انتهت صلاحيته
+  const option = set.labels[mm[2]];
+  if (!option) return true;
+  const acc = registry[id], jid = m.key.remoteJid;
+  const vk = chatKey(inboxOf(id), jid, m.key.remoteJidAlt);
+  const d = inboxOf(id), c = d.chats[vk] || {};
+  const res = await hook({ type: 'poll_vote', owner: acc?.owner, account_id: id, tpl: set.tpl, jid: vk, name: c.name || m.pushName || '', phone: c.phone || (/@s\.whatsapp\.net$/.test(vk) ? jidUser(vk) : ''), option, options: Object.values(set.labels) });
+  if (res?.reply && (res.reply.text || res.reply.poll)) {
+    const charge = await hook({ type: 'charge', owner: acc.owner, note: `رد على زر «${option}»`, quiet: 1 });
+    if (charge?.ok) {
+      try {
+        if (res.reply.text) await sendTo(id, jid, res.reply.text);
+        if (res.reply.poll) await sendInteractive(id, jid, res.reply.poll);
+      } catch (e) { console.log('[أزرار] فشل الرد:', e.message); hook({ type: 'refund', owner: acc.owner, amount: charge.charged || 0, failed: 1 }); }
+    }
+  }
+  return true;
+}
 /** صوت على استبيان: نفكه (نجرب صيغ الـ jid: رقم/LID) ونشغّل الإجراء للخيارات الجديدة */
 async function onPollVote(id, m) {
   const pu = m.message?.pollUpdateMessage;
@@ -673,7 +781,7 @@ async function onPollVote(id, m) {
       if (!charge?.ok) continue;
       try {
         if (res.reply.text) await sendTo(id, m.key.remoteJid, res.reply.text);
-        if (res.reply.poll) await sendPoll(id, m.key.remoteJid, res.reply.poll);
+        if (res.reply.poll) await sendInteractive(id, m.key.remoteJid, res.reply.poll);
       } catch (e) { console.log('[استبيان] فشل الرد:', e.message); hook({ type: 'refund', owner: acc.owner, amount: charge.charged || 0, failed: 1 }); }
     }
   }
@@ -890,7 +998,7 @@ async function runCampaign(id) {
       try {
         const res = await sendTo(id, number, st.text, media, st.media_delay);
         st.sent += 1;
-        if (st.poll) { try { await sleep(1200); await sendPoll(id, res.jid, st.poll); } catch (e) { console.log('[حملة] فشل إرسال الأزرار:', e.message); } }
+        if (st.poll) { try { await sleep(1200); await sendInteractive(id, res.jid, st.poll); } catch (e) { console.log('[حملة] فشل إرسال الأزرار:', e.message); } }
         const t = tracking[st.campaign_id];
         if (t) {
           const d = digits(number); // نخزن كل شي على الرقم الأصلي
@@ -1249,7 +1357,7 @@ const routes = [
     if (!charge || !charge.ok) return [402, { ok: false, error: charge?.error || 'تعذر التحقق من الرصيد' }];
     try {
       if (body.text) await sendTo(id, target, String(body.text).slice(0, 4000));
-      const res = await sendPoll(id, target, body.poll || {});
+      const res = await sendInteractive(id, target, body.poll || {});
       return [200, { ok: true, jid: chatKey(inboxOf(id), res.jid), id: res.id }];
     } catch (e) {
       hook({ type: 'refund', owner: acc.owner, amount: charge.charged || 0, failed: 1 });
