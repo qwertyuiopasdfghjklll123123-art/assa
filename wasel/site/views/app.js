@@ -499,20 +499,21 @@ R.pushset = async (el) => {
 };
 
 // ---------------------------------------------------------------- الأزرار والاستبيانات والتقييم
-const PK = { buttons: ['fa-solid fa-hand-pointer', 'أزرار', 'ic-teal'], survey: ['fa-solid fa-square-poll-vertical', 'استبيان', 'ic-purple'], rating: ['fa-solid fa-star', 'تقييم', 'ic-orange'] };
+const PK = { buttons: ['fa-solid fa-hand-pointer', 'أزرار', 'ic-teal'], vote: ['fa-solid fa-square-poll-vertical', 'تصويت', 'ic-purple'] };
+const pk = k => PK[k] || PK.vote; // توافق مع القوالب القديمة (survey/rating صارت تصويت)
 async function loadPolls() { const r = await api('/api/polls'); S.polls = r.ok ? r.polls : []; S.ratingOpts = r.rating_options || []; return S.polls; }
 /** قائمة اختيار قالب (للحملة/الرسالة الجماعية/المحادثة) */
 function pollSelect(id, polls) {
-  return `<select class="select" id="${id}"><option value="">بدون</option>${polls.map(p => `<option value="${p.id}">${PK[p.kind][1]}: ${esc(p.name || p.question)}</option>`).join('')}</select>`;
+  return `<select class="select" id="${id}"><option value="">بدون</option>${polls.map(p => `<option value="${p.id}">${pk(p.kind)[1]}: ${esc(p.name || p.question)}</option>`).join('')}</select>`;
 }
 R.polls = async (el) => {
   el.innerHTML = head('الأزرار والاستبيانات', true, `<button class="btn btn-primary btn-sm" onclick="go('poll',{})"><i class="fa-solid fa-plus"></i> جديد</button>`) + '<div class="card"><div class="skel" style="height:120px"></div></div>';
   const polls = await loadPolls();
   el.innerHTML = head('الأزرار والاستبيانات', true, `<button class="btn btn-primary btn-sm" onclick="go('poll',{})"><i class="fa-solid fa-plus"></i> جديد</button>`) + `
-    <div class="note" style="margin-bottom:12px"><i class="fa-solid fa-circle-info"></i> تنرسل بواتساب كخيارات ينضغط عليها. لما الشخص يضغط زر (مثل «المزيد») ينرسله تلقائياً الرد اللي تحدده: رسالة، استبيان ثاني، أو تقييم - ويوصلك إشعار باسمه واختياره.</div>
+    <div class="note" style="margin-bottom:12px"><i class="fa-solid fa-circle-info"></i> قسمين: <b>أزرار</b> حقيقية تنضغط (زر يفتح رابط أو يرسل رسالة)، و<b>تصويت</b> لجمع أصوات الزبائن (ويشمل التقييم بالنجوم). يوصلك إشعار بكل ضغطة باسم الشخص واختياره.</div>
     ${polls.length ? polls.map(p => `<div class="card poll-card" onclick="go('poll',{id:${p.id},view:1})" style="cursor:pointer">
-      <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ${PK[p.kind][2]}"><i class="${PK[p.kind][0]}"></i></span>
-        <div style="flex:1;min-width:0"><b>${esc(p.name || p.question)}</b><div class="row-sub">${PK[p.kind][1]} · ${p.preview.length} خيارات</div></div>
+      <div style="display:flex;align-items:center;gap:12px"><span class="row-ic ${pk(p.kind)[2]}"><i class="${pk(p.kind)[0]}"></i></span>
+        <div style="flex:1;min-width:0"><b>${esc(p.name || p.question)}</b><div class="row-sub">${pk(p.kind)[1]}${p.kind === 'buttons' ? '' : p.rating ? ' · تقييم بالنجوم' : ''} · ${p.preview.length} ${p.kind === 'buttons' ? 'أزرار' : 'خيارات'}</div></div>
         <span class="pill ${p.votes ? 'pill-green' : 'pill-gray'} num">${fmt(p.votes)} ضغطة</span></div>
       <div class="poll-prev">${p.preview.slice(0, 6).map(o => `<span>${esc(o)}</span>`).join('')}</div></div>`).join('')
     : `<div class="card">${empty('fa-solid fa-hand-pointer', 'ما سويت أزرار أو استبيانات بعد', `<button class="btn btn-primary" onclick="go('poll',{})"><i class="fa-solid fa-plus"></i> سوّي أول واحد</button>`)}</div>`}`;
@@ -526,7 +527,7 @@ R.poll = async (el, p) => {
     const max = Math.max(1, ...Object.values(res.counts));
     el.innerHTML = head(esc(t.name || t.question), true, `<button class="btn btn-soft btn-sm" onclick="go('poll',{id:${t.id}})"><i class="fa-solid fa-pen"></i> تعديل</button>`) + `
       <div class="stats three"><div class="stat"><span class="stat-v num">${fmt(res.total)}</span><span class="stat-l">ضغطة</span></div><div class="stat"><span class="stat-v num">${fmt(res.people)}</span><span class="stat-l">شخص</span></div>
-        <div class="stat"><span class="stat-v num">${res.avg != null ? res.avg + ' ⭐' : PK[t.kind][1]}</span><span class="stat-l">${res.avg != null ? 'معدل التقييم' : 'النوع'}</span></div></div>
+        <div class="stat"><span class="stat-v num">${res.avg != null ? res.avg + ' ⭐' : pk(t.kind)[1]}</span><span class="stat-l">${res.avg != null ? 'معدل التقييم' : 'النوع'}</span></div></div>
       <div class="card" style="margin-top:12px"><div class="card-title"><i class="fa-solid fa-chart-simple"></i> ${esc(t.question)}</div>
         ${Object.entries(res.counts).map(([o, n]) => `<div class="pr-row"><div class="pr-top"><span>${esc(o)}</span><b class="num">${fmt(n)}</b></div><div class="progress"><span style="width:${Math.round(n / max * 100)}%"></span></div></div>`).join('')}</div>
       <div class="section-head">مين ضغط؟</div>
@@ -537,34 +538,38 @@ R.poll = async (el, p) => {
   // ---- المحرر
   const others = polls.filter(x => x.id !== t.id);
   const draw = () => {
-    el.innerHTML = head(t.id ? 'تعديل' : 'أزرار / استبيان جديد') + `
+    const rating = t.kind === 'vote' && !!t.rating;
+    el.innerHTML = head(t.id ? 'تعديل' : 'أزرار / تصويت جديد') + `
       <div class="seg" id="pKind" style="margin-bottom:12px">${Object.entries(PK).map(([k, v]) => `<button data-k="${k}" class="${t.kind === k ? 'on' : ''}"><i class="${v[0]}"></i><b>${v[1]}</b></button>`).join('')}</div>
       <div class="card">
-        <div class="field"><label>اسم داخلي (لك بس)</label><input class="input" id="pName" value="${esc(t.name)}" placeholder="مثلاً: أزرار عرض الشتاء"></div>
-        <div class="field"><label>${t.kind === 'rating' ? 'سؤال التقييم' : t.kind === 'survey' ? 'سؤال الاستبيان' : 'النص فوق الأزرار'}</label><input class="input" id="pQ" maxlength="255" value="${esc(t.question)}" placeholder="${t.kind === 'rating' ? 'شلون تقيّم خدمتنا؟' : t.kind === 'survey' ? 'شنو أكثر شي يهمك؟' : 'تحب تعرف أكثر؟'}"></div>
-        ${t.kind === 'survey' ? `<label style="display:flex;align-items:center;gap:10px;margin:4px 0 10px"><span class="switch"><input type="checkbox" id="pMulti" ${t.multi ? 'checked' : ''}><span></span></span> يكدر يختار أكثر من خيار</label>` : ''}
+        <div class="field"><label>اسم داخلي (لك بس)</label><input class="input" id="pName" value="${esc(t.name)}" placeholder="${t.kind === 'buttons' ? 'مثلاً: أزرار عرض الشتاء' : 'مثلاً: تصويت رضا الزبائن'}"></div>
+        <div class="field"><label>${t.kind === 'buttons' ? 'النص فوق الأزرار' : 'سؤال التصويت'}</label><input class="input" id="pQ" maxlength="255" value="${esc(t.question)}" placeholder="${t.kind === 'buttons' ? 'تحب تعرف أكثر؟' : rating ? 'شلون تقيّم خدمتنا؟' : 'شنو أكثر شي يهمك؟'}"></div>
+        ${t.kind === 'vote' ? `<label style="display:flex;align-items:center;gap:10px;margin:4px 0 2px"><span class="switch"><input type="checkbox" id="pRating" ${rating ? 'checked' : ''}><span></span></span> ⭐ تقييم بالنجوم (خيارات جاهزة من 5 نجوم)</label>
+        ${!rating ? `<label style="display:flex;align-items:center;gap:10px;margin:8px 0 2px"><span class="switch"><input type="checkbox" id="pMulti" ${t.multi ? 'checked' : ''}><span></span></span> يكدر يختار أكثر من خيار</label>` : ''}` : ''}
       </div>
-      ${t.kind === 'rating' ? `<div class="card"><div class="card-title"><i class="fa-solid fa-star"></i> الخيارات (ثابتة)</div><div class="poll-prev">${(S.ratingOpts || []).map(o => `<span>${esc(o)}</span>`).join('')}</div></div>`
-      : `<div class="section-head">${t.kind === 'survey' ? 'الخيارات' : 'الأزرار'} <a id="pAdd">+ إضافة</a></div>
-        ${t.kind === 'buttons' ? '<div class="hint" style="margin:-4px 2px 10px">أزرار حقيقية تنضغط - كل زر إمّا يفتح رابط أو يرسل رسالة/استبيان ثاني. (واتساب يسمح لحد 3 أزرار)</div>' : ''}
+      ${rating ? `<div class="card"><div class="card-title"><i class="fa-solid fa-star"></i> خيارات التقييم (جاهزة)</div><div class="poll-prev">${(S.ratingOpts || []).map(o => `<span>${esc(o)}</span>`).join('')}</div></div>`
+      : `<div class="section-head">${t.kind === 'buttons' ? 'الأزرار' : 'الخيارات'} <a id="pAdd">+ إضافة</a></div>
+        ${t.kind === 'buttons' ? '<div class="hint" style="margin:-4px 2px 10px">أزرار حقيقية تنضغط - كل زر إمّا يفتح رابط أو يرسل رسالة/تصويت ثاني. (واتساب يسمح لحد 3 أزرار)</div>' : '<div class="hint" style="margin:-4px 2px 10px">تصويت واتساب لجمع أصوات الزبائن.</div>'}
         ${t.options.map((o, i) => `<div class="card opt-card">
-          <div style="display:flex;gap:8px;align-items:center"><span class="opt-n num">${i + 1}</span><input class="input" data-l="${i}" value="${esc(o.label)}" maxlength="${t.kind === 'buttons' ? 25 : 100}" placeholder="اسم الزر - مثلاً: المزيد"><button class="icon-btn red" data-x="${i}" ${t.options.length <= (t.kind === 'buttons' ? 1 : 2) ? 'disabled' : ''}><i class="fa-solid fa-trash"></i></button></div>
-          <div class="field" style="margin:10px 0 0"><label>لما يضغطه:</label><select class="select" data-a="${i}">${t.kind === 'buttons' ? `<option value="url" ${o.action === 'url' ? 'selected' : ''}>🔗 يفتح رابط (لينك)</option>` : ''}<option value="message" ${o.action === 'message' ? 'selected' : ''}>💬 يرسله رسالة محددة</option><option value="poll" ${o.action === 'poll' ? 'selected' : ''} ${others.length ? '' : 'disabled'}>🗳️ يرسله استبيان أو تقييم${others.length ? '' : ' (سوّي واحد ثاني أول)'}</option><option value="none" ${o.action === 'none' ? 'selected' : ''}>بس يتسجل (بدون رد)</option></select></div>
+          <div style="display:flex;gap:8px;align-items:center"><span class="opt-n num">${i + 1}</span><input class="input" data-l="${i}" value="${esc(o.label)}" maxlength="${t.kind === 'buttons' ? 25 : 100}" placeholder="${t.kind === 'buttons' ? 'اسم الزر - مثلاً: المزيد' : 'الخيار'}"><button class="icon-btn red" data-x="${i}" ${t.options.length <= (t.kind === 'buttons' ? 1 : 2) ? 'disabled' : ''}><i class="fa-solid fa-trash"></i></button></div>
+          <div class="field" style="margin:10px 0 0"><label>لما يضغطه:</label><select class="select" data-a="${i}">${t.kind === 'buttons' ? `<option value="url" ${o.action === 'url' ? 'selected' : ''}>🔗 يفتح رابط (لينك)</option>` : ''}<option value="message" ${o.action === 'message' ? 'selected' : ''}>💬 يرسله رسالة محددة</option><option value="poll" ${o.action === 'poll' ? 'selected' : ''} ${others.length ? '' : 'disabled'}>🗳️ يرسله تصويت ثاني${others.length ? '' : ' (سوّي واحد ثاني أول)'}</option><option value="none" ${o.action === 'none' ? 'selected' : ''}>بس يتسجل (بدون رد)</option></select></div>
           ${o.action === 'url' ? `<input class="input" data-u="${i}" dir="ltr" style="margin-top:8px;text-align:left" value="${esc(o.url || '')}" placeholder="https://example.com">` : ''}
           ${o.action === 'message' ? `<textarea class="textarea" data-t="${i}" style="margin-top:8px;min-height:80px" placeholder="الرسالة اللي توصله...">${esc(o.text)}</textarea>` : ''}
-          ${o.action === 'poll' ? `<select class="select" data-n="${i}" style="margin-top:8px">${others.map(x => `<option value="${x.id}" ${+o.next === x.id ? 'selected' : ''}>${PK[x.kind][1]}: ${esc(x.name || x.question)}</option>`).join('')}</select>` : ''}
+          ${o.action === 'poll' ? `<select class="select" data-n="${i}" style="margin-top:8px">${others.map(x => `<option value="${x.id}" ${+o.next === x.id ? 'selected' : ''}>${pk(x.kind)[1]}: ${esc(x.name || x.question)}</option>`).join('')}</select>` : ''}
         </div>`).join('')}`}
       <div class="card"><div class="field" style="margin:0"><label>رسالة شكر (اختياري) - تنرسل لما يختار خيار ما إله رد</label><textarea class="textarea" id="pThanks" style="min-height:70px" placeholder="شكراً لرأيك 🌹">${esc(t.thanks)}</textarea></div></div>
       <button class="btn btn-primary btn-block" id="pSave"><i class="fa-solid fa-check"></i> حفظ</button>
       ${t.id ? '<button class="btn btn-red btn-block" style="margin-top:10px" id="pDel"><i class="fa-solid fa-trash"></i> حذف</button>' : ''}`;
     const sync = () => {
       t.name = $('#pName').value; t.question = $('#pQ').value; t.thanks = $('#pThanks').value; t.multi = !!$('#pMulti')?.checked;
+      if ($('#pRating')) t.rating = !!$('#pRating').checked;
       el.querySelectorAll('[data-l]').forEach(i => { t.options[+i.dataset.l].label = i.value; });
       el.querySelectorAll('[data-t]').forEach(i => { t.options[+i.dataset.t].text = i.value; });
       el.querySelectorAll('[data-u]').forEach(i => { t.options[+i.dataset.u].url = i.value; });
       el.querySelectorAll('[data-n]').forEach(i => { t.options[+i.dataset.n].next = +i.value; });
     };
-    el.querySelectorAll('#pKind [data-k]').forEach(b => b.onclick = () => { sync(); t.kind = b.dataset.k; if (t.kind !== 'buttons') t.options.forEach(o => { if (o.action === 'url') o.action = 'none'; }); draw(); });
+    el.querySelectorAll('#pKind [data-k]').forEach(b => b.onclick = () => { sync(); t.kind = b.dataset.k; if (t.kind !== 'buttons') t.options.forEach(o => { if (o.action === 'url') o.action = 'none'; }); if (t.kind === 'vote' && !t.rating && t.options.length < 2) while (t.options.length < 2) t.options.push({ label: '', action: 'none', text: '', url: '' }); draw(); });
+    const rtog = $('#pRating'); if (rtog) rtog.onchange = () => { sync(); t.rating = rtog.checked; if (!t.rating && t.options.length < 2) while (t.options.length < 2) t.options.push({ label: '', action: 'none', text: '', url: '' }); draw(); };
     el.querySelectorAll('[data-a]').forEach(s => s.onchange = () => { sync(); const o = t.options[+s.dataset.a]; o.action = s.value; if (s.value === 'poll' && !o.next && others[0]) o.next = others[0].id; draw(); });
     el.querySelectorAll('[data-x]').forEach(b => b.onclick = () => { sync(); t.options.splice(+b.dataset.x, 1); draw(); });
     const add = $('#pAdd'); if (add) add.onclick = () => { sync(); const max = t.kind === 'buttons' ? 3 : 12; if (t.options.length >= max) return toast(t.kind === 'buttons' ? 'واتساب يسمح لحد 3 أزرار' : 'الحد 12 خيار', 'err'); t.options.push({ label: '', action: t.kind === 'buttons' ? 'url' : 'none', text: '', url: '' }); draw(); };
@@ -795,7 +800,7 @@ R.chat = async (el, p) => {
     const box = $d('#chPolls');
     if (!box.classList.contains('hidden')) { box.classList.add('hidden'); return; }
     const polls = S.polls || await loadPolls();
-    box.innerHTML = polls.length ? `<div class="ch-polls-h">أرسل أزرار أو استبيان <a onclick="go('polls')">إدارة</a></div>` + polls.map(x => `<button class="ch-poll" data-t="${x.id}"><i class="${PK[x.kind][0]}"></i> <span>${esc(x.name || x.question)}</span><small>${PK[x.kind][1]}</small></button>`).join('')
+    box.innerHTML = polls.length ? `<div class="ch-polls-h">أرسل أزرار أو تصويت <a onclick="go('polls')">إدارة</a></div>` + polls.map(x => `<button class="ch-poll" data-t="${x.id}"><i class="${pk(x.kind)[0]}"></i> <span>${esc(x.name || x.question)}</span><small>${pk(x.kind)[1]}</small></button>`).join('')
       : `<div class="hint" style="padding:8px">ما عندك قوالب. <a onclick="go('poll',{})" style="font-weight:800;color:var(--primary)">سوّي أزرار أو استبيان</a></div>`;
     box.classList.remove('hidden');
     box.querySelectorAll('[data-t]').forEach(b => b.onclick = async () => {

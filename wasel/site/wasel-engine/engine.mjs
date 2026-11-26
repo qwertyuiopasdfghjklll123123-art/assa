@@ -66,7 +66,7 @@ for (const d of [CFG.dataDir, SESSIONS_DIR, MEDIA_DIR, CAMPAIGNS_DIR]) fs.mkdirS
 const logger = pino({ level: 'silent' });
 const DEFAULT_DELAY = 15;
 const DEFAULT_MEDIA_DELAY = 2;
-const ENGINE_VERSION = 17; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
+const ENGINE_VERSION = 18; // ترتفع مع كل تحديث للمحرك - موقع PHP ينبّه لو المحرك المرفوع قديم
 const MAX_BODY = 60 * 1024 * 1024; // وسائط الحملات تجي base64 بجسم الطلب
 
 const now = () => new Date();
@@ -397,6 +397,7 @@ function inboxOf(id) {
   if (!inboxes.has(id)) {
     let d = { chats: {}, msgs: {}, alias: {}, names: {} };
     try { d = { ...d, ...JSON.parse(fs.readFileSync(inboxFile(id), 'utf8')) }; } catch { /* جديد */ }
+    try { dedupInbox(d); } catch { /* ignore */ }
     inboxes.set(id, d);
   }
   return inboxes.get(id);
@@ -419,10 +420,40 @@ setInterval(() => {
 
 const isPersonalJid = (j) => /@(s\.whatsapp\.net|lid)$/.test(String(j || ''));
 const jidUser = (j) => String(j || '').split('@')[0].split(':')[0];
+/** يدمج محادثة مكررة (مفتاح @lid) داخل محادثة الرقم (@s.whatsapp.net) */
+function mergeChat(d, fromK, toK) {
+  if (fromK === toK || !d.chats[fromK]) return;
+  const from = d.chats[fromK];
+  const to = d.chats[toK] || (d.chats[toK] = { jid: toK, name: '', ts: 0, unread: 0, incoming: false });
+  const fm = d.msgs[fromK] || [], tm = d.msgs[toK] || (d.msgs[toK] = []);
+  const have = new Set(tm.map((x) => x.id));
+  for (const e of fm) if (!have.has(e.id)) tm.push(e);
+  tm.sort((a, b) => a.ts - b.ts);
+  if (tm.length > INBOX_MAX_MSGS) tm.splice(0, tm.length - INBOX_MAX_MSGS);
+  to.name = to.name || from.name || '';
+  to.phone = to.phone || from.phone || (/@s\.whatsapp\.net$/.test(toK) ? jidUser(toK) : '');
+  to.unread = (to.unread || 0) + (from.unread || 0);
+  to.incoming = Boolean(to.incoming || from.incoming);
+  if ((from.ts || 0) > (to.ts || 0)) { to.ts = from.ts; to.last = from.last; }
+  else if (!to.last && from.last) to.last = from.last;
+  if (d.names[fromK] && !d.names[toK]) d.names[toK] = d.names[fromK];
+  delete d.chats[fromK]; delete d.msgs[fromK]; delete d.names[fromK];
+}
+/** نتعلّم أن lid يخص رقم معيّن، وندمج أي محادثة مكررة */
+function aliasLearn(d, lid, pn) {
+  lid = String(lid || ''); pn = String(pn || '');
+  if (!/@lid$/.test(lid) || !/@s\.whatsapp\.net$/.test(pn)) return;
+  d.alias[lid] = pn;
+  mergeChat(d, lid, pn);
+}
+/** تنظيف المحادثات المكررة الموجودة مسبقاً (بناءً على الأسماء المستعارة المعروفة) */
+function dedupInbox(d) {
+  for (const lid of Object.keys(d.alias || {})) if (d.chats[lid]) mergeChat(d, lid, d.alias[lid]);
+}
 /** مفتاح المحادثة: نفضّل jid الرقم (@s.whatsapp.net) لو نعرفه، حتى ما تتكرر المحادثة بصيغتين */
 function chatKey(d, jid, alt) {
   jid = String(jid || '');
-  if (alt && /@s\.whatsapp\.net$/.test(alt) && /@lid$/.test(jid)) d.alias[jid] = alt;
+  if (alt && /@s\.whatsapp\.net$/.test(alt) && /@lid$/.test(jid)) aliasLearn(d, jid, alt);
   if (/@lid$/.test(jid) && d.alias[jid]) return d.alias[jid];
   return jid;
 }
@@ -498,7 +529,7 @@ function inboxNames(id, contacts) {
   for (const c of contacts || []) {
     const name = c.name || c.notify || c.verifiedName;
     if (!c.id || !name) continue;
-    if (c.lid && /@s\.whatsapp\.net$/.test(c.id)) d.alias[c.lid] = c.id;
+    if (c.lid && /@s\.whatsapp\.net$/.test(c.id)) aliasLearn(d, c.lid, c.id);
     const k = chatKey(d, c.id);
     d.names[k] = String(name).slice(0, 60);
     if (d.chats[k] && (!d.chats[k].name || c.name)) d.chats[k].name = d.names[k];

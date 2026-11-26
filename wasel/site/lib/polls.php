@@ -1,18 +1,36 @@
 <?php
 /**
- * الأزرار والاستبيانات والتقييم.
- * - «أزرار»: أزرار واتساب حقيقية قابلة للضغط. كل زر إمّا يفتح رابط (cta_url) أو عند الضغط
- *   يرسل رسالة/استبيان ثاني (quick_reply). المحرك يبلّغنا بالضغطة (poll_vote) فنرجّع شنو يرسل.
- * - «استبيان/تقييم»: تصويت واتساب (عدّة خيارات) لأنها فعلاً تصويت نجمع نتائجه.
+ * قسمين فقط:
+ * - «أزرار» (buttons): أزرار واتساب حقيقية قابلة للضغط. كل زر إمّا يفتح رابط (cta_url) أو عند الضغط
+ *   يرسل رسالة/تصويت ثاني (quick_reply). المحرك يبلّغنا بالضغطة (poll_vote) فنرجّع شنو يرسل.
+ * - «تصويت» (vote): تصويت واتساب لجمع الأصوات. يمكن تختار «تقييم بالنجوم» الجاهز بدل كتابة خيارات.
+ * (القوالب القديمة: survey→تصويت، rating→تصويت بنجوم - نحوّلها تلقائياً.)
  */
 
-const POLL_KINDS = ['buttons' => 'أزرار', 'survey' => 'استبيان', 'rating' => 'تقييم'];
+const POLL_KINDS = ['buttons' => 'أزرار', 'vote' => 'تصويت'];
 const RATING_OPTIONS = ['⭐⭐⭐⭐⭐ ممتاز', '⭐⭐⭐⭐ جيد جداً', '⭐⭐⭐ جيد', '⭐⭐ مقبول', '⭐ سيء'];
+
+/** يحوّل القوالب القديمة (survey/rating) لنظام القسمين (buttons/vote + rating) */
+function poll_norm(array $t): array
+{
+    $k = $t['kind'] ?? 'buttons';
+    if ($k === 'survey') {
+        $t['kind'] = 'vote';
+        $t['rating'] = false;
+    } elseif ($k === 'rating') {
+        $t['kind'] = 'vote';
+        $t['rating'] = true;
+    } elseif ($k !== 'vote' && $k !== 'buttons') {
+        $t['kind'] = 'buttons';
+    }
+    $t['rating'] = !empty($t['rating']);
+    return $t;
+}
 
 function poll_tpl_of(int $owner, $id): ?array
 {
     $t = store_find('poll_tpls', (int)$id);
-    return $t && (int)$t['owner'] === $owner ? $t : null;
+    return $t && (int)$t['owner'] === $owner ? poll_norm($t) : null;
 }
 
 /** الحمولة اللي تنرسل للمحرك */
@@ -28,22 +46,25 @@ function poll_payload(array $t): array
         return ['kind' => 'buttons', 'question' => $t['question'], 'footer' => '',
             'buttons' => array_values($buttons), 'options' => array_column($t['options'], 'label'), 'tpl' => (int)$t['id']];
     }
-    $opts = $kind === 'rating' ? RATING_OPTIONS : array_column($t['options'], 'label');
-    return ['kind' => $kind, 'question' => $t['question'], 'options' => array_values($opts),
-        'multi' => $kind === 'survey' && !empty($t['multi']), 'tpl' => (int)$t['id']];
+    // تصويت: إمّا تقييم بالنجوم الجاهز أو خيارات كتبها المستخدم
+    $opts = !empty($t['rating']) ? RATING_OPTIONS : array_column($t['options'], 'label');
+    return ['kind' => 'vote', 'question' => $t['question'], 'options' => array_values($opts),
+        'multi' => !empty($t['multi']) && empty($t['rating']), 'tpl' => (int)$t['id']];
 }
 
 /** يقرأ قالب من الطلب ويتحقق منه */
 function poll_clean(array $d, int $owner): array
 {
-    $kind = isset(POLL_KINDS[$d['kind'] ?? '']) ? $d['kind'] : 'buttons';
+    $d = poll_norm($d); // يقبل القديم (survey/rating) ويحوّله
+    $kind = $d['kind'];
+    $rating = $kind === 'vote' && !empty($d['rating']);
     $q = trim(clean_text(mb_substr((string)($d['question'] ?? ''), 0, 255)));
     if ($q === '') {
-        json_err('اكتب السؤال أو النص اللي يطلع فوق الأزرار');
+        json_err($kind === 'buttons' ? 'اكتب النص اللي يطلع فوق الأزرار' : 'اكتب سؤال التصويت');
     }
     $opts = [];
-    if ($kind !== 'rating') {
-        // واتساب يعرض حتى 3 أزرار حقيقية، أما التصويت (استبيان) فحتى 12 خيار
+    if (!$rating) {
+        // واتساب يعرض حتى 3 أزرار حقيقية، أما التصويت فحتى 12 خيار
         $max = $kind === 'buttons' ? 3 : 12;
         $seen = [];
         foreach (array_slice((array)($d['options'] ?? []), 0, $max) as $o) {
@@ -52,7 +73,7 @@ function poll_clean(array $d, int $owner): array
                 continue;
             }
             $seen[$label] = 1;
-            // زر الرابط (url) متاح للأزرار الحقيقية بس؛ الاستبيان تصويت فقط
+            // زر الرابط (url) متاح للأزرار الحقيقية بس؛ التصويت أصوات فقط
             $allowed = $kind === 'buttons' ? ['none', 'message', 'poll', 'url'] : ['none', 'message', 'poll'];
             $action = in_array($o['action'] ?? '', $allowed, true) ? $o['action'] : 'none';
             $text = mb_substr(trim((string)($o['text'] ?? '')), 0, 2000);
@@ -68,7 +89,7 @@ function poll_clean(array $d, int $owner): array
                 json_err("اكتب الرسالة اللي تنرسل لما يضغط «{$label}»");
             }
             if ($action === 'poll' && (!$next || !poll_tpl_of($owner, $next) || $next === (int)($d['id'] ?? 0))) {
-                json_err("اختار الاستبيان اللي ينرسل لما يضغط «{$label}»");
+                json_err("اختار التصويت اللي ينرسل لما يضغط «{$label}»");
             }
             $opts[] = ['label' => $label, 'action' => $action, 'text' => $action === 'message' ? $text : '',
                 'next' => $action === 'poll' ? $next : 0, 'url' => $action === 'url' ? $url : ''];
@@ -79,7 +100,8 @@ function poll_clean(array $d, int $owner): array
             json_err($kind === 'buttons' ? 'حط زر واحد على الأقل' : 'لازم خيارين على الأقل (واتساب يطلب هيج)');
         }
     }
-    return ['kind' => $kind, 'question' => $q, 'options' => $opts, 'multi' => $kind === 'survey' && !empty($d['multi']),
+    return ['kind' => $kind, 'rating' => $rating, 'options' => $opts, 'question' => $q,
+        'multi' => $kind === 'vote' && !$rating && !empty($d['multi']),
         'thanks' => mb_substr(trim((string)($d['thanks'] ?? '')), 0, 1000), 'name' => trim(clean_text(mb_substr((string)($d['name'] ?? ''), 0, 60)))];
 }
 
@@ -132,7 +154,7 @@ function poll_results(array $t): array
         $people[$v['jid'] ?: $v['phone']] = 1;
     }
     $avg = null;
-    if ($t['kind'] === 'rating' && $votes) {
+    if (!empty($t['rating']) && $votes) {
         $sum = 0;
         foreach ($votes as $v) {
             $sum += 5 - (int)array_search($v['option'], RATING_OPTIONS, true);
@@ -155,7 +177,7 @@ function poll_routes(): array
             foreach ($votes as $v) {
                 $cnt[(int)$v['tpl']] = ($cnt[(int)$v['tpl']] ?? 0) + 1;
             }
-            json_out(['ok' => true, 'polls' => array_map(fn($t) => $t + ['votes' => $cnt[(int)$t['id']] ?? 0, 'preview' => poll_payload($t)['options']], $rows), 'rating_options' => RATING_OPTIONS]);
+            json_out(['ok' => true, 'polls' => array_map(function ($t) use ($cnt) { $t = poll_norm($t); return $t + ['votes' => $cnt[(int)$t['id']] ?? 0, 'preview' => poll_payload($t)['options']]; }, $rows), 'rating_options' => RATING_OPTIONS]);
         }],
         ['GET', '#^/api/polls/(\d+)$#', function ($pid) {
             $id = require_login();
