@@ -152,8 +152,8 @@ async function refreshMe() {
 // ================================================================ التنقل
 const PAGES = {
   home: { nav: 'home', slug: '' }, campaign: { nav: 'campaign', slug: 'campaign' }, accounts: { nav: 'accounts', slug: 'numbers' }, acc: { nav: 'accounts', slug: 'number' },
-  wallet: { nav: 'wallet', slug: 'packages' }, pay: { nav: 'wallet', slug: 'pay' }, account: { nav: 'account', slug: 'me' }, notifications: { nav: 'account', slug: 'notifications' },
-  subscribers: { nav: 'account', slug: 'clients' }, reports: { nav: 'campaign', slug: 'reports' }, apikeys: { nav: 'account', slug: 'api' }, tx: { nav: 'wallet', slug: 'transactions' }, profile: { nav: 'account', slug: 'profile' },
+  wallet: { nav: 'account', slug: 'packages' }, pay: { nav: 'account', slug: 'pay' }, account: { nav: 'account', slug: 'me' }, notifications: { nav: 'account', slug: 'notifications' },
+  subscribers: { nav: 'account', slug: 'clients' }, reports: { nav: 'campaign', slug: 'reports' }, apikeys: { nav: 'account', slug: 'api' }, tx: { nav: 'account', slug: 'transactions' }, profile: { nav: 'account', slug: 'profile' },
   admin: { nav: 'account', admin: true, slug: 'dashboard' }, users: { nav: 'account', admin: true, slug: 'users' }, recharges: { nav: 'account', admin: true, slug: 'recharges' },
   payments: { nav: 'account', admin: true, slug: 'payments' }, plansAdmin: { nav: 'account', admin: true, slug: 'plans' }, settings: { nav: 'account', admin: true, slug: 'settings' },
   security: { nav: 'account', admin: true, slug: 'security' }, backup: { nav: 'account', admin: true, slug: 'backup' }, announce: { nav: 'account', admin: true, slug: 'announce' },
@@ -625,7 +625,7 @@ R.inbox = async (el, p) => {
     <div id="ibNewBox"></div>
     <div class="ib-search"><i class="fa-solid fa-magnifying-glass"></i><input class="input" id="ibQ" placeholder="ابحث بالاسم أو الرقم أو الرسالة..." value="${esc(IB.q)}"></div>
     <div class="ib-bar">
-      <div class="chips" id="ibF">${[['all', 'الكل'], ['unread', 'غير مقروءة'], ['seen', 'شافوا وما ردوا'], ['unseen', 'ما شافوا'], ['incoming', 'راسلوني'], ['mine', 'راسلتهم أنا بس']].map(([k, v]) => `<button class="chip ${IB.filter === k ? 'on' : ''}" data-f="${k}">${v}<b class="num ib-cnt" data-c="${k}"></b></button>`).join('')}</div>
+      <div class="chips" id="ibF">${[['all', 'الكل'], ['unread', 'غير مقروءة'], ['mine', 'ما ردّوا أبداً'], ['incoming', 'راسلوني'], ['seen', 'شافوا وما ردوا'], ['unseen', 'ما شافوا']].map(([k, v]) => `<button class="chip ${IB.filter === k ? 'on' : ''}" data-f="${k}">${v}<b class="num ib-cnt" data-c="${k}"></b></button>`).join('')}</div>
     </div>
     <div class="ib-sel ${IB.selMode ? 'on' : ''}" id="ibSelBar">
       <button class="btn btn-soft btn-sm" id="ibSelMode"><i class="fa-regular fa-square-check"></i> <span>${IB.selMode ? 'إلغاء التحديد' : 'تحديد'}</span></button>
@@ -664,9 +664,21 @@ R.inbox = async (el, p) => {
       ${list.length > 400 ? `<div class="hint" style="text-align:center">يظهر أول 400 - استخدم البحث</div>` : ''}`;
     drawSel();
   };
+  const offBanner = (at) => {
+    const old = $('#ibOff'); if (old) old.remove();
+    const when = at ? ' · آخر تحديث ' + ibTime(at) : '';
+    $('#ibList').insertAdjacentHTML('beforebegin', `<div class="ib-offline" id="ibOff"><i class="fa-solid fa-plug-circle-exclamation"></i> المحرك غير متصل مؤقتاً - تشوف آخر نسخة محفوظة${when}. الرد والإرسال يرجعون لمّا يتصل.</div>`);
+  };
   async function load() {
     const r = await api(`/api/inbox/${IB.acc}`);
-    if (!r.ok) { if (!IB.chats.length) $('#ibList').innerHTML = `<div class="card">${empty('fa-solid fa-plug-circle-xmark', r.error || 'تعذر جلب المحادثات')}</div>`; return; }
+    if (!r.ok) {
+      if (!IB.chats.length) {
+        const off = /غير شغّال|غير متصل|محرك/.test(r.error || '');
+        $('#ibList').innerHTML = `<div class="card">${empty('fa-solid fa-plug-circle-xmark', off ? 'محادثاتك محفوظة - بس محرك واتساب يعيد التشغيل حالياً' : (r.error || 'تعذر جلب المحادثات'), off ? `<div class="hint" style="line-height:1.9">جرّب بعد دقيقة.${ADMIN ? ' (لو استمر: افتح install.php واتبع خطوة «محرك واتساب» ثم Restart)' : ''}</div>` : '')}</div>`;
+      }
+      return;
+    }
+    if (r.offline) offBanner(r.cached_at); else { const o = $('#ibOff'); if (o) o.remove(); }
     const sig = JSON.stringify(r.chats || []);
     if (sig === IB.sig && $('#ibList .ib-list')) return; // ما تغير شي: ما نعيد الرسم (حتى الصور ما ترمش)
     IB.sig = sig; IB.chats = r.chats || [];
@@ -1778,6 +1790,7 @@ R.account = async (el) => {
     </div>
     <div class="section-head">حسابي</div>
     <div class="list stagger">
+      ${rowItem({ icon: 'fa-solid fa-gem', ic: 'ic-purple', title: 'الباقات والاشتراك', sub: ME.plan_active ? 'باقتك: ' + esc(ME.plan_name || 'فعّالة') + (ME.plan_days_left === null ? ' · دائمة' : ' · باقي ' + ME.plan_days_left + ' يوم') : 'اشترك بباقة وشوف الأسعار والمدد والشحن', onclick: "go('wallet')" })}
       ${rowItem({ icon: 'fa-solid fa-comments', ic: 'ic-wa', title: 'محادثات واتساب' + (ME.chats_allowed ? '' : ' <i class="fa-solid fa-lock" style="font-size:11px;color:var(--text3)"></i>'), sub: 'شوف محادثات رقمك ورد عليها، وراسل مجموعة دفعة وحدة', onclick: "go('inbox')" })}
       ${rowItem({ icon: 'fa-solid fa-hand-pointer', ic: 'ic-teal', title: 'الأزرار والاستبيانات', sub: 'أزرار تنضغط بواتساب، استبيانات وتقييم، ونتائجها', onclick: "go('polls')" })}
       ${rowItem({ icon: 'fa-solid fa-bell', ic: 'ic-orange', title: 'إشعارات الجوال', sub: 'لما أحد يرد أو يشوف رسالتك أو يضغط زر', onclick: "go('pushset')" })}

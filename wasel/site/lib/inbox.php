@@ -49,6 +49,32 @@ function inbox_input(): array
     return !empty($_POST) || !empty($_FILES) ? $_POST : request_json();
 }
 
+/**
+ * كاش المحادثات على جهة الموقع: نخزّن آخر نسخة ناجحة من المحرك،
+ * فلو المحرك وقع/يعيد التشغيل تبقى المحادثات القديمة ظاهرة بدل رسالة خطأ.
+ */
+function inbox_cache_file(string $accId, string $kind): string
+{
+    return DATA_DIR . '/inbox_cache/' . preg_replace('/[^\w-]/', '', $accId) . '-' . $kind . '.json';
+}
+function inbox_cache_save(string $accId, string $kind, array $data): void
+{
+    $dir = DATA_DIR . '/inbox_cache';
+    if (!is_dir($dir)) {
+        @mkdir($dir, 0775, true);
+    }
+    @file_put_contents(inbox_cache_file($accId, $kind), json_encode($data, JSON_UNESCAPED_UNICODE));
+}
+function inbox_cache_load(string $accId, string $kind): ?array
+{
+    $f = inbox_cache_file($accId, $kind);
+    if (!is_file($f)) {
+        return null;
+    }
+    $d = json_decode((string)@file_get_contents($f), true);
+    return is_array($d) ? ['data' => $d, 'at' => @filemtime($f) ?: time()] : null;
+}
+
 function inbox_routes(): array
 {
     return [
@@ -58,6 +84,15 @@ function inbox_routes(): array
             $r = engine_json('GET', '/accounts/' . rawurlencode($accId) . '/inbox', null, 10);
             $st = $r['_status'] ?? 503;
             unset($r['_status']);
+            if ($st === 200 && !empty($r['ok'])) {
+                inbox_cache_save($accId, 'list', $r);
+                json_out($r, 200);
+            }
+            // المحرك غير متصل: نرجّع آخر نسخة محفوظة حتى تبقى المحادثات ظاهرة (قراءة فقط)
+            $cache = inbox_cache_load($accId, 'list');
+            if ($cache && !empty($cache['data']['chats'])) {
+                json_out($cache['data'] + ['offline' => true, 'cached_at' => $cache['at']], 200);
+            }
             json_out($r, $st === 200 ? 200 : $st);
         }],
         // رسائل محادثة (since = الجديدة بس، read = علّمها مقروءة)
@@ -67,10 +102,23 @@ function inbox_routes(): array
             if (!inbox_valid_jid($jid)) {
                 json_err('محادثة غير صالحة');
             }
-            $q = http_build_query(['jid' => $jid, 'since' => (int)($_GET['since'] ?? 0), 'read' => !empty($_GET['read']) ? '1' : '0']);
+            $since = (int)($_GET['since'] ?? 0);
+            $q = http_build_query(['jid' => $jid, 'since' => $since, 'read' => !empty($_GET['read']) ? '1' : '0']);
             $r = engine_json('GET', '/accounts/' . rawurlencode($accId) . '/inbox/chat?' . $q, null, 10);
             $st = $r['_status'] ?? 503;
             unset($r['_status']);
+            $ck = 'chat-' . substr(md5($jid), 0, 16);
+            if ($st === 200 && !empty($r['ok'])) {
+                if ($since === 0) {
+                    inbox_cache_save($accId, $ck, $r); // نخزّن المحادثة كاملة لأول تحميل
+                }
+                json_out($r, 200);
+            }
+            // المحرك غير متصل: نرجّع آخر نسخة محفوظة من المحادثة (قراءة فقط)
+            $cache = $since === 0 ? inbox_cache_load($accId, $ck) : null;
+            if ($cache && !empty($cache['data']['messages'])) {
+                json_out($cache['data'] + ['offline' => true, 'cached_at' => $cache['at']], 200);
+            }
             json_out($r, $st === 200 ? 200 : $st);
         }],
         // صورة/صوت/فيديو/ملف من رسالة

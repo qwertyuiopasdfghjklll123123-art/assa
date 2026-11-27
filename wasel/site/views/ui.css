@@ -570,6 +570,8 @@ input,textarea,[contenteditable],.selectable,.code-block,.copy-box .v{-webkit-us
 .ui-font.on{background:var(--primary-bg)}
 
 /* ---------------------------------------------------------------- المحادثات */
+.ib-offline{display:flex;align-items:center;gap:8px;background:color-mix(in srgb,var(--orange,#f59e0b) 14%,var(--surface));color:var(--text);border:1px solid color-mix(in srgb,var(--orange,#f59e0b) 35%,transparent);border-radius:14px;padding:10px 13px;margin-bottom:10px;font-size:12.5px;line-height:1.7}
+.ib-offline i{color:var(--orange,#f59e0b);font-size:16px;flex:none}
 .ib-search{position:relative;margin-bottom:10px}
 .ib-search i{position:absolute;right:16px;top:50%;transform:translateY(-50%);color:var(--text3)}
 .ib-search .input{padding-right:42px}
