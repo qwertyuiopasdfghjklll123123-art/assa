@@ -674,7 +674,7 @@ R.inbox = async (el, p) => {
     if (!r.ok) {
       if (!IB.chats.length) {
         const off = /غير شغّال|غير متصل|محرك/.test(r.error || '');
-        $('#ibList').innerHTML = `<div class="card">${empty('fa-solid fa-plug-circle-xmark', off ? 'محادثاتك محفوظة - بس محرك واتساب يعيد التشغيل حالياً' : (r.error || 'تعذر جلب المحادثات'), off ? `<div class="hint" style="line-height:1.9">جرّب بعد دقيقة.${ADMIN ? ' (لو استمر: افتح install.php واتبع خطوة «محرك واتساب» ثم Restart)' : ''}</div>` : '')}</div>`;
+        $('#ibList').innerHTML = `<div class="card">${empty('fa-solid fa-plug-circle-xmark', off ? 'محادثاتك محفوظة - بس محرك واتساب يعيد التشغيل حالياً' : (r.error || 'تعذر جلب المحادثات'), off ? `<div class="hint" style="line-height:1.9">جرّب بعد دقيقة.${ADMIN ? ' لو استمر: <a href="/install.php" target="_blank" style="font-weight:800;color:var(--primary)">افتح صفحة المحرك</a> وتأكد «Run NPM Install» ثم Restart' : ''}</div>` : '')}</div>`;
       }
       return;
     }

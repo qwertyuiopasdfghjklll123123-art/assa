@@ -111,6 +111,9 @@ function system_checks(): array
     $c[] = ['مجلد wasel-engine موجود', is_dir(ENGINE_DIR) ? 'ok' : 'warn', 'لازم يكون مجلد wasel-engine داخل نفس المجلد مع index.php'];
     if (is_dir(ENGINE_DIR)) {
         $c[] = ['wasel-engine قابل للكتابة', is_writable(ENGINE_DIR) ? 'ok' : 'warn', 'غيّر صلاحيته إلى 755 حتى يحفظ المحرك جلسات واتساب'];
+        $hasModules = is_dir(ENGINE_DIR . '/node_modules/@whiskeysockets/baileys');
+        $c[] = ['مكتبات المحرك منصّبة (node_modules)', $hasModules ? 'ok' : 'bad',
+            'من «Setup Node.js App» اضغط «Run NPM Install» وانتظر لين يخلص ثم «Restart». بدونها المحرك ما يشتغل أبداً - وهذا أشيع سبب لـ«المحرك غير شغّال».'];
     }
     [$code, $body] = http_get(base_url() . '/manifest.json');
     $rewriteOk = $code === 200 && strpos($body, 'short_name') !== false;
@@ -126,7 +129,11 @@ function engine_check(): array
     }
     [$code, $body, $err] = http_get(ENGINE_URL . '/', 6);
     if ($code === 0) {
-        return ['bad', 'لا يوجد رد من ' . ENGINE_URL . ($err ? " ($err)" : '')];
+        // المحرك مو شغّال: نكشف أشيع سبب (مكتبات ناقصة)
+        if (is_dir(ENGINE_DIR) && !is_dir(ENGINE_DIR . '/node_modules/@whiskeysockets/baileys')) {
+            return ['bad', 'المحرك مو شغّال لأن مكتباته مو منصّبة - من «Setup Node.js App» اضغط «Run NPM Install» وانتظر لين يخلص، ثم «Restart». (أو سوّي Cron لـ start.sh - شوف التعليمات تحت)'];
+        }
+        return ['bad', 'المحرك مو شغّال أو ما يرد على ' . ENGINE_URL . '. من «Setup Node.js App»: تأكد Application startup file = <b>wasel-engine/app.js</b>، اضغط «Run NPM Install» ثم «Restart». وأضمن حل دائم: سوّي Cron لـ start.sh (التعليمات تحت).' . ($err ? " ($err)" : '')];
     }
     if (strpos($body, 'wasel-engine') === false) {
         return ['bad', "الرابط يرد ($code) لكن مو محرك واصل - تأكد من رابط التطبيق وأنك ضغطت Start"];
@@ -404,6 +411,11 @@ $phpBin = PHP_BINDIR . '/php';
       <li>اضغط <b>Restart</b> فوق.</li>
       <li>ارجع لهذي الصفحة وحدّثها - لازم تصير الحالة «شغّال».</li>
     </ol>
+    <div class="kv" style="margin-top:14px"><b>⚠️ لو عملت Restart وبقي «متوقف»</b>
+      غالباً المكتبات مو منصّبة: افتح <b>Setup Node.js App</b> ← اضغط <b>Run NPM Install</b> وانتظر لحد ما يكمل تماماً (مو بس تضغط)، بعدين <b>Restart</b>. وتأكد Startup file = <code>app.js</code>.</div>
+    <p style="margin-top:14px"><b>🔒 حل دائم (ينصح بيه):</b> سوّي Cron يشغّل المحرك تلقائياً لو وقف، وينصّب المكتبات لحاله. من <b>Cron Jobs</b> أضف: Minute <code>*/5</code> والباقي <code>*</code>، والأمر:</p>
+    <code>/bin/bash <?= h(ENGINE_DIR . '/start.sh') ?></code>
+    <p class="hint">هذا يفحص كل 5 دقائق: لو المحرك واقف يشغّله (وينصّب node_modules أول مرة)، ولو شغّال ما يسوي شي. فمهما وقف، يرجع لحاله.</p>
     <?php endif; ?>
     <div class="actions">
       <form method="post"><input type="hidden" name="csrf" value="<?= h($_SESSION['install_csrf']) ?>"><input type="hidden" name="action" value="engine_cfg"><button class="alt">إعادة كتابة إعدادات المحرك</button></form>
