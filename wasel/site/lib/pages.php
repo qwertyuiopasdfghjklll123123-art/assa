@@ -209,25 +209,75 @@ function render_app_page(string $section = ''): string
 }
 
 /** أيقونات PWA بصيغة PNG: من شعار الموقع لو موجود (عبر GD)، وإلا الأيقونة الافتراضية */
-function serve_pwa_icon($size): void
+/** لون خلفية الأيقونة من الشعار المرفوع: زاوية صلبة لو موجودة، وإلا اللون المسيطر، وإلا تركواز واصل */
+function icon_bg_color($src): array
 {
-    $size = (int)$size === 512 ? 512 : 192;
-    $cache = DATA_DIR . "/pwa-{$size}.png";
-    $default = __DIR__ . "/../views/pwa-{$size}.png";
+    $w = imagesx($src);
+    $h = imagesy($src);
+    // لو الزاوية صلبة (غير شفافة) ناخذ لونها حتى تندمج الحواف (شكل يملأ الأيقونة)
+    foreach ([[1, 1], [$w - 2, 1], [1, $h - 2], [$w - 2, $h - 2]] as [$x, $y]) {
+        $c = imagecolorsforindex($src, imagecolorat($src, $x, $y));
+        if ($c['alpha'] < 40) {
+            return [$c['red'], $c['green'], $c['blue']];
+        }
+    }
+    // شعار شفاف: نجيب اللون المسيطر من عيّنات، وإلا تركواز واصل
+    $tally = [];
+    for ($i = 0; $i < 400; $i++) {
+        $c = imagecolorsforindex($src, imagecolorat($src, random_int(0, $w - 1), random_int(0, $h - 1)));
+        if ($c['alpha'] < 40) {
+            $k = ($c['red'] >> 4) . ',' . ($c['green'] >> 4) . ',' . ($c['blue'] >> 4);
+            $tally[$k] = ($tally[$k] ?? 0) + 1;
+        }
+    }
+    if ($tally) {
+        arsort($tally);
+        [$r, $g, $b] = explode(',', (string)array_key_first($tally));
+        return [((int)$r << 4) + 8, ((int)$g << 4) + 8, ((int)$b << 4) + 8];
+    }
+    return [2, 123, 142]; // تركواز واصل
+}
+
+/** يمسح كاش أيقونات PWA المولّدة (يُستدعى عند تغيير الشعار حتى تتولّد من جديد) */
+function pwa_cache_clear(): void
+{
+    foreach (['192', '512', 'maskable-192', 'maskable-512'] as $t) {
+        @unlink(DATA_DIR . "/pwa-{$t}.png");
+    }
+}
+
+function serve_pwa_icon($a, $b = null): void
+{
+    // يقبل serve_pwa_icon('192') وكذلك serve_pwa_icon('maskable', '512') من المسار
+    if ($b === null) {
+        $size = (int)$a;
+        $mask = false;
+    } else {
+        $mask = ($a === 'maskable');
+        $size = (int)$b;
+    }
+    $size = $size === 512 ? 512 : 192;
+    $tag = $mask ? "maskable-{$size}" : (string)$size;
+    $cache = DATA_DIR . "/pwa-{$tag}.png";
+    $default = __DIR__ . "/../views/pwa-{$tag}.png";
     [, $hasLogo] = branding_context();
     if ($hasLogo && !is_file($cache) && function_exists('imagecreatefromstring')) {
         $src = @imagecreatefromstring((string)file_get_contents(logo_path()));
         if ($src) {
             $dst = imagecreatetruecolor($size, $size);
-            imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
-            $pad = (int)($size * .12);
+            imagealphablending($dst, true);
+            // خلفية تملأ الأيقونة (بدون مربع أبيض): لون الشعار نفسه أو المسيطر
+            $bg = icon_bg_color($src);
+            imagefill($dst, 0, 0, imagecolorallocate($dst, $bg[0], $bg[1], $bg[2]));
+            // maskable: نترك هامش أمان (النظام يقص دائرة/مربع محدّب)؛ any: يملأ تقريباً كامل الأيقونة
+            $pad = (int)($size * ($mask ? 0.16 : 0.05));
             $w = imagesx($src);
             $h = imagesy($src);
             $scale = min(($size - 2 * $pad) / $w, ($size - 2 * $pad) / $h);
-            $nw = (int)($w * $scale);
-            $nh = (int)($h * $scale);
+            $nw = max(1, (int)($w * $scale));
+            $nh = max(1, (int)($h * $scale));
             imagecopyresampled($dst, $src, (int)(($size - $nw) / 2), (int)(($size - $nh) / 2), 0, 0, $nw, $nh, $w, $h);
-            imagepng($dst, $cache);
+            imagepng($dst, $cache, 9);
         }
     }
     $file = $hasLogo && is_file($cache) ? $cache : $default;

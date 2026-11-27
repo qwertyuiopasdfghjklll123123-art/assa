@@ -423,6 +423,7 @@ function handle_set_branding(): void
             @unlink(logo_path());
             $fields['has_logo'] = false;
         }
+        pwa_cache_clear();
     }
     update_settings($fields);
     json_out(['ok' => true]);

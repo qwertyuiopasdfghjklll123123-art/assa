@@ -100,7 +100,7 @@ start_session();
 enforce_session();
 
 // الموقع لسا ما تنصّب: كل الصفحات تروح لصفحة التنصيب
-if (!APP_INSTALLED && $method === 'GET' && !preg_match('#^/(branding/logo|icon\.svg|pwa-\d+\.png|manifest\.json|app\.webmanifest|sw\.js|assets/.+)$#', $path)) {
+if (!APP_INSTALLED && $method === 'GET' && !preg_match('#^/(branding/logo|icon\.svg|pwa-(?:maskable-)?\d+\.png|manifest\.json|app\.webmanifest|sw\.js|assets/.+)$#', $path)) {
     redirect_to(($base ?: '') . '/install.php');
 }
 
@@ -161,11 +161,12 @@ $routes = [
             'icons' => [
                 ['src' => '/pwa-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'any'],
                 ['src' => '/pwa-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'any'],
-                ['src' => '/pwa-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
+                ['src' => '/pwa-maskable-192.png', 'sizes' => '192x192', 'type' => 'image/png', 'purpose' => 'maskable'],
+                ['src' => '/pwa-maskable-512.png', 'sizes' => '512x512', 'type' => 'image/png', 'purpose' => 'maskable'],
             ],
         ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }],
-    ['GET', '#^/pwa-(192|512)\.png$#', 'serve_pwa_icon'],
+    ['GET', '#^/pwa-(?:(maskable)-)?(192|512)\.png$#', 'serve_pwa_icon'],
     ['GET', '#^/assets/(ui\.css|app\.js|logo(?:-(?:gold|violet|rose))?\.(?:png|webp)|vendor/[a-z0-9-]+\.(?:css|woff2))$#', 'serve_asset'],
     ['POST', '#^/api/me/ui$#', function () {
         $id = require_login();

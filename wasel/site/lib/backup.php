@@ -62,6 +62,7 @@ function backup_import(string $json): array
     }
     if (!empty($d['logo'])) {
         file_put_contents(logo_path(), base64_decode($d['logo']));
+        pwa_cache_clear();
     }
     return [true, "تم الاستيراد ({$n} سجل)"];
 }

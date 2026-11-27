@@ -533,8 +533,7 @@ function api_routes(): array
                     @unlink(logo_path());
                     $f['has_logo'] = false;
                 }
-                @unlink(DATA_DIR . '/pwa-192.png');
-                @unlink(DATA_DIR . '/pwa-512.png');
+                pwa_cache_clear();
             }
             foreach (['dev_name' => 40, 'dev_title' => 60] as $k => $max) {
                 if (array_key_exists($k, $d)) {
