@@ -618,20 +618,22 @@ R.inbox = async (el, p) => {
   const accs = await loadAccounts();
   if (!accs.length) { el.innerHTML = head('المحادثات') + `<div class="card">${empty('fa-brands fa-whatsapp', 'اربط رقم واتساب أولاً حتى تشوف محادثاته', `<button class="btn btn-wa" onclick="go('accounts')"><i class="fa-solid fa-link"></i> ربط رقم</button>`)}</div>`; return; }
   if (p.acc) IB.acc = p.acc;
-  if (!accs.some(a => a.id === IB.acc)) { IB.acc = (accs.find(a => a.logged_in) || accs[0]).id; IB.sel.clear(); }
+  const accValid = IB.acc === '*' ? accs.length > 1 : accs.some(a => a.id === IB.acc);
+  if (!accValid) { IB.acc = accs.length > 1 ? '*' : accs[0].id; IB.sel.clear(); }
+  const allMode = IB.acc === '*';
   const acc = () => accs.find(a => a.id === IB.acc);
-  el.innerHTML = head('المحادثات', true, `<button class="btn btn-primary btn-sm" id="ibNew"><i class="fa-solid fa-pen-to-square"></i> جديدة</button>`) + `
-    ${accs.length > 1 ? `<div class="chips" style="margin-bottom:10px;flex-wrap:nowrap;overflow-x:auto" id="ibAccs">${accs.map(a => `<button class="chip ${a.id === IB.acc ? 'on' : ''}" data-id="${esc(a.id)}"><span class="status-dot ${a.logged_in ? 'on' : ''}"></span> ${esc(a.name)}</button>`).join('')}</div>` : ''}
+  el.innerHTML = head('المحادثات', true, allMode ? '' : `<button class="btn btn-primary btn-sm" id="ibNew"><i class="fa-solid fa-pen-to-square"></i> جديدة</button>`) + `
+    ${accs.length > 1 ? `<div class="chips" style="margin-bottom:10px;flex-wrap:nowrap;overflow-x:auto" id="ibAccs"><button class="chip ${allMode ? 'on' : ''}" data-id="*"><i class="fa-solid fa-layer-group"></i> كل الحسابات</button>${accs.map(a => `<button class="chip ${a.id === IB.acc ? 'on' : ''}" data-id="${esc(a.id)}"><span class="status-dot ${a.logged_in ? 'on' : ''}"></span> ${esc(a.name)}</button>`).join('')}</div>` : ''}
     <div id="ibNewBox"></div>
     <div class="ib-search"><i class="fa-solid fa-magnifying-glass"></i><input class="input" id="ibQ" placeholder="ابحث بالاسم أو الرقم أو الرسالة..." value="${esc(IB.q)}"></div>
     <div class="ib-bar">
       <div class="chips" id="ibF">${[['all', 'الكل'], ['unread', 'غير مقروءة'], ['mine', 'ما ردّوا أبداً'], ['incoming', 'راسلوني'], ['seen', 'شافوا وما ردوا'], ['unseen', 'ما شافوا']].map(([k, v]) => `<button class="chip ${IB.filter === k ? 'on' : ''}" data-f="${k}">${v}<b class="num ib-cnt" data-c="${k}"></b></button>`).join('')}</div>
     </div>
-    <div class="ib-sel ${IB.selMode ? 'on' : ''}" id="ibSelBar">
+    ${allMode ? '' : `<div class="ib-sel ${IB.selMode ? 'on' : ''}" id="ibSelBar">
       <button class="btn btn-soft btn-sm" id="ibSelMode"><i class="fa-regular fa-square-check"></i> <span>${IB.selMode ? 'إلغاء التحديد' : 'تحديد'}</span></button>
       <button class="btn btn-soft btn-sm ${IB.selMode ? '' : 'hidden'}" id="ibAll"><i class="fa-solid fa-check-double"></i> تحديد الكل</button>
       <span class="spacer"></span><span class="pill pill-blue num ${IB.selMode ? '' : 'hidden'}" id="ibSelN">0</span>
-    </div>
+    </div>`}
     <div id="ibList"><div class="card"><div class="skel" style="height:200px"></div></div></div>`;
   document.body.insertAdjacentHTML('beforeend', `<div class="ib-send-bar portal hidden" id="ibSendBar"><button class="btn btn-primary btn-block shine" id="ibSend"><i class="fa-solid fa-paper-plane"></i> <span>إرسال رسالة للمحددين</span></button></div>`);
   const filtered = () => {
@@ -641,6 +643,7 @@ R.inbox = async (el, p) => {
       && (!q || ibName(c).toLowerCase().includes(q) || (c.phone || '').includes(q.replace(/\D/g, '') || '§') || (c.last?.text || '').toLowerCase().includes(q)));
   };
   const drawSel = () => {
+    if (!$('#ibSelN')) return; // وضع «كل الحسابات»: ما فيه تحديد جماعي
     const n = IB.sel.size;
     $('#ibSelN').textContent = fmt(n) + ' محدد';
     $d('#ibSendBar').classList.toggle('hidden', !(IB.selMode && n));
@@ -656,10 +659,10 @@ R.inbox = async (el, p) => {
       box.innerHTML = `<div class="card">${empty('fa-regular fa-comments', 'ما فيه محادثات لحد الآن')}<div class="hint" style="text-align:center;line-height:1.9">المحادثات تنضاف تلقائياً من لحظة تحديث المحرك: كل رسالة توصلك أو ترسلها (حتى من جوالك).<br>إذا ربطت الرقم من جديد ينسحب آخر سجل محادثاتك.</div></div>`;
       return;
     }
-    box.innerHTML = `<div class="list ib-list">${list.slice(0, 400).map(c => `<div class="row ib-row ${IB.sel.has(c.jid) ? 'picked' : ''}" data-j="${esc(c.jid)}">
+    box.innerHTML = `<div class="list ib-list">${list.slice(0, 400).map(c => `<div class="row ib-row ${IB.sel.has(c.jid) ? 'picked' : ''}" data-j="${esc(c.jid)}" data-a="${esc(c._acc || IB.acc)}">
         ${IB.selMode ? `<span class="ib-check"><i class="fa-solid fa-check"></i></span>` : ''}
-        ${avatarHtml(IB.acc, c)}
-        <span class="row-body"><span class="row-title">${esc(ibName(c))}</span><span class="row-sub ib-prev">${ibPreview(c.last)}</span></span>
+        ${avatarHtml(c._acc || IB.acc, c)}
+        <span class="row-body"><span class="row-title">${esc(ibName(c))}${allMode && c._accName ? ` <span class="ib-acc-tag">${esc(c._accName)}</span>` : ''}</span><span class="row-sub ib-prev">${ibPreview(c.last)}</span></span>
         <span class="ib-end"><small class="${c.unread ? 'un' : ''}">${ibTime(c.ts)}</small>${c.unread ? `<b class="ib-badge num">${c.unread}</b>` : ''}</span></div>`).join('') || '<div class="hint" style="padding:16px;text-align:center">ما فيه نتائج</div>'}</div>
       ${list.length > 400 ? `<div class="hint" style="text-align:center">يظهر أول 400 - استخدم البحث</div>` : ''}`;
     drawSel();
@@ -669,7 +672,24 @@ R.inbox = async (el, p) => {
     const when = at ? ' · آخر تحديث ' + ibTime(at) : '';
     $('#ibList').insertAdjacentHTML('beforebegin', `<div class="ib-offline" id="ibOff"><i class="fa-solid fa-plug-circle-exclamation"></i> المحرك غير متصل مؤقتاً - تشوف آخر نسخة محفوظة${when}. الرد والإرسال يرجعون لمّا يتصل.</div>`);
   };
+  async function loadAll() {
+    const results = await Promise.all(accs.map(a => api(`/api/inbox/${a.id}`).then(r => ({ a, r })).catch(() => ({ a, r: {} }))));
+    const merged = []; let anyOk = false, anyOffline = false, oldest = 0;
+    for (const { a, r } of results) {
+      if (!r.ok) continue;
+      anyOk = true;
+      if (r.offline) { anyOffline = true; oldest = oldest ? Math.min(oldest, r.cached_at || 0) : (r.cached_at || 0); }
+      for (const c of (r.chats || [])) { c._acc = a.id; c._accName = a.name; merged.push(c); }
+    }
+    if (!anyOk) { if (!IB.chats.length) $('#ibList').innerHTML = `<div class="card">${empty('fa-solid fa-plug-circle-xmark', 'تعذر جلب المحادثات - جرّب بعد دقيقة')}</div>`; return; }
+    merged.sort((x, y) => (y.ts || 0) - (x.ts || 0));
+    if (anyOffline) offBanner(oldest); else { const o = $('#ibOff'); if (o) o.remove(); }
+    const sig = JSON.stringify(merged.map(c => [c._acc, c.jid, c.ts, c.unread, c.last?.st]));
+    if (sig === IB.sig && $('#ibList .ib-list')) return;
+    IB.sig = sig; IB.chats = merged; draw();
+  }
   async function load() {
+    if (IB.acc === '*') return loadAll();
     const r = await api(`/api/inbox/${IB.acc}`);
     if (!r.ok) {
       if (!IB.chats.length) {
@@ -688,15 +708,15 @@ R.inbox = async (el, p) => {
     const row = e.target.closest('[data-j]'); if (!row) return;
     const j = row.dataset.j;
     if (IB.selMode) { IB.sel.has(j) ? IB.sel.delete(j) : IB.sel.add(j); row.classList.toggle('picked'); drawSel(); return; }
-    go('chat', { acc: IB.acc, jid: j });
+    go('chat', { acc: row.dataset.a || IB.acc, jid: j });
   });
   $('#ibQ').addEventListener('input', e => { IB.q = e.target.value.trim(); draw(); });
   $('#ibF').addEventListener('click', e => { const b = e.target.closest('[data-f]'); if (!b) return; IB.filter = b.dataset.f; $$('#ibF .chip').forEach(x => x.classList.toggle('on', x === b)); draw(); });
-  $('#ibSelMode').onclick = () => { IB.selMode = !IB.selMode; if (!IB.selMode) IB.sel.clear(); $('#ibSelBar').classList.toggle('on', IB.selMode); $('#ibSelMode span').textContent = IB.selMode ? 'إلغاء التحديد' : 'تحديد'; $('#ibAll').classList.toggle('hidden', !IB.selMode); $('#ibSelN').classList.toggle('hidden', !IB.selMode); draw(); };
-  $('#ibAll').onclick = () => { const l = filtered(), all = l.every(c => IB.sel.has(c.jid)); l.forEach(c => all ? IB.sel.delete(c.jid) : IB.sel.add(c.jid)); draw(); };
+  if ($('#ibSelMode')) $('#ibSelMode').onclick = () => { IB.selMode = !IB.selMode; if (!IB.selMode) IB.sel.clear(); $('#ibSelBar').classList.toggle('on', IB.selMode); $('#ibSelMode span').textContent = IB.selMode ? 'إلغاء التحديد' : 'تحديد'; $('#ibAll').classList.toggle('hidden', !IB.selMode); $('#ibSelN').classList.toggle('hidden', !IB.selMode); draw(); };
+  if ($('#ibAll')) $('#ibAll').onclick = () => { const l = filtered(), all = l.every(c => IB.sel.has(c.jid)); l.forEach(c => all ? IB.sel.delete(c.jid) : IB.sel.add(c.jid)); draw(); };
   $d('#ibSend').onclick = () => go('ibcast', { acc: IB.acc });
-  const accChips = $('#ibAccs'); if (accChips) accChips.addEventListener('click', e => { const c = e.target.closest('[data-id]'); if (!c) return; IB.acc = c.dataset.id; IB.sel.clear(); IB.chats = []; go('inbox', { acc: IB.acc }, false); });
-  $('#ibNew').onclick = () => {
+  const accChips = $('#ibAccs'); if (accChips) accChips.addEventListener('click', e => { const c = e.target.closest('[data-id]'); if (!c) return; IB.acc = c.dataset.id; IB.sel.clear(); IB.sig = null; IB.chats = []; go('inbox', { acc: IB.acc }, false); });
+  const ibNewBtn = $('#ibNew'); if (ibNewBtn) ibNewBtn.onclick = () => {
     const box = $('#ibNewBox');
     if (box.innerHTML) { box.innerHTML = ''; return; }
     box.innerHTML = `<div class="card fade-in"><div class="card-title"><i class="fa-solid fa-user-plus"></i> مراسلة رقم جديد</div>
@@ -705,7 +725,7 @@ R.inbox = async (el, p) => {
     $('#ibGo').onclick = () => { const ph = $('#ibPh').value.replace(/\D/g, ''); if (ph.length < 7) return toast('اكتب رقم صحيح', 'err'); go('chat', { acc: IB.acc, phone: ph, cc: $('#ibCc').dataset.cc }); };
     $('#ibPh').focus();
   };
-  if (!acc()?.logged_in) $('#ibList').insertAdjacentHTML('beforebegin', `<div class="note warn" style="margin-bottom:10px"><i class="fa-solid fa-plug-circle-xmark"></i> الرقم غير متصل - تشوف المحادثات المحفوظة بس، وما توصل رسائل جديدة لحد ما تربطه</div>`);
+  if (!allMode && !acc()?.logged_in) $('#ibList').insertAdjacentHTML('beforebegin', `<div class="note warn" style="margin-bottom:10px"><i class="fa-solid fa-plug-circle-xmark"></i> الرقم غير متصل - تشوف المحادثات المحفوظة بس، وما توصل رسائل جديدة لحد ما تربطه</div>`);
   await load();
   S.timers.push(setInterval(load, 6000));
 };
