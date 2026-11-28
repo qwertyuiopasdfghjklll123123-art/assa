@@ -66,6 +66,88 @@ function write_engine_cfg(array $cfg): bool
     return @file_put_contents(ENGINE_DIR . '/config.json', json_encode($data, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT)) !== false;
 }
 
+/** مسارات محميّة ما نلمسها عند التحديث: البيانات، المكتبات، الجلسات، الإعدادات السرية */
+function update_is_protected(string $rel): bool
+{
+    $rel = ltrim(str_replace('\\', '/', $rel), '/');
+    if ($rel === '' || strpos($rel, '../') !== false || strpos($rel, "\0") !== false) {
+        return true; // أمان ضد المسارات الخبيثة
+    }
+    foreach (['data/', 'wasel-engine/node_modules/', 'wasel-engine/data/', 'wasel-engine/auth'] as $p) {
+        if (str_starts_with($rel, $p)) {
+            return true;
+        }
+    }
+    if (in_array($rel, ['wasel-engine/config.json', 'wasel-engine/tracking.json', 'wasel-engine/engine.pid'], true)) {
+        return true;
+    }
+    if (preg_match('#(^|/)\.(env|git)#', $rel) || str_ends_with($rel, '.log')) {
+        return true;
+    }
+    return false;
+}
+
+/** يطبّق تحديث من ملف zip: يكتب الملفات الجديدة بمكانها بدون ما يلمس البيانات والمكتبات والجلسات. */
+function apply_update_zip(string $zipPath): array
+{
+    if (!class_exists('ZipArchive')) {
+        return [false, 'امتداد zip مو مفعّل بـ PHP - فعّله من Select PHP Version ثم جرّب'];
+    }
+    $zip = new ZipArchive();
+    if ($zip->open($zipPath) !== true) {
+        return [false, 'الملف مو ZIP صالح - ارفع ملف wasel-full.zip نفسه بدون ما تفكّه'];
+    }
+    // تحقق إنها فعلاً حزمة واصل (مو ملف ثاني بالغلط)
+    if ($zip->locateName('index.php') === false || $zip->locateName('views/app.js') === false) {
+        $zip->close();
+        return [false, 'هذا مو ملف تحديث واصل الكامل (لازم يكون wasel-full.zip)'];
+    }
+    $root = __DIR__;
+    $updated = 0;
+    $skipped = 0;
+    $failed = 0;
+    for ($i = 0; $i < $zip->numFiles; $i++) {
+        $name = $zip->getNameIndex($i);
+        if ($name === false || str_ends_with($name, '/')) {
+            continue;
+        }
+        $rel = str_replace('\\', '/', $name);
+        if (update_is_protected($rel)) {
+            $skipped++;
+            continue;
+        }
+        $data = $zip->getFromIndex($i);
+        if ($data === false) {
+            $failed++;
+            continue;
+        }
+        $dest = $root . '/' . $rel;
+        $dir = dirname($dest);
+        if (!is_dir($dir)) {
+            @mkdir($dir, 0755, true);
+        }
+        if (@file_put_contents($dest . '.new', $data) === false || !@rename($dest . '.new', $dest)) {
+            @unlink($dest . '.new');
+            $failed++;
+            continue;
+        }
+        $updated++;
+    }
+    $zip->close();
+    // إشارة إعادة تشغيل للمحرك (Passenger يعيد التشغيل لمّا يتغير هذا الملف)
+    $restarted = '';
+    if (is_dir(ENGINE_DIR)) {
+        @mkdir(ENGINE_DIR . '/tmp', 0755, true);
+        if (@touch(ENGINE_DIR . '/tmp/restart.txt')) {
+            $restarted = ' وأرسلنا إشارة إعادة تشغيل للمحرك';
+        }
+    }
+    $msg = "تم التحديث ✅ حدّثنا {$updated} ملف، وتركنا {$skipped} ملف محمي (بياناتك ومكتباتك وجلساتك ما انلمست)"
+        . ($failed ? "، وفشل {$failed}" : '') . '.' . $restarted
+        . ' لو المحرك ما انرستر لحاله، افتح Setup Node.js App واضغط Restart.';
+    return [$updated > 0, $msg];
+}
+
 /** المسار النسبي من مجلد المستخدم الرئيسي (اللي تطلبه صفحة Setup Node.js App) */
 function home_relative(string $abs): string
 {
@@ -261,6 +343,19 @@ if ($isAdmin && $action === 'start_engine') {
     }
 }
 
+if ($isAdmin && $action === 'update_app') {
+    if (empty($_FILES['pkg']) || ($_FILES['pkg']['error'] ?? 1) !== UPLOAD_ERR_OK) {
+        $errors[] = 'اختر ملف wasel-full.zip أول (لو كبير، تأكد إنه خلص رفع)';
+    } else {
+        [$ok, $m] = apply_update_zip((string)$_FILES['pkg']['tmp_name']);
+        if ($ok) {
+            $notice = $m;
+        } else {
+            $errors[] = $m;
+        }
+    }
+}
+
 if ($action === 'admin_login' && APP_INSTALLED && !$isAdmin) {
     rate_limit_or_fail('install_login', 6, 900);
     $email = strtolower(trim((string)($_POST['email'] ?? '')));
@@ -425,6 +520,16 @@ $phpBin = PHP_BINDIR . '/php';
       <a class="btn alt" href="install.php">تحديث الفحص</a>
     </div>
   </div>
+
+  <form method="post" enctype="multipart/form-data" class="card" style="border:2px solid var(--gold)">
+    <h2>⬆️ تحديث التطبيق (بضغطة وحدة)</h2>
+    <p class="sub" style="margin:0 0 12px">ارفع ملف <b>wasel-full.zip</b> هنا وبس. راح نفكّه ونحدّث الملفات بمكانها تلقائياً، <b>وما نلمس بياناتك ولا مكتبات المحرك (node_modules) ولا جلسات واتساب</b> - ما تحتاج تغيّر أو تحذف شي يدوياً.</p>
+    <input type="hidden" name="action" value="update_app">
+    <input type="hidden" name="csrf" value="<?= h($_SESSION['install_csrf']) ?>">
+    <input type="file" name="pkg" accept=".zip" required style="padding:9px">
+    <div class="hint">بعد التحديث: لو كان فيه تغيير بالمحرك، اضغط Restart من Setup Node.js App (نحاول نرستره تلقائياً).</div>
+    <button type="submit">فك الضغط وتحديث الآن</button>
+  </form>
 
   <div class="card">
     <h2><span class="num">3</span> المهام المجدولة (Cron Jobs)</h2>
